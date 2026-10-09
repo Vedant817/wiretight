@@ -1,0 +1,30 @@
+Airwallex provides webhook events for monitoring transfer status changes as part of the Payouts integration. This covers the available `payout.transfer.*` webhook events and an example payload for individual transfers.
+
+# Transfers
+
+Subscribe to webhook events for transfer and batch transfer status changes.
+
+The following webhook events are available for your [Payouts](https://www.airwallex.com/docs/payouts/overview.md) integration.
+## Transfers
+
+> **\[WARNING]**
+>
+> This section describes transfer webhooks for the latest API version. For older API versions, see [transfer webhooks (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-webhooks.md).
+
+| Event                                                   | Description                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| payout.transfer.in\_approval                            | The transfer is submitted and waiting for approval. Approvers can review the transfer in the web app.                                                                                                                                                                       |
+| payout.transfer.approval\_recalled                      | Transfer is recalled by a user through the web app.                                                                                                                                                                                                                         |
+| payout.transfer.approval\_rejected                      | Transfer is rejected by an approver through the web app.                                                                                                                                                                                                                    |
+| payout.transfer.approval\_blocked                       | Transfer is blocked as the next approver cannot be found.                                                                                                                                                                                                                   |
+| payout.transfer.scheduled                               | The transfer is scheduled to be processed on the transfer date if it is funded and passes review by Airwallex.                                                                                                                                                              |
+| payout.transfer.overdue                                 | The transfer has not been funded by the scheduled date.                                                                                                                                                                                                                     |
+| payout.transfer.processing                              | The transfer is funded and being processed.                                                                                                                                                                                                                                 |
+| payout.transfer.sent                                    | The transfer has been sent from Airwallex.                                                                                                                                                                                                                                  |
+| payout.transfer.paid                                    | The transfer has been processed successfully by our banking partner. `PAID` is not always final, and the transfer can still transition to `FAILED` later. See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md). |
+| payout.transfer.failed                                  | The transfer has failed our banking partner's processing or was rejected by the recipient bank, including failures that occur after `PAID`. See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md).               |
+| payout.transfer.cancellation\_requested                 | Transfer cancellation has been requested before `SENT`.                                                                                                                                                                                                                     |
+| payout.transfer.cancelled                               | The transfer has been successfully cancelled. Funds will be returned to the Wallet.                                                                                                                                                                                         |
+| payout.transfer.funding.requires\_funding\_confirmation | The funding of this transfer requires your confirmation.                                                                                                                                                                                                                    |
+| payout.transfer.funding.scheduled                       | The funding is scheduled to be processed on the transfer date.                                                                                                                                                                                                              |
+| payout.transfer.fundin

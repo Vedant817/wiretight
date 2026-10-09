@@ -1,0 +1,1259 @@
+The `GET /api/v1/transfers` endpoint retrieves a paginated list of transfers filtered by creation date range, currency, status, and other optional parameters.
+
+# List all Transfers
+
+Get list of transfers from a specified creation date/time, with optional filters on end creation date/time, buy/sell currency and status. Alternatively, one or neither of the *from* or *to* created_at request fields needs to be populated. In the event that neither or only the to created_at fields are populated, then transfers 30 days in arrears of today or the *to* created_at date will be returned.
+
+## Endpoint
+
+`GET /api/v1/transfers`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Query Parameters
+
+- `batch_transfer_id` (string, format: uuid, optional)
+  Batch transfer unique identifier.
+- `beneficiary_id` (string, format: uuid, optional)
+  Beneficiary unique identifier.
+- `from_created_at` (string, optional)
+  The start date of `created_at` in ISO8601 format (inclusive).
+- `page` (string, optional)
+  A bookmark for use in pagination to retrieve either the next page or the previous page of results. You can fetch the value for this identifier from the response of the previous API call. To retrieve the next page of results, pass the value of page_after (if not null) from the response to a subsequent call. To retrieve the previous page of results, pass the value of page_before (if not null) from the response to a subsequent call. The 30-day limit will be removed if `page` is present in the request. Passing page=0 on the very first page will override the 30 days default for null date ranges, enabling a complete search of the transfers.
+- `page_size` (integer, format: int32, optional)
+  Number of results per page, defaultValue 2000.
+- `request_id` (string, optional)
+  Transfer `request_id`.
+- `short_reference_id` (string, optional)
+  Transfer `short_reference_id`.
+- `status` (string, optional)
+  Status of the transfer.
+- `to_created_at` (string, optional)
+  The end date of `created_at` in ISO8601 format (inclusive).
+- `transfer_currency` (string, optional)
+  Transfer currency.
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/api/v1/transfers' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+Step 3 covers how to retrieve transfer details via the API, including retrieving a list of transfers with filtering and pagination, and retrieving a single transfer by ID, with example requests and responses.
+
+## Step 3: Retrieve a transfer
+
+Call [Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md) or [Get list of transfers](https://www.airwallex.com/docs/api/payouts/transfers/list.md) to retrieve transfer details. Additionally, you can subscribe to [Transfers webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) to receive any transfer status transitions (the payload will be in the same manner as [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md)). See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) for more information.
+
+### Retrieve a list of transfers
+
+Call [Get list of transfers](https://www.airwallex.com/docs/api/payouts/transfers/list.md) to retrieve details for transfers based on specific conditions.
+
+You can specify the date range of transfer creation (`from_created_at` and `to_created_at`, inclusively) within the endpoint URL of the request, and the response will be in the same format as in the response of [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md). You can also use optional parameters such as `transfer_currency` and `status` to filter your transfers, and the pagination parameters (`page_num`, `page_size`) to refine the results.
+
+> **\[WARNING]**
+>
+> The maximum date range between `from_created_at` and `to_created_at` is **30 days**. Requests that exceed this window return `400 time_range_exceed`. To retrieve transfers over a longer period, paginate with multiple requests each covering at most 30 days.
+
+#### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/transfers \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --data-urlencode 'from_created_at=2022-10-21' \
+  --data-urlencode 'page_num=0' \
+  --data-urlencode 'page_size=2000' \
+  --data-urlencode 'transfer_currency=USD' \
+  --data-urlencode 'status=COMPLETED'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+#### Example response
+
+```json
+{
+    "items": [
+        {
+            "amount_beneficiary_receives": 50.0,
+            "amount_payer_pays": 68.13,
+            "beneficiary": {
+                "additional_info": {
+                    "personal_email": "john.walker@gmail.com"
+                },
+                "address": {
+                    "city": "Seattle",
+                    "country_code": "US",
+                    "postcode": "98104",
+                    "state": "Washington",
+                    "street_address": "412 5th Avenue"
+                },
+                "bank_details": {
+                    "account_currency": "USD",
+                    "account_name": "John Walker",
+                    "account_number": "50001121",
+                    "account_routing_type1": "aba",
+                    "account_routing_value1": "021000021",
+                    "bank_account_category": "Checking",
+                    "bank_country_code": "US",
+                    "bank_name": "JPMorgan Chase Bank, NA",
+                    "local_clearing_system": "ACH"
+                },
+                "entity_type": "COMPANY",
+                "type": "BANK_ACCOUNT"
+            },
+            "conversion": {
+                "currency_pair": "USDSGD",
+                "rate": 1.285352
+            },
+            "created_at": "2025-07-09T15:05:45+0000",
+            "fee_amount": 3.86,
+            "fee_currency": "SGD",
+            "fee_paid_by": "PAYER",
+            "funding": {
+                "status": "SCHEDULED"
+            },
+            "id": "99c36dff-4f21-49f9-9ffa-6698323772c5",
+            "lock_rate_on_create": true,
+            "payer": {
+                "additional_info": {
+                    "business_incorporation_date": "2024-03-04",
+                    "business_registration_number": "HK-575-92-5785",
+                    "business_registration_type": "COMPANY"
+                },
+                "address": {
+                    "city": "Melbourne",
+                    "country_code": "HK",
+                    "postcode": "3000",
+                    "state": "VIC",
+                    "street_address": "Melbourne St, Melbourne St"
+                },
+                "company_name": "ivy sandbox test",
+                "entity_type": "COMPANY"
+            },
+            "prepayment": {
+                "amount": 3.22,
+                "currency": "SGD"
+            },
+            "reason": "travel",
+            "reference": "PMT1936398",
+            "remarks": "",
+            "request_id": "8750f946-39f4-46e5-8a9d-2b2fca63a18a",
+            "short_reference_id": "P250709-J48HB2M",
+            "source_amount": 64.27,
+            "source_currency": "SGD",
+            "status": "SCHEDULED",
+            "swift_charge_option": "SHARED",
+            "transfer_amount": 50.0,
+            "transfer_currency": "USD",
+            "transfer_date": "2025-07-25",
+            "transfer_method": "LOCAL",
+            "updated_at": "2025-07-09T15:05:46+0000"
+        }
+    ]
+}
+```
+
+### Retrieve details of a transfer
+
+Call [Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md) to retrieve details of a transfer by specifying the `transfer_id`.
+
+A successful request will return response in the same format as [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+#### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/transfers/{{TRANSFER_ID}} \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+Step 3 covers retrieving transfers via the API, including listing transfers by date range and filters, and fetching a single transfer by ID, with example requests and responses.
+
+## Step 3: Retrieve a transfer
+
+Call [Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md) or [Get list of transfers](https://www.airwallex.com/docs/api/payouts/transfers/list.md) to retrieve transfer details. Additionally, you can subscribe to [Transfers webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) to receive any transfer status transitions (the payload will be in the same manner as [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md)). See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) for more information.
+
+### Retrieve a list of transfers
+
+Call [Get list of transfers](https://www.airwallex.com/docs/api/payouts/transfers/list.md) to retrieve details for transfers based on specific conditions.
+
+You can specify the date range of transfer creation (`from_created_at` and `to_created_at`, inclusively) within the endpoint URL of the request, and the response will be in the same format as in the response of [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md). You can also use optional parameters such as `transfer_currency` and `status` to filter your transfers, and the pagination parameters (`page_num`, `page_size`) to refine the results.
+
+> **\[WARNING]**
+>
+> The maximum date range between `from_created_at` and `to_created_at` is **30 days**. Requests that exceed this window return `400 time_range_exceed`. To retrieve transfers over a longer period, paginate with multiple requests each covering at most 30 days.
+
+#### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/transfers \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --data-urlencode 'from_created_at=2022-10-21' \
+  --data-urlencode 'page_num=0' \
+  --data-urlencode 'page_size=2000' \
+  --data-urlencode 'transfer_currency=USD' \
+  --data-urlencode 'status=COMPLETED'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+#### Example response
+
+```json
+{
+    "items": [
+        {
+            "amount_beneficiary_receives": 50.0,
+            "amount_payer_pays": 68.13,
+            "beneficiary": {
+                "additional_info": {
+                    "personal_email": "john.walker@gmail.com"
+                },
+                "address": {
+                    "city": "Seattle",
+                    "country_code": "US",
+                    "postcode": "98104",
+                    "state": "Washington",
+                    "street_address": "412 5th Avenue"
+                },
+                "bank_details": {
+                    "account_currency": "USD",
+                    "account_name": "John Walker",
+                    "account_number": "50001121",
+                    "account_routing_type1": "aba",
+                    "account_routing_value1": "021000021",
+                    "bank_account_category": "Checking",
+                    "bank_country_code": "US",
+                    "bank_name": "JPMorgan Chase Bank, NA",
+                    "local_clearing_system": "ACH"
+                },
+                "entity_type": "COMPANY",
+                "type": "BANK_ACCOUNT"
+            },
+            "conversion": {
+                "currency_pair": "USDSGD",
+                "rate": 1.285352
+            },
+            "created_at": "2025-07-09T15:05:45+0000",
+            "fee_amount": 3.86,
+            "fee_currency": "SGD",
+            "fee_paid_by": "PAYER",
+            "funding": {
+                "status": "SCHEDULED"
+            },
+            "id": "99c36dff-4f21-49f9-9ffa-6698323772c5",
+            "lock_rate_on_create": true,
+            "payer": {
+                "additional_info": {
+                    "business_incorporation_date": "2024-03-04",
+                    "business_registration_number": "HK-575-92-5785",
+                    "business_registration_type": "COMPANY"
+                },
+                "address": {
+                    "city": "Melbourne",
+                    "country_code": "HK",
+                    "postcode": "3000",
+                    "state": "VIC",
+                    "street_address": "Melbourne St, Melbourne St"
+                },
+                "company_name": "ivy sandbox test",
+                "entity_type": "COMPANY"
+            },
+            "prepayment": {
+                "amount": 3.22,
+                "currency": "SGD"
+            },
+            "reason": "travel",
+            "reference": "PMT1936398",
+            "remarks": "",
+            "request_id": "8750f946-39f4-46e5-8a9d-2b2fca63a18a",
+            "short_reference_id": "P250709-J48HB2M",
+            "source_amount": 64.27,
+            "source_currency": "SGD",
+            "status": "SCHEDULED",
+            "swift_charge_option": "SHARED",
+            "transfer_amount": 50.0,
+            "transfer_currency": "USD",
+            "transfer_date": "2025-07-25",
+            "transfer_method": "LOCAL",
+            "updated_at": "2025-07-09T15:05:46+0000"
+        }
+    ]
+}
+```
+
+### Retrieve details of a transfer
+
+Call [Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md) to retrieve details of a transfer by specifying the `transfer_id`.
+
+A successful request will return response in the same format as [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+#### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/transfers/{{TRANSFER_ID}} \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+The `GET /partner-api/v1/transfers` endpoint retrieves a paginated list of transfers, including their status, amounts, fees, and beneficiary details.
+
+# List all Transfers
+
+Retrieve details of transfers.
+
+## Endpoint
+
+`GET /partner-api/v1/transfers`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via partner authentication or OAuth endpoints, then pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`.
+
+## Request Parameters
+
+### Query Parameters
+
+- `from_created_at` (string, format: date-time, optional)
+  The start time of `created_at` in ISO8601 format (inclusive).
+- `to_created_at` (string, format: date-time, optional)
+  The end time of `created_at` in ISO8601 format (exclusive).
+- `factor_managed_account_id` (string, format: uuid, optional)
+  The unique identifier of the factor managed account.
+- `status` (string, optional)
+  Status of the transfer.
+- `page` (string, optional)
+  A bookmark for use in pagination to retrieve either the next page or the previous page of results. You can fetch the value for this identifier from the response of the previous API call. To retrieve the next page of results, pass the value of `page_after` (if not `null`) from the response to a subsequent call. To retrieve the previous page of results, pass the value of `page_before` (if not `null`) from the response to a subsequent call.
+- `page_size` (integer, format: int32, optional)
+  Number of transfer objects per page. Defaults to `20`.
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/partner-api/v1/transfers' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "items": [
+    {
+      "amount_beneficiary_receives": 1,
+      "factor_managed_account_id": "e1f3c6e3-ba66-4400-83ec-e81553647806",
+      "fee_amount": 1,
+      "fee_currency": "USD",
+      "fee_paid_by": "BENEFICIARY",
+      "id": "b05a7b0f-e24f-4339-ab4f-67bf398b2b0a",
+      "reference": "payment-2025-01-01",
+      "request_id": "ffb277f7-c10d-4e46-ab1e-25acd90a79fc",
+      "source_amount": 100,
+      "source_currency": "USD",
+      "status": "PENDING",
+      "target_amount": 100,
+      "transfer_currency": "USD"
+    }
+  ],
+  "page_after": "<string>",
+  "page_before": "<string>"
+}
+```
+
+- `items` (array[object], required)
+  Paged results.
+  - `created_at` (string, format: date-time, required)
+    The time when this transaction was created.
+  - `factor_managed_account_id` (string, format: uuid, required)
+    The unique identifier of the factor managed account.
+  - `id` (string, format: uuid, required)
+    The unique identifier of the transfer.
+  - `reference` (string, required)
+    A user specified reference that will be displayed to the beneficiary on the payment transaction with their bank.
+    - 1-140 characters long
+    - Should not contain emojis.
+  - `request_id` (string, required)
+    A unique request identifier specified by you for idempotency. Up to 50 characters.
+  - `status` (string, required)
+    The status of the transfer.
+    Possible values:
+    - `PENDING` — The transfer is pending to be executed.
+    - `COMPLETED` — The transfer is completed successfully.
+    - `FAILED` — The transfer is failed.
+  - `updated_at` (string, format: date-time, required)
+    The time when this transaction was last updated.
+  - `amount_beneficiary_receives` (number, optional)
+    The total amount the beneficiary receives for this transfer,.
+  - `beneficiary` (string, optional)
+    Details for the repayment beneficiary.  The schema of the bank_transfer_beneficiary can be referenced from the `beneficiary` field in the  request body in  [create a new beneficiary API](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md). We only support `LOCAL` as payment method for now.
+  - `fee_amount` (number, optional)
+    The amount of the fee.
+  - `fee_currency` (object, optional)
+    The currency of the fee.
+  - `fee_paid_by` (string, optional)
+    Denotes whether PAYER/BENEFICIARY will be liable for the transfer fees, and it affects the actual amount the beneficiary receives.
+    Possible values:
+    - `PAYER`
+    - `BENEFICIARY`
+  - `source_amount` (number, optional)
+    The amount of the source transfer.
+  - `source_currency` (object, optional)
+    The currency of the source transfer.
+  - `target_amount` (number, optional)
+    The amount of the target transfer.
+  - `transfer_currency` (object, optional)
+    The currency of the target transfer.
+- `page_after` (string, optional)
+  The page cursor used for searching after page.
+- `page_before` (string, optional)
+  The page cursor used for search before page.
+
+Step 3 covers retrieving transfer details, including listing transfers with filters and pagination, and retrieving a single transfer by ID, with example requests and responses.
+
+## Step 3: Retrieve a transfer
+
+Call [Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md) or [Get list of transfers](https://www.airwallex.com/docs/api/payouts/transfers/list.md) to retrieve transfer details. Additionally, you can subscribe to [Transfers webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) to receive any transfer status transitions (the payload will be in the same manner as [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md)). See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) for more information.
+
+### Retrieve a list of transfers
+
+Call [Get list of transfers](https://www.airwallex.com/docs/api/payouts/transfers/list.md) to retrieve details for transfers based on specific conditions.
+
+You can specify the date range of transfer creation (`from_created_at` and `to_created_at`, inclusively) within the endpoint URL of the request, and the response will be in the same format as in the response of [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md). You can also use optional parameters such as `transfer_currency` and `status` to filter your transfers, and the pagination parameters (`page_num`, `page_size`) to refine the results.
+
+> **\[WARNING]**
+>
+> The maximum date range between `from_created_at` and `to_created_at` is **30 days**. Requests that exceed this window return `400 time_range_exceed`. To retrieve transfers over a longer period, paginate with multiple requests each covering at most 30 days.
+
+#### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/transfers \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --data-urlencode 'from_created_at=2022-10-21' \
+  --data-urlencode 'page_num=0' \
+  --data-urlencode 'page_size=2000' \
+  --data-urlencode 'transfer_currency=USD' \
+  --data-urlencode 'status=COMPLETED'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+#### Example response
+
+```json
+{
+    "items": [
+        {
+            "amount_beneficiary_receives": 50.0,
+            "amount_payer_pays": 68.13,
+            "beneficiary": {
+                "additional_info": {
+                    "personal_email": "john.walker@gmail.com"
+                },
+                "address": {
+                    "city": "Seattle",
+                    "country_code": "US",
+                    "postcode": "98104",
+                    "state": "Washington",
+                    "street_address": "412 5th Avenue"
+                },
+                "bank_details": {
+                    "account_currency": "USD",
+                    "account_name": "John Walker",
+                    "account_number": "50001121",
+                    "account_routing_type1": "aba",
+                    "account_routing_value1": "021000021",
+                    "bank_account_category": "Checking",
+                    "bank_country_code": "US",
+                    "bank_name": "JPMorgan Chase Bank, NA",
+                    "local_clearing_system": "ACH"
+                },
+                "entity_type": "COMPANY",
+                "type": "BANK_ACCOUNT"
+            },
+            "conversion": {
+                "currency_pair": "USDSGD",
+                "rate": 1.285352
+            },
+            "created_at": "2025-07-09T15:05:45+0000",
+            "fee_amount": 3.86,
+            "fee_currency": "SGD",
+            "fee_paid_by": "PAYER",
+            "funding": {
+                "status": "SCHEDULED"
+            },
+            "id": "99c36dff-4f21-49f9-9ffa-6698323772c5",
+            "lock_rate_on_create": true,
+            "payer": {
+                "additional_info": {
+                    "business_incorporation_date": "2024-03-04",
+                    "business_registration_number": "HK-575-92-5785",
+                    "business_registration_type": "COMPANY"
+                },
+                "address": {
+                    "city": "Melbourne",
+                    "country_code": "HK",
+                    "postcode": "3000",
+                    "state": "VIC",
+                    "street_address": "Melbourne St, Melbourne St"
+                },
+                "company_name": "ivy sandbox test",
+                "entity_type": "COMPANY"
+            },
+            "prepayment": {
+                "amount": 3.22,
+                "currency": "SGD"
+            },
+            "reason": "travel",
+            "reference": "PMT1936398",
+            "remarks": "",
+            "request_id": "8750f946-39f4-46e5-8a9d-2b2fca63a18a",
+            "short_reference_id": "P250709-J48HB2M",
+            "source_amount": 64.27,
+            "source_currency": "SGD",
+            "status": "SCHEDULED",
+            "swift_charge_option": "SHARED",
+            "transfer_amount": 50.0,
+            "transfer_currency": "USD",
+            "transfer_date": "2025-07-25",
+            "transfer_method": "LOCAL",
+            "updated_at": "2025-07-09T15:05:46+0000"
+        }
+    ]
+}
+```
+
+### Retrieve details of a transfer
+
+Call [Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md) to retrieve details of a transfer by specifying the `transfer_id`.
+
+A successful request will return response in the same format as [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+#### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/transfers/{{TRANSFER_ID}} \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+Step 3 explains how to retrieve transfer details, either as a paginated list filtered by date range, currency, and status, or by fetching a single transfer by ID. Webhook subscription for transfer status transitions is also covered.
+
+## Step 3: Retrieve a transfer
+
+Call [Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md) or [Get list of transfers](https://www.airwallex.com/docs/api/payouts/transfers/list.md) to retrieve transfer details. Additionally, you can subscribe to [Transfers webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) to receive any transfer status transitions (the payload will be in the same manner as [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md)). See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) for more information.
+
+### Retrieve a list of transfers
+
+Call [Get list of transfers](https://www.airwallex.com/docs/api/payouts/transfers/list.md) to retrieve details for transfers based on specific conditions.
+
+You can specify the date range of transfer creation (`from_created_at` and `to_created_at`, inclusively) within the endpoint URL of the request, and the response will be in the same format as in the response of [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md). You can also use optional parameters such as `transfer_currency` and `status` to filter your transfers, and the pagination parameters (`page_num`, `page_size`) to refine the results.
+
+> **\[WARNING]**
+>
+> The maximum date range between `from_created_at` and `to_created_at` is **30 days**. Requests that exceed this window return `400 time_range_exceed`. To retrieve transfers over a longer period, paginate with multiple requests each covering at most 30 days.
+
+#### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/transfers \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --data-urlencode 'from_created_at=2022-10-21' \
+  --data-urlencode 'page_num=0' \
+  --data-urlencode 'page_size=2000' \
+  --data-urlencode 'transfer_currency=USD' \
+  --data-urlencode 'status=COMPLETED'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+#### Example response
+
+```json
+{
+    "items": [
+        {
+            "amount_beneficiary_receives": 50.0,
+            "amount_payer_pays": 68.13,
+            "beneficiary": {
+                "additional_info": {
+                    "personal_email": "john.walker@gmail.com"
+                },
+                "address": {
+                    "city": "Seattle",
+                    "country_code": "US",
+                    "postcode": "98104",
+                    "state": "Washington",
+                    "street_address": "412 5th Avenue"
+                },
+                "bank_details": {
+                    "account_currency": "USD",
+                    "account_name": "John Walker",
+                    "account_number": "50001121",
+                    "account_routing_type1": "aba",
+                    "account_routing_value1": "021000021",
+                    "bank_account_category": "Checking",
+                    "bank_country_code": "US",
+                    "bank_name": "JPMorgan Chase Bank, NA",
+                    "local_clearing_system": "ACH"
+                },
+                "entity_type": "COMPANY",
+                "type": "BANK_ACCOUNT"
+            },
+            "conversion": {
+                "currency_pair": "USDSGD",
+                "rate": 1.285352
+            },
+            "created_at": "2025-07-09T15:05:45+0000",
+            "fee_amount": 3.86,
+            "fee_currency": "SGD",
+            "fee_paid_by": "PAYER",
+            "funding": {
+                "status": "SCHEDULED"
+            },
+            "id": "99c36dff-4f21-49f9-9ffa-6698323772c5",
+            "lock_rate_on_create": true,
+            "payer": {
+                "additional_info": {
+                    "business_incorporation_date": "2024-03-04",
+                    "business_registration_number": "HK-575-92-5785",
+                    "business_registration_type": "COMPANY"
+                },
+                "address": {
+                    "city": "Melbourne",
+                    "country_code": "HK",
+                    "postcode": "3000",
+                    "state": "VIC",
+                    "street_address": "Melbourne St, Melbourne St"
+                },
+                "company_name": "ivy sandbox test",
+                "entity_type": "COMPANY"
+            },
+            "prepayment": {
+                "amount": 3.22,
+                "currency": "SGD"
+            },
+            "reason": "travel",
+            "reference": "PMT1936398",
+            "remarks": "",
+            "request_id": "8750f946-39f4-46e5-8a9d-2b2fca63a18a",
+            "short_reference_id": "P250709-J48HB2M",
+            "source_amount": 64.27,
+            "source_currency": "SGD",
+            "status": "SCHEDULED",
+            "swift_charge_option": "SHARED",
+            "transfer_amount": 50.0,
+            "transfer_currency": "USD",
+            "transfer_date": "2025-07-25",
+            "transfer_method": "LOCAL",
+            "updated_at": "2025-07-09T15:05:46+0000"
+        }
+    ]
+}
+```
+
+### Retrieve details of a transfer
+
+Call [Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md) to retrieve details of a transfer by specifying the `transfer_id`.
+
+A successful request will return response in the same format as [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+#### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/transfers/{{TRANSFER_ID}} \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+The successful 200 OK response for `GET /api/v1/transfers` returns a JSON object containing a paginated `items` array of transfer objects and pagination cursors. The example below shows a full transfer object.
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "items": [
+    {
+      "amount_beneficiary_receives": 99996,
+      "amount_payer_pays": 10004,
+      "application_fee_options": [
+        {
+          "amount": "5",
+          "currency": "AUD",
+          "percentage": "0.1",
+          "source_type": "TRANSFER",
+          "type": "FIXED"
+        }
+      ],
+      "application_fees": [
+        {
+          "amount": "5",
+          "currency": "AUD",
+          "source_type": "TRANSFER"
+        }
+      ],
+      "batch_transfer_id": "d9df6d02-4116-4376-82c7-064159cc878e",
+      "beneficiary": {
+        "additional_info": {
+          "business_area": "Travel",
+          "business_phone_number": "689342234",
+          "business_registration_number": "IT593003",
+          "legal_rep_bank_account_number": "44250100003700000000",
+          "legal_rep_first_name_in_chinese": "小芳",
+          "legal_rep_id_number": "110108199304203520",
+          "legal_rep_last_name_in_chinese": "刘",
+          "legal_rep_mobile_number": "13651362890",
+          "personal_email": "john.walker@gmail.com",
+          "personal_first_name_in_chinese": "大明",
+          "personal_id_number": "1234567890",
+          "personal_id_type": "NATIONAL_ID",
+          "personal_last_name_in_chinese": "李",
+          "personal_mobile_number": "13651362890",
+          "security_question": "What is the name of my second puppy?",
+          "security_question_answer": "Scooby Doo"
+        },
+        "address": {
+          "city": "Melbourne",
+          "country_code": "AU",
+          "postcode": "3000",
+          "state": "VIC",
+          "street_address": "15 William Street"
+        },
+        "bank_details": {
+          "account_currency": "AUD",
+          "account_name": "Lee Da Ming",
+          "account_name_alias": "Lee D M",
+          "account_number": "12750852",
+          "account_routing_type1": "bsb",
+          "account_routing_type2": "sort_code",
+          "account_routing_value1": "083064",
+          "account_routing_value2": "123456",
+          "bank_account_category": "Checking,Savings,Vista,Maestra",
+          "bank_branch": "Melbourne",
+          "bank_country_code": "AU",
+          "bank_name": "National Australia Bank",
+          "bank_street_address": "500 Bourke Street, Melbourne 3000, Australia",
+          "binding_mobile_number": "654897612345",
+          "fingerprint": "2e99758548972a8e8822ad47fa1017ff72f06f3ff6a016851f45c398732bc50c",
+          "iban": "ES8023100001180000012345",
+          "intermediary_bank_name": "National Australia Bank",
+          "intermediary_bank_swift_code": "CTBAAU2S",
+          "local_clearing_system": "ACH",
+          "swift_code": "CTBAAU2S"
+        },
+        "card": {
+          "brand": "VISA",
+          "cardholder_name": "John Walker",
+          "currency": "USD",
+          "expiry_month": "10",
+          "expiry_year": "2033",
+          "number": "************1111",
+          "token": "AKvN4TqxI04SNFZ+oYRXaECtDA=="
+        },
+        "company_name": "Complete Concrete Pty Ltd",
+        "date_of_birth": "1976-08-26",
+        "digital_wallet": {
+          "account_name": "John Walker Corporation",
+          "country_code": "US",
+          "id_type": "account_number",
+          "id_value": "1033106816639334",
+          "provider": "AIRWALLEX"
+        },
+        "entity_type": "COMPANY",
+        "first_name": "John",
+        "last_name": "Walker"
+      },
+      "conversion": {
+        "currency_pair": "USDEUR",
+        "rate": 0.761223
+      },
+      "created_at": "2017-03-22T16:08:02+1100",
+      "dispatch_date": "2017-03-29",
+      "dispatch_info": {
+        "external_reference": "CHK-100012345",
+        "external_reference_type": "PAPER_CHECK_NUMBER"
+      },
+      "failure": {
+        "code": "90502",
+        "message": "Unable to process due to risk concerns.",
+        "details": {
+          "type": "TM_SUSPEND",
+          "reason_codes": [
+            "EXPIRED_TRANSACTION_RFI"
+          ]
+        }
+      },
+      "fee_amount": 4,
+      "fee_currency": "AUD",
+      "fee_paid_by": "PAYER",
+      "funding": {
+        "deposit_type": "DIRECT_DEBIT",
+        "failure_details": {
+          "code": "insufficient_funds",
+          "iso_code": "AM04",
+          "provider_failure_details": {
+            "code": "R01",
+            "local_clearing_system": "US_ACH",
+            "message": "INSUFFICIENT FUNDS"
+          }
+        },
+        "failure_reason": "regulatory_reason",
+        "funding_source_id": "b3856846-31b0-44d8-855d-e0eedf532282",
+        "status": "FUNDED"
+      },
+      "id": "d9af1614-a6a1-4d45-aae7-6858fc6d9ede",
+      "metadata": {
+        "order_id": "0123456789"
+      },
+      "payer": {
+        "additional_info": {
+          "business_registration_number": "EU300503",
+          "business_registration_type": "Partnership",
+          "external_id": "1234567890",
+          "personal_email": "james.smith@google.com",
+          "personal_id_number": "1234567890"
+        },
+        "address": {
+          "city": "Melbourne",
+          "country_code": "AU",
+          "postcode": "3000",
+          "state": "VIC",
+          "street_address": "15 William Street"
+        },
+        "company_name": "Complete Concrete Pty Ltd",
+        "date_of_birth": "1976-08-26",
+        "entity_type": "COMPANY",
+        "first_name": "James",
+        "last_name": "Smith"
+      },
+      "prepayment": {
+        "amount": 12.34,
+        "currency": "USD"
+      },
+      "reason": "travel",
+      "reference": "PMT1936398",
+      "remarks": "Any information",
+      "request_id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+      "short_reference_id": "20170322-9F6ML2",
+      "source_amount": 10000,
+      "source_currency": "AUD",
+      "status": "PROCESSING",
+      "swift_charge_option": "SHARED",
+      "transfer_amount": 10000,
+      "transfer_currency": "AUD",
+      "transfer_date": "2017-03-24",
+      "transfer_method": "SWIFT",
+      "updated_at": "2017-03-24T18:00:02+1100"
+    }
+  ],
+  "page_after": "<string>",
+  "page_before": "<string>"
+}
+```
+
+The List all Connected Account Transfers endpoint retrieves a paginated, creation-time-sorted list of connected account transfers created by your Airwallex account.
+
+# List all Connected Account Transfers
+
+Get a list of connected account transfers created by your Airwallex account. The transfers returned are sorted by creation time.
+
+## Endpoint
+
+`GET /api/v1/connected_account_transfers`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Query Parameters
+
+- `currency` (string, optional)
+  Currency (3-letter ISO-4217 code).
+- `destination` (string, optional)
+  Airwallex account unique identifier.
+- `from_created_at` (string, optional)
+  The start date of `created_at` in ISO8601 format (inclusive).
+- `page_num` (integer, format: int32, optional)
+  Page number, starts from 0.
+- `page_size` (integer, format: int32, optional)
+  Number of results per page. Default value is 100, minimum 10, maximum 2000.
+- `request_id` (string, optional)
+  Transfer `request_id`.
+- `status` (string, optional)
+  Status of the transfer. One of: `NEW`, `SETTLED`, `PENDING`, `SUSPENDED`, `FAILED`.
+- `to_created_at` (string, optional)
+  The end date of `created_at` in ISO8601 format (inclusive).
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/api/v1/connected_account_transfers' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+A successful 200 OK response returns a paginated list of connected account transfer objects, each containing transfer details, status, fees, and optional card payment and merchant data.
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "has_more": false,
+  "items": [
+    {
+      "amount": 10000,
+      "created_at": "2018-03-22T16:08:02+1100",
+      "currency": "AUD",
+      "destination": "acct_DjU6FcdYPYy6MEJsU0JAPg",
+      "failure_reasons": [
+        "EXPIRED_TRANSACTION_RFI_PAYER",
+        "EXPIRED_TRANSACTION_RFI_BENEFICIARY",
+        "DORMANCY_KYC_NO_RESPONSE_PAYER",
+        "DORMANCY_KYC_NO_RESPONSE_BENEFICIARY",
+        "WEBSITE_KYC_NO_RESPONSE_PAYER",
+        "WEBSITE_KYC_NO_RESPONSE_BENEFICIARY",
+        "WATCHLIST_RESTRICTION_PAYER",
+        "WATCHLIST_RESTRICTION_BENEFICIARY",
+        "OTHER_HIGH_RISK_PAYER",
+        "OTHER_HIGH_RISK_BENEFICIARY"
+      ],
+      "fee": 10,
+      "id": "d9af1614-a6a1-4d45-aae7-6858fc6d9ede",
+      "reason": "travel",
+      "reference": "PMT1936398",
+      "request_id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+      "short_reference_id": "D220926-QZ7BTZE",
+      "status": "NEW",
+      "updated_at": "2018-03-22T16:08:02+1100"
+    }
+  ]
+}
+```
+
+- `has_more` (boolean, optional)
+  A flag which identifies whether there are more results.
+- `items` (array[object], optional)
+  Paged results.
+  - `amount` (number, required)
+    Amount of the transfer in `currency` specified in the request.
+  - `created_at` (string, required)
+    The time this transfer was created.
+  - `currency` (string, required)
+    Currency (3-letter ISO-4217 code) specified in the request.
+  - `destination` (string, required)
+    Airwallex account unique identifier specified in the request.
+  - `fee` (number, required)
+    Fee of the transfer in `currency` specified in the request.
+  - `id` (string, required)
+    Unique identifier for the transfer.
+  - `reason` (string, required)
+    Reason for the transfer instruction specified in the request.
+  - `reference` (string, required)
+    User specified reference that will be displayed to the beneficiary specified in the request.
+  - `request_id` (string, required)
+    Unique request identifier specified in the request.
+  - `short_reference_id` (string, required)
+    Short reference for support purposes.
+  - `status` (string, required)
+    Status of the transfer. One of: `NEW`, `SETTLED`, `PENDING`, `SUSPENDED`, `FAILED`.
+  - `updated_at` (string, required)
+    The time this transfer was updated.
+  - `additional_info` (object, optional)
+    Additional information about the transaction.
+    - `card_payment_data` (object, optional)
+      Additional information about the card payment funding the connected account transfer.
+      - `amount` (string, optional)
+        The payment amount for this transaction.
+      - `brand` (string, optional)
+        The card brand. Possible enum values:
+        Possible values:
+        - `MASTERCARD`
+        - `VISA`
+        - `UNION_PAY`
+        - `AMERICAN_EXPRESS`
+        - `JCB`
+        - `DISCOVER`
+        - `DINERS_CLUB_INTERNATIONAL`
+      - `card_issuing_country` (string, optional)
+        Country code where the card was issued (e.g., `US`, `GB`, `CN`).
+      - `card_token` (string, optional)
+        A unique token (GUID) representing the customer’s card number.
+      - `card_type` (string, optional)
+        The card type. Possible enum values:
+        Possible values:
+        - `CREDIT`
+        - `DEBIT`
+        - `PREPAID`
+      - `cardholder_name` (string, optional)
+        The cardholder's name. Not applicable to `APPLE_PAY` and `GOOGLE_PAY`.
+      - `created_at` (string, optional)
+        The timestamp when the customer created the payment transaction.
+      - `deposit_id` (string, optional)
+        The unique identifier of the deposit that corresponds to the settlement into Airwallex's Global Account.
+      - `ip_address` (string, optional)
+        IP address (IPv4 or IPv6) of the payer’s device at the time of payment.
+      - `payment_method` (string, optional)
+        The payment method used for this transaction. Possible enum values:
+        Possible values:
+        - `APPLE_PAY`
+        - `GOOGLE_PAY`
+        - `CARD_ON_FILE`
+      - `three_dsecure_outcome` (string, optional)
+        The outcome of a 3D Secure authentication process, which verifies the identity of a cardholder during an online purchase. Possible enum values:
+        Possible values:
+        - `ATTEMPTED`
+        - `AUTHENTICATED`
+        - `FAILED`
+        - `NOT_APPLICABLE`
+        - `NOT_REQUESTED`
+    - `merchant_data` (object, optional)
+      Structured merchant information for nested-flow transfers.
+      - `business_name` (string, optional)
+        The merchant's official legal name.
+      - `business_registration_date` (string, optional)
+        The date when the merchant's business was registered, in `YYYY-MM-DD` format. For example, `2025-03-15`.
+      - `business_registration_number` (string, optional)
+        The merchant's Business Registration Number (BRN) or equivalent identifier.
+      - `business_trading_name` (string, optional)
+        The merchant's trading or DBA (doing business as) name.
+      - `industry_category_code` (string, optional)
+        The merchant's industry category code.
+      - `merchant_identifier` (string, optional)
+        The merchant's unique identifier on the platform.
+      - `registration_country` (string, optional)
+        The merchant's country of registration in ISO 3166-1 alpha-2 format. For example, `CN` or `HK`.
+      - `store_urls` (array[string], optional)
+        The merchant's store URL(s).
+  - `failure_reasons` (array[string], optional)
+    List of failure reason codes when status is FAILED.
+
+The remaining fields in each transfer item cover timing, fees, funding status, payer details, transfer amounts, application fees, conversion, dispatch, failure, and metadata. The response also includes pagination cursors and error definitions.
+
+  - `created_at` (string, required)
+    The time this transfer request was created.
+  - `fee_amount` (number, required)
+    The transfer fee (in `source_currency`) for sending this transfer.
+  - `fee_currency` (string, required)
+    The transfer fee currency. This should always equal to the `source_currency`.
+  - `fee_paid_by` (string, required)
+    Denotes whether `PAYER` / `BENEFICIARY` will be liable for the the transfer fee.  Defaults to `PAYER` unless field is populated in the request.
+  - `funding` (object, required)
+    The funding information of this transfer.
+    - `status` (string, required)
+      The funding status of this payment. Please see details in [Funding Statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md#funding-statuses).
+    - `deposit_type` (string, optional)
+      Can be one of: `FASTER_DIRECT_DEBIT`, `DIRECT_DEBIT`.
+    - `failure_details` (object, optional)
+      Details about why the funding has failed. Only present when the funding is in a failure state.
+      - `code` (string, optional)
+        Error code (details can be found [here](https://www.airwallex.com/docs/global-treasury/receive-funds/add-funds-via-direct-debits-from-linked-accounts/direct-debit-deposit-error-codes.md)).
+      - `iso_code` (string, optional)
+        Error code [ISO 20022](https://www.iso20022.org/about-iso-20022) (details can be found [here](https://www.airwallex.com/docs/global-treasury/receive-funds/add-funds-via-direct-debits-from-linked-accounts/direct-debit-deposit-error-codes.md)).
+      - `provider_failure_details` (object, optional)
+        A set of original information received from the local clearing system.
+        - `code` (string, optional)
+          The original error code received from the local clearing system.
+        - `local_clearing_system` (string, optional)
+          The local clearing system used for the direct debit deposit. Possible values are `AU_BECS`, `US_ACH`, `GB_BACS`, `EU_SEPA`.
+        - `message` (string, optional)
+          The original error message received from the local clearing system.
+    - `failure_reason` (string, optional)
+      Empty unless the funding is in an error state.
+    - `funding_source_id` (string, optional)
+      The id of the funding source, it can be null if using a wallet.
+  - `id` (string, format: uuid, required)
+    Returned `id` that can be used to query the status of the transfer.
+  - `payer` (object, required)
+    Details of the payer.
+    - `address` (object, required)
+      Payer's address details.
+      - `country_code` (string, required)
+        Payer's country code (2-letter ISO 3166-2 country code).
+      - `city` (string, optional)
+        Payer's city.
+      - `postcode` (string, optional)
+        Payer's post code.
+      - `state` (string, optional)
+        Payer's state.
+      - `street_address` (string, optional)
+        Payer's street address.
+    - `entity_type` (string, required)
+      Entity type of the payer.
+    - `additional_info` (object, optional)
+      Additional information about the payer.
+      - `business_registration_number` (string, optional)
+        Business registration number.
+      - `business_registration_type` (string, optional)
+        Type of business as registered with the local government authority.
+      - `external_id` (string, optional)
+        Unique identifier of the person in your company.
+      - `personal_email` (string, optional)
+        Personal email.
+      - `personal_id_number` (string, optional)
+        Personal unique identifier number.
+    - `company_name` (string, optional)
+      Company name of the payer.
+    - `date_of_birth` (string, optional)
+      Payer's date of birth.
+    - `first_name` (string, optional)
+      First name of the payer.
+    - `last_name` (string, optional)
+      Last name of the payer.
+  - `reason` (string, required)
+    Reason for the transfer instruction.
+  - `reference` (string, required)
+    Bank transfer reference to be shown on beneficiary's bank transaction history.
+  - `request_id` (string, required)
+    A unique request identifier specified in the transfer request.
+  - `short_reference_id` (string, required)
+    Short transfer reference for support purposes.
+  - `source_amount` (number, required)
+    Amount to be received.
+  - `source_currency` (string, required)
+    Copied from the request if specified.
+  - `status` (string, required)
+    The transfer status. Please see details in [Transfer Statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md).
+  - `transfer_amount` (number, required)
+    Amount to be paid.
+  - `transfer_currency` (string, required)
+    Currency the transfer should be made in (3-letter ISO-4217 code).
+  - `transfer_date` (string, required)
+    Date when transfer should be made (Copied from the request if specified).
+  - `transfer_method` (string, required)
+    Copied from the request if specified.  Otherwise the system will populate this field automatically.
+  - `updated_at` (string, required)
+    The time this transfer request was last updated.
+  - `application_fee_options` (array[object], optional)
+    The application fee options applied to this transfer.
+    - `amount` (string, optional)
+      A positive integer specifying the amount of the fee expressed in the smallest unit of the currency. e.g. cents for USD. This field is required only when type is FIXED.
+    - `currency` (string, optional)
+      Specify the currency of the application fee in ISO 4217 currency code format, e.g., USD, AUD. This field is required when the type is FIXED.
+      When the type is PERCENTAGE and source_type is CONVERSION, the currency for the conversion if specified must be from the currency pair. If the currency is unspecified, the contra currency of the quote will be used.
+    - `metadata` (object, optional)
+      The metadata of the application fee. The value should be set in key:value format. (e.g., id:1).
+    - `percentage` (string, optional)
+      Required if the type is PERCENTAGE, and the value to be provided depends on the transaction context.
+      FX Conversions: The value acts as a markup on the FX rate, increasing the conversion cost by the specified percentage.
+      Others: The value represents a direct fee calculated as a percentage of the transaction amount.
+    - `source_type` (string, optional)
+      Specify type of the source transaction.
+      Possible values:
+      - `CONVERSION`
+      - `TRANSFER`
+    - `type` (string, optional)
+      Define the type of fee calculation. If the `source_type` is `CONVERSION`, then the type must be `PERCENTAGE`.
+      Possible values:
+      - `FIXED`
+      - `PERCENTAGE`
+  - `application_fees` (array[object], optional)
+    Application fees in this transfer.
+    - `amount` (string, optional)
+      The application fee amount.
+    - `currency` (string, optional)
+      The currency of the application fee.
+    - `source_type` (string, optional)
+      Specify the type of source transaction for this application fee.
+      Possible values:
+      - `CONVERSION`
+      - `TRANSFER`
+  - `batch_transfer_id` (string, optional)
+    Unique identifier of the batch containing the transfer.
+  - `beneficiary_id` (string, format: uuid, optional)
+    beneficiary_id of the beneficiary contact used to create this transfer.
+  - `conversion` (object, optional)
+    Conversion details of a transfer with currency conversions.
+    - `currency_pair` (string, required)
+      The currency pair of the conversion.
+    - `rate` (number, required)
+      The rate of the conversion.
+  - `dispatch_date` (string, optional)
+    Actual payout dispatch date. Payouts are dispatched at this date in actual processing. This date could be later than the transfer date.
+  - `dispatch_info` (object, optional)
+    Additional details populated after the transaction is sent to Airwallex's downstream for processing. Only available for some transfer methods - see [Product Docs](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md) for details.
+    - `external_reference` (string, optional)
+      A reference ID to track a transfer after it's dispatched from Airwallex. For stablecoin transfers, this is the on-chain transaction hash.
+    - `external_reference_type` (string, optional)
+      The definition of the `external_reference` in the payment system. Possible values include `NETWORK_TRANSACTION_ID` for stablecoin transfers (blockchain transaction hash).
+  - `failure` (object, optional)
+    Failure details if the transfer is in an error state.
+    - `code` (string, optional)
+      Failure code.
+    - `details` (object, optional)
+      Additional failure details.
+      - `reason_codes` (array[string], optional)
+        Detailed reason code.
+      - `type` (string, optional)
+        Failure type.
+    - `message` (string, optional)
+      Failure message.
+  - `lock_rate_on_create` (boolean, optional)
+    Denotes whether to lock the conversion rate for a scheduled transfer with value `TRUE` or `FALSE`.This field should only be specified when a conversion is involved. If not specified, the default value is `TRUE`.
+  - `metadata` (object, optional)
+    A set of key-value pairs for storing your own data together with the transfer.
+  - `payer_id` (string, format: uuid, optional)
+    payer_id of the payer contact used to create this transfer.
+  - `prepayment` (object, optional)
+    Prepayment details for a schedule transfer with currency conversions at a confirmed rate.
+    - `amount` (number, required)
+      The prepayment amount to be paid.
+    - `currency` (string, required)
+      The prepayment currency.
+  - `remarks` (string, optional)
+    Additional information about this transfer, which will not be passed to the beneficiary.
+  - `swift_charge_option` (string, optional)
+    (For SWIFT transfers only), specify who should bear SWIFT charges, either `SHARED` (default) or `PAYER`.
+- `page_after` (string, optional)
+  The page cursor used for searching after page.
+- `page_before` (string, optional)
+  The page cursor used for search before page.
+
+## Errors
+
+### 400 Bad request
+
+Possible errors: `field_required`, `invalid_argument`
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 429 Too many requests
+
+Too many requests
+
+### 500 Server error
+
+Service unavailable

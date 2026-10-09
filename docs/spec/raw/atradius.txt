@@ -1,0 +1,335 @@
+Atradius Payment Practices Barometer
+
+
+B2B payment
+practices trends
+Western Europe 2025
+     In this report
+
+     B2B payment practices trends                                               4
+
+
+     Looking ahead                                                              6
+
+
+     Survey design                                                              7
+
+
+
+
+     About the Atradius
+     Payment Practices Barometer
+     The Atradius Payment Practices Barometer is an annual survey of
+     business-to-business (B2B) payment practices in markets across the
+     world.
+
+     Our survey gives you the opportunity to hear directly from businesses
+     trading on credit with B2B customers about how they are coping with
+     evolving trends in customer payment behaviour. Staying informed
+     about these trends is vital because it helps to identify emerging shifts in
+     customer payment habits, allowing businesses to address potential
+     liquidity pressure and maintain smooth operations.
+
+     Businesses operating in – or planning to enter – the markets and
+     industries covered by our survey can gain valuable insights from our
+     reports, which also shed light on the challenges and risks companies
+     anticipate in the coming months, as well as their expectations for future
+     growth.
+
+     In this report, you will find the survey results for Western Europe.
+     Markets surveyed: Austria, Belgium, France, Germany, Greece, Ireland,
+     Italy, the Netherlands, Spain, Switzerland and the United Kingdom.
+     The findings for Denmark, Finland, and Sweden, while part of Western
+     Europe, are presented separately in the report dedicated to the Nordic
+     region. Insights into topics by market and local sectors can be found in
+     the individual reports that form the 2025 edition of the survey for
+     Western Europe and the Nordic region.
+
+     The survey was conducted between the end of Q1 and the beginning of
+     Q2 2025. Findings should therefore be viewed with this in mind.
+
+     All reports highlighting country and sector-specific findings of the
+     May 2025 edition of the Atradius Payment Practices Barometer for
+     Western Europe and the Nordic region are available for download from
+     the Atradius website. https://group.atradius.com/publications/results
+
+
+
+
+ATRADIUS PAYMENT PRACTICES BAROMETER – SURVEY RESULTS FOR WESTERN EUROPE – 2025     3
+                                                                    B2B payment
+                                                                    practices trends
+                                                                    Bad debts a growing concern amid uncertain payment
+                                                                    risk landscape
+
+
+                                                                    It is clear from our survey that companies across Western Europe are
+                                                                    operating in an unpredictable customer payment risk landscape. While
+                                                                    46% of companies tell us payment behaviour of business-to-business
+                                                                    (B2B) customers has remained consistent in recent months, many of
+                                                                    the rest are seeing a deterioration in payment practices. This is
+                                                                    reflected in 47% of B2B invoices now being overdue, with payment
+                                                                    delays largely driven by financial stress across the economy. On
+                                                                    average, bad debts affect 6% of B2B invoices, representing a
+                                                                    significant hit to revenue and a growing concern.
+
+                                                                    Despite the increasingly uncertain trading environment, 50% of firms
+                                                                    in Western Europe have not scaled back their credit offerings to B2B
+                                                                    customers in recent months. This highlights a strong commitment to
+                                                                    customer support and long-term relationships. Payment terms have
+                                                                    remained largely stable, with most companies offering average terms
+                                                                    ranging between 31 and 60 days from invoicing. More firms are
+                                                                    extending payment terms than shortening them, indicating a strategic
+                                                                    effort to provide payment flexibility to customers and help them
+                                                                    manage cash flow challenges.
+
+                                                                    Stability of Days Sales Outstanding (DSO) is also evident in our survey
+                                                                    across many sectors. Inventory levels are mostly steady as well,
+                                                                    although more companies report stock build-up than quicker turnover,
+                                                                    tying up cash and slowing liquidity. In response, many businesses are
+                                                                    delaying payments to suppliers in order to preserve cash. This
+                                                                    highlights a broader trend of protecting internal liquidity, even as
+                                                                    suppliers face their own financial pressures.
+
+                                                                    To bridge potential cash flow gaps and sustain operations, most
+                                                                    companies across Western Europe rely on external financing sources
+                                                                    such as supplier credit, bank loans, and invoice financing. Fewer
+                                                                    businesses depend solely on internal funds, underscoring the
+                                                                    limitations many are facing in self-financing due to ongoing financial
+                                                                    pressures. This reliance on external funding also aligns with how
+                                                                    businesses are approaching customer payment risk management. As
+                                                                    payment uncertainty grows, 46% of companies use a hybrid model
+                                                                    which combines internal processes with outsourced services.
+
+
+
+
+                                                                    Key figures and charts on the next page
+
+4   ATRADIUS PAYMENT PRACTICES BAROMETER – SURVEY RESULTS FOR WESTERN EUROPE – 2025
+Key figures and charts
+
+
+ Western Europe                                                           Western Europe
+ % of the total value of B2B invoices paid on time,                       What are the top 4 reasons your B2B customers pay
+ overdue and bad debts                                                    invoices late?
+
+ (change vs. 2024)                                                        (% of respondents - multiple response)
+
+
+
+
+                            47%
+                             Paid on time
+                                                                          Operational constraints
+
+                                                                                                                                  34%
+
+
+                                                                          Customer’s liquidity issues
+
+                                                                                                                                  34%
+
+                            47%
+                             Overdue
+                                                                          Invoice dispute
+
+                                                                                                                          30%
+
+
+                                                                          Supply chain disruptions
+
+                            6%
+                             Bad debts
+                                                                                                                        29%
+
+
+
+
+ Sample: all survey respondents                                           Sample: all survey respondents
+ Source: Atradius Payment Practices Barometer Western Europe – 2025       Source: Atradius Payment Practices Barometer Western Europe – 2025
+
+
+
+
+ Western Europe                                                           Western Europe
+ % of respondents reporting changes in Days Sales                         What are the main sources of financing that your
+ Outstanding (DSO)* over the past 12 months                               company used during the past 12 months?
+
+ (% of respondents)                                                       (% of respondents - multiple response)
+
+      26%             23%                      51%                           48% Trade credit
+                                                                             46% Bank loans
+ Shorter          Longer          No change
+                                                                             46% Invoice financing
+ *average amount of time to collect payment after a sale
+                                                                             37% Internal funds
+ Sample: all survey respondents                                           Sample: all survey respondents
+ Source: Atradius Payment Practices Barometer Western Europe – 2025       Source: Atradius Payment Practices Barometer Western Europe – 2025
+
+
+
+
+                                                                      ATRADIUS PAYMENT PRACTICES BAROMETER – SURVEY RESULTS FOR WESTERN EUROPE – 2025   5
+                                                                    Looking ahead
+                                                                    Rising insolvency risk shines spotlight on strategic
+                                                                    payment risk management
+
+
+                                                                    One of the most significant findings from our survey is that 47% of
+                                                                    companies across Western Europe anticipate an increase in B2B
+                                                                    customer insolvencies during the months ahead. Although other
+                                                                    businesses do not share this view, the diverse expectations about
+                                                                    future economic and trading conditions clearly highlight the
+                                                                    uncertainty firms are grappling with as they make future plans.
+                                                                    A more positive outlook is expressed about prospects for Days
+                                                                    Sales Outstanding (DSO), which is expected to remain steady by
+                                                                    almost 50% of companies.
+
+                                                                    A positive mood is also found about inventory management, with
+                                                                    twice as many businesses anticipating improved inventory
+                                                                    turnover, which points to stronger sales performance in the
+                                                                    coming months. This view is expressed despite ongoing concern
+                                                                    about rising operational costs that could impact profitability. The
+                                                                    outlook on Days Payable Outstanding (DPO) is more mixed. While
+                                                                    many businesses anticipate no change in the timing of their
+                                                                    payments to suppliers, twice as many foresee an increase in
+                                                                    supplier requests for faster payments to manage their own cash
+                                                                    flow needs. This could place additional strain on businesses
+                                                                    already grappling with higher input costs.
+
+                                                                    The response to this by 46% of companies across Western Europe
+                                                                    is to take a dual approach to managing customer payment risks,
+                                                                    combining internal credit provisions with outsourced credit
+                                                                    management solutions. This strategy provides some flexibility to
+                                                                    protect cash flow in an uncertain financial landscape. However,
+                                                                    businesses which rely solely on internal provisions may encounter
+                                                                    limitations because this approach can tie up cash reserves and
+                                                                    restrict financial flexibility.
+
+                                                                    Against the backdrop of rising production costs, geopolitical
+                                                                    tensions, regulatory changes and growing environmental
+                                                                    concerns, companies across Western Europe acknowledge the
+                                                                    need to remain agile and resilient. These challenges are expected
+                                                                    to continue driving up operational costs and increase uncertainty
+                                                                    in financial planning. The ability to respond swiftly and
+                                                                    strategically, particularly through effective payment risk
+                                                                    management, is essential to maintaining financial stability and
+                                                                    safeguarding profitability in the months ahead.
+
+
+
+
+6   ATRADIUS PAYMENT PRACTICES BAROMETER – SURVEY RESULTS FOR WESTERN EUROPE – 2025
+     Survey design
+     Atradius conducts annual reviews of international corporate
+     payment practices through a survey called the Atradius
+     Payment Practices Barometer.
+
+
+
+
+        Sample overview – Total interviews = 2,940
+        Markets
+        Austria             Finland*            Italy          Switzerland
+        Belgium             Germany             Netherlands    United Kingdom
+        Denmark*            Greece              Spain
+        France              Ireland             Sweden*
+        * covered in the report for Nordics
+        Sectors
+        Agri-Food           Consumer Durables   Steel-Metals
+        Chemicals           Electronics-ICT     Transport
+        Construction        Machines
+        Business sector                         Interviews          %
+        Manufacturing                             1,176            40
+        Wholesale trade                             748            25
+        Retail trade/Distribution                   687            23
+        Services                                    329             11
+        TOTAL                                    2,940            100
+        Business size                           Interviews          %
+        SME: Small enterprises                      491             17
+        SME: Medium enterprises                     963             33
+        Medium Large enterprises                  1,034            35
+        Large enterprises                           452             15
+        TOTAL                                    2,940            100
+
+
+
+     Survey scope
+
+     • Basic population: Companies from Western Europe were surveyed
+       and the appropriate contacts for accounts receivable management
+       were interviewed.
+     • Sample design: The Strategic Sampling Plan enabled us to perform
+       an analysis of country data crossed by sector and company size.
+     • Selection process: Companies were selected and contacted by use
+       of an international Internet panel. A screening for the appropriate
+       contact, and for quota control, was conducted at the beginning of
+       the interview.
+     • Sample: N=2,940 people were interviewed in total.
+       A quota was maintained according to four classes of company size.
+     • Interview: Computer Assisted Web Interviews (CAWI) of
+       approximately 15 minutes duration.
+     • The survey was conducted between the end of Q1 and the beginning
+       of Q2 2025.
+       The findings should therefore be viewed with this in mind.
+
+     This is part of the 2025 edition of the Atradius Payment Practices
+     Barometer available at
+     https://group.atradius.com/knowledge-and-research
+
+
+ATRADIUS PAYMENT PRACTICES BAROMETER – SURVEY RESULTS FOR WESTERN EUROPE – 2025   7
+                                                                    Interested
+                                                                    in finding
+                                                                    out more?
+                                                                    Please visit the Atradius website where you can find a wide range
+                                                                    of up-to-date publications. Click here to access our analysis of individual
+                                                                    industry performance, detailed focus on country-specific and global
+                                                                    economic concerns, insights into credit management issues, and
+                                                                    information about protecting your receivables against payment default
+                                                                    by customers.
+
+                                                                    To find out more about B2B receivables collection practices in Western
+                                                                    Europe and worldwide, please visit atradiuscollections.com.
+
+
+
+                                                                    Our solutions
+                                                                    Credit Insurance
+                                                                    Solutions for Multinationals
+                                                                    Credit Specialties
+                                                                    Debt collections
+                                                                    Surety
+                                                                    Reinsurance
+
+                                                                    Our presence across the globe
+                                                                    Africa
+                                                                    Asia
+                                                                    Europe
+                                                                    Middle East
+                                                                    North America
+                                                                    Oceania
+                                                                    South America
+
+
+
+
+8   ATRADIUS PAYMENT PRACTICES BAROMETER – SURVEY RESULTS FOR WESTERN EUROPE – 2025
+Connect with         Copyright Atradius N.V. 2025                                                                                                      Atradius
+Atradius on          Disclaimer: This publication is provided for information purposes only and is not intended as investment ad-           David Ricardostraat
+social media         vice, legal advice or as a recommendation as to particular transactions, investments or strategies to any
+youtube.com/         reader. Readers must make their own independent decisions, commercial or otherwise, regarding the infor-
+                                                                                                                                          11066 JS Amsterdam
+user/atradiusgroup   mation provided. While we have made every attempt to ensure that the information contained in this publi-                   Postbus 8982
+linkedin.com/        cation has been obtained from reliable sources, Atradius is not responsible for any errors or omissions, or for
+company/atradius                                                                                                                           1006 JD Amsterdam
+                     the results obtained from the use of this information. All information in this publication is provided ’as is’,
+                     with no guarantee of completeness, accuracy, timeliness or of the results obtained from its use, and without              The Netherlands
+                     warranty of any kind, express or implied. In no event will Atradius, its related partnerships or corporations,     Phone: +31 20 553 9111
+                     or the partners, agents or employees thereof, be liable to you or anyone else for any decision made or action
+                     taken in reliance on the information in this publication or for any loss of opportunity, loss of profit, loss of
+                     production, loss of business or indirect losses, special or similar damages of any kind, even if advised of the
+                                                                                                                                            info@atradius.com
+                     possibility of such losses or damages.                                                                                      atradius.com
+

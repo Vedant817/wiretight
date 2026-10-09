@@ -1,0 +1,977 @@
+Step 1 continued: the Quotes approach allows retrieving a guaranteed, locked-in rate valid for a specified period (1 minute up to 24 hours). The returned `quote_id` must be used in the subsequent conversion or payout request before the quote expires.
+
+### Quotes
+
+To retrieve a guaranteed quote for use within a validity period, call [Create a Quote](https://www.airwallex.com/docs/api/transactional_fx/quotes/create.md). Specify the `buy_currency`, `sell_currency`, `buy_amount`/`sell_amount`, and the quote `validity`. Supported validity periods include: 1 minute, 15 minutes, 30 minutes, 1 hour, 4 hour, 8 hour, 24 hour.
+
+Optionally, you can specify a `conversion_date`, i.e., the date on which the conversion will be settled. If you do not specify a date, Airwallex determines the default based on your funding mode (see [settlement timing](https://www.airwallex.com/docs/transactional-fx/funding-and-settlement-models.md#settlement-timing)).
+
+Once a quote is retrieved, you must request a conversion using that quote before the expiry time (`valid_to_at`) returned in the response.
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/fx/quotes/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "buy_amount": "10000",
+    "buy_currency": "USD",
+    "conversion_date": "2024-03-22",
+    "sell_currency": "AUD",
+    "validity": "HR_24"
+  }'
+```
+
+A successful conversion returns the `quote_id` in the response. You must store the `quote_id` for future use on subsequent conversions or payout requests (see [Create a payout](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#step-2-create-a-transfer)).
+
+The quote response also contains key details that are required for a successful subsequent conversion booking including:
+
+- Validity period of the quote ( `valid_from_at` , `valid_to_at` )
+- Quote usage (`MULTI_USE`)
+- Conversion date (`conversion_date`)
+- Direction of conversion (`buy_currency`, `sell_currency`)
+
+### Example response
+
+```json
+{
+  "awx_rate": 0.781622,
+  "buy_amount": 10000,
+  "buy_currency": "USD",
+  "client_rate": 0.779277,
+  "mid_rate":  0.782000,
+  "conversion_date": "2024-03-22",
+  "quote_id": "d9af1614-a6a1-4d45-aae7-6858fc6d9ede",
+  "valid_from_at": "2024-03-20T10:08:12+1100",
+  "valid_to_at": "2024-03-21T10:08:12+1100",
+  "validity": "HR_24",
+  "usage": "MULTI_USE",
+  "currency_pair": "AUDUSD",
+  "dealt_currency": "USD",
+  "rate_details": [
+    {
+      "buy_amount": 10000,
+      "level": "AWX",
+      "rate": 0.781622,
+      "sell_amount": 12793.91
+    },
+    {
+      "buy_amount": 10000,
+      "level": "CLIENT",
+      "rate": 0.779277,
+      "sell_amount": 12832.41
+    }
+  ],
+  "sell_amount": 12832.41,
+  "sell_currency": "AUD"
+}
+```
+
+The Create a Quote API endpoint provides a guaranteed FX rate for an agreed period of time. This reference covers the endpoint URL, authentication, request parameters, and a cURL example.
+
+# Create a Quote
+
+The Quote endpoint gives the user a guaranteed rate for an agreed period of time.
+
+## Endpoint
+
+`POST /api/v1/fx/quotes/create`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Request Body
+
+- `buy_currency` (string, required)
+  Currency (3-letter ISO-4217 code) the client buys.
+- `sell_currency` (string, required)
+  Currency (3-letter ISO-4217 code) the client sells.  This is the currency you will need to send us by the settlement cutoff time.
+- `validity` (string, required)
+  Quote validity period.
+  Possible values:
+  - `MIN_1`
+  - `MIN_15`
+  - `MIN_30`
+  - `HR_1`
+  - `HR_4`
+  - `HR_8`
+  - `HR_24`
+- `application_fee_options` (array[object], optional)
+  The application fee options applied to the transaction.
+  - `amount` (string, optional)
+    A positive integer specifying the amount of the fee expressed in the smallest unit of the currency. e.g. cents for USD. This field is required only when type is FIXED.
+  - `currency` (string, optional)
+    Specify the currency of the application fee in ISO 4217 currency code format, e.g., USD, AUD. This field is required when the type is FIXED.
+    When the type is PERCENTAGE and source_type is CONVERSION, the currency for the conversion if specified must be from the currency pair. If the currency is unspecified, the contra currency of the quote will be used.
+  - `metadata` (object, optional)
+    The metadata of the application fee. The value should be set in key:value format. (e.g., id:1).
+  - `percentage` (string, optional)
+    Required if the type is PERCENTAGE, and the value to be provided depends on the transaction context.
+    FX Conversions: The value acts as a markup on the FX rate, increasing the conversion cost by the specified percentage.
+    Others: The value represents a direct fee calculated as a percentage of the transaction amount.
+  - `source_type` (string, optional)
+    Specify type of the source transaction.
+    Possible values:
+    - `CONVERSION`
+    - `TRANSFER`
+  - `type` (string, optional)
+    Define the type of fee calculation. If the `source_type` is `CONVERSION`, then the type must be `PERCENTAGE`.
+    Possible values:
+    - `FIXED`
+    - `PERCENTAGE`
+- `buy_amount` (number, optional)
+  Amount the client buys in `buy_currency` (must be blank if `sell_amount` is specified).
+- `conversion_date` (string, format: date, optional)
+  Date on which the conversion will be settled. `conversion_date` defaults to current date, if funding is available, unless specified.
+- `sell_amount` (number, optional)
+  Amount the client sells in `sell_currency` (must be blank if `buy_amount` is specified).
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/fx/quotes/create' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "application_fee_options": [
+    {
+      "amount": "5",
+      "currency": "AUD",
+      "percentage": "0.1",
+      "source_type": "TRANSFER",
+      "type": "FIXED"
+    }
+  ],
+  "buy_amount": 10000,
+  "buy_currency": "AUD",
+  "conversion_date": "2017-04-01",
+  "sell_amount": 100,
+  "sell_currency": "USD",
+  "validity": "HR_24"
+}'
+```
+
+The 201 Created response returns the confirmed quote with rate details, amounts, validity window, and any application fees. Error responses cover invalid requests, authentication failures, rate limiting, and server errors.
+
+## Response
+
+### 201 Created
+
+**Example:**
+
+```json
+{
+  "application_fees": [
+    {
+      "amount": "5",
+      "currency": "AUD",
+      "source_type": "TRANSFER"
+    }
+  ],
+  "awx_rate": 0.7622,
+  "buy_amount": 10000,
+  "buy_currency": "AUD",
+  "client_rate": 0.7632,
+  "conversion_date": "2017-04-01",
+  "currency_pair": "AUDUSD",
+  "dealt_currency": "AUD",
+  "mid_rate": 0.7612,
+  "quote_id": "a08c0f2f-3f26-4443-b5df-fad15582eb94",
+  "rate_details": [
+    {
+      "buy_amount": 10000,
+      "level": "CLIENT",
+      "rate": 0.781523,
+      "sell_amount": 12794.27
+    }
+  ],
+  "sell_amount": 7632,
+  "sell_currency": "USD",
+  "usage": "SINGLE_USE",
+  "valid_from_at": "2019-05-03T02:49:05+0000",
+  "valid_to_at": "2019-05-04T02:49:05+0000",
+  "validity": "HR_24"
+}
+```
+
+- `awx_rate` (number, required)
+  For reference purposes only. This is a reference rate Airwallex compiles by analyzing prices across multiple banking providers and independent rate publishers.
+- `buy_amount` (number, required)
+  `buy_amount` copied from the Quote request (if specified).  Otherwise, this is calculated by multiplying/dividing the `sell_amount` by the FX quote depending on the direction of the currency pair.
+- `buy_currency` (string, required)
+  Buy currency of the quote (3-letter ISO-4217 code).
+- `client_rate` (number, required)
+  The returned quote.
+- `conversion_date` (string, required)
+  Date on which the conversion will be settled. `conversion_date` defaults to current date, if funding is available, unless specified.
+- `currency_pair` (string, required)
+  The currency pair that the quote is for.  The direction of the currency pair is per market convention where possible.
+- `dealt_currency` (string, required)
+  The currency where the client provided the exact amount for in the request.
+- `mid_rate` (number, required)
+  For reference purposes only. This rate represents the midpoint of the current bid and ask price.
+- `quote_id` (string, format: uuid, required)
+  The quote unique identifier.
+- `rate_details` (array[object], required)
+  Breakdown of rates at different user levels.
+  - `buy_amount` (number, optional)
+    The total amount being bought at the respective level.
+  - `level` (string, optional)
+    Possible values:
+    - `CLIENT`
+    - `AWX`
+    - `PLATFORM_CLIENT`
+  - `rate` (number, optional)
+    The exchange rate from the respective level's perspective.
+  - `sell_amount` (number, optional)
+    The total amount being sold at the respective level.
+- `sell_amount` (number, required)
+  `sell_amount` copied from the Quote request (if specified).  Otherwise, this is calculated by multiplying/dividing the `buy_amount` by the FX quote depending on the direction of the currency pair.
+- `sell_currency` (string, required)
+  Sell currency of the quote (3-letter ISO-4217 code).
+- `usage` (string, required)
+  Quote usage.
+  Possible values:
+  - `SINGLE_USE`
+  - `MULTI_USE`
+- `valid_from_at` (string, required)
+  Quote valid from in ISO8601 format (inclusive).
+- `valid_to_at` (string, required)
+  Quote valid to in ISO8601 format (inclusive).
+- `validity` (string, required)
+  Quote validity period in the create request.
+  Possible values:
+  - `MIN_1`
+  - `MIN_15`
+  - `MIN_30`
+  - `HR_1`
+  - `HR_4`
+  - `HR_8`
+  - `HR_24`
+- `application_fees` (array[object], optional)
+  Application fees in this transaction.
+  - `amount` (string, optional)
+    The application fee amount.
+  - `currency` (string, optional)
+    The currency of the application fee.
+  - `source_type` (string, optional)
+    Specify the type of source transaction for this application fee.
+    Possible values:
+    - `CONVERSION`
+    - `TRANSFER`
+
+## Errors
+
+### 400 Bad request
+
+Possible errors: `amount_below_limit`, `amount_above_limit`, `operation_failed`, `field_required`, `invalid_settlement_date`, `invalid_endpoint`, `invalid_argument`, `unsupported_currency`
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 429 Too many requests
+
+Too many requests
+
+### 500 Server error
+
+Service unavailable
+
+Conversion variations for LockFX describe how accounts can be configured to balance cost, speed, and workflow matching. This page applies to API version 2024-06-14 or earlier.
+
+# Conversion variations (legacy API versions)
+
+> **\[WARNING]**
+>
+> This page applies for **API version 2024-06-14 or earlier**.
+
+Conversion variations only apply to **LockFX**.
+
+You can apply the following conversion variations to your account to strike the right balance between **cost**, **speed** and **matching of commercial workflows** to the pricing and execution flow selected. Contact your Airwallex Account Manager to add/update any of these variations to your account.
+
+## Quote validity period
+
+Quotes with a range of validity periods are available via the API. Once a quote is retrieved, you must request a conversion using that quote before the expiry time returned in the response. Airwallex supports the following quote validity periods:
+
+- 1 minute
+- 15 minutes
+- 30 minutes
+- 1 hour
+- 4 hour
+- 8 hour
+- 24 hour
+
+The default configuration on newly opened Airwallex accounts are validity periods from the **Short** group below - *only one group can be assigned per Airwallex account*. In the event your workflows are better suited for longer validity periods, your Account Manager will help to assign your account to a group with longer validity periods.
+
+| GROUP           | QUOTE VALIDITY PERIOD            |
+| --------------- | -------------------------------- |
+| Short (default) | 1 minute, 15 minutes, 30 minutes |
+| Medium          | 30 minutes, 1 hour, 4 hours      |
+| Long            | 4 hours, 8 hours, 24 hours       |
+
+## Quote usage
+
+LockFX allows for quotes to be used either multiple times for execution (`MULTI_USE`) or just once (default `SINGLE_USE`) depending on how your account is set up. This variation will change how you retrieve quotes from Airwallex and use them to execute transactions.
+
+The Create a Conversion Quote API endpoint creates a new conversion quote for converting from merchant currency to shopper currency. It covers the request format, parameters, response fields, and error codes.
+
+# Create a Conversion Quote
+
+Create a new conversion quote for converting from merchant currency to shopper currency.
+
+## Endpoint
+
+`POST /api/v1/pa/conversion_quotes/create`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Request Body
+
+- `merchant_currency` (string, required)
+  The currency used by the merchant for pricing or payment (3-letter ISO 4217 code).
+- `request_id` (string, required)
+  Unique request identifier specified by the merchant. Maximum length is 64.
+- `shopper_currency` (string, required)
+  The currency that the shopper prefers to use (3-letter ISO-4217 code).
+- `validity_period` (string, optional)
+  The period for which the conversion quote remains valid. If not specified, the default value is `HR_1`.
+  Possible values:
+  - `HR_1`
+  - `HR_24`
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/pa/conversion_quotes/create' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "merchant_currency": "USD",
+  "request_id": "71e0ff5a-d4c0-4c1d-b77b-64b2966d5411",
+  "shopper_currency": "SGD",
+  "validity_period": "HR_1"
+}'
+```
+
+## Response
+
+### 201 Created
+
+**Example:**
+
+```json
+{
+  "conversion_rate": 1.287532,
+  "created_at": "2025-07-15T06:15:09Z",
+  "expires_at": "2025-07-15T07:15:09Z",
+  "id": "cvq_hkpd5k6pgfub1fyurc86",
+  "merchant_currency": "USD",
+  "shopper_currency": "SGD",
+  "status": "CREATED",
+  "validity_period": "HR_1"
+}
+```
+
+- `conversion_rate` (number, optional)
+  The conversion rate from the merchant currency to the shopper currency.
+- `created_at` (string, optional)
+  Time at which this Conversion Quote was created.
+- `expires_at` (string, optional)
+  Time at which this Conversion Quote expires.
+- `id` (string, optional)
+  Unique identifier of the Conversion Quote.
+- `merchant_currency` (string, optional)
+  The currency used by the merchant for pricing or payment (3-letter ISO 4217 code).
+- `shopper_currency` (string, optional)
+  The currency that the shopper prefers to use (3-letter ISO-4217 code).
+- `status` (string, optional)
+  Status of the Conversion Quote
+
+  - **CREATED**: The conversion quote has been created and is valid for use.
+  - **EXPIRED**: The conversion quote has expired.
+- `validity_period` (string, optional)
+  The period for which the conversion quote remains valid. One of `HR_1`, `HR_24`.
+
+## Errors
+
+### 400 Bad request
+
+Bad Request. Possible error codes: `validation_error`, `duplicate_request`
+
+### 401 Unauthorized
+
+Unauthorized. Possible error codes: `unauthorized`
+
+### 403 Forbidden
+
+Forbidden
+
+### 404 Not found
+
+Not Found. Possible error codes: `not_found`(invalid url)
+
+### 500 Server error
+
+Server Error. Possible error codes: `internal_error`
+
+Once a conversion quote is created, it can be reused, refreshed, reset, or retrieved as needed. This chunk covers quote invalidation and refresh behavior, how to dissociate a quote from a payment intent to revert to the original currency, and how to retrieve an existing quote by ID.
+
+### Quote invalidation and refresh
+
+A quote can be reused by multiple payment intents, as long as it is within its validity period. We use the `expires_at` timestamp to mark the quote's expiration time. Upon expiry, a quote's `status` attribute changes to `EXPIRED`.
+
+Merchants need to call the [create quote API](#step-2-create-a-conversion-quote) to refresh and replace the quote before it expires. This can be done either in real time during shopper interactions or periodically via scheduled tasks.
+
+Whenever feasible, we encourage you to reuse an existing valid quote that matches the source and target currency for a particular payment. This will minimize latency for your shoppers.
+
+### Reset payment intent to original currency
+
+To dissociate a quote from a payment intent and revert the payment intent to its original currency, make the following API call to update the quote with a null quote ID.
+
+Request:
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/pa/payment_intents/int_hkpdskz7vg1xc7uscdj/update \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "request_id": "28f0a16f-4e97-4d77-a310-3cf7be2ba6ed",
+    "conversion_quote_id": null
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "int_hkpdskz7vg1xc7uscdj",
+  "amount": 100,
+  "currency": "EUR",
+  ...,
+}
+```
+
+### Retrieve a conversion quote
+
+After creating a quote, you can retrieve its details anytime using [Retrieve a Conversion Quote](https://www.airwallex.com/docs/api/payments/conversion_quotes/retrieve.md). Simply provide the relevant quote ID to access the quote information.
+
+Request:
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/pa/conversion_quotes/cvq_sgst7hjl7hb7yws8rjt \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}'
+```
+
+Response:
+
+```json
+{
+  "id": "cvq_sgst7hjl7hb7yws8rjt",
+  "merchant_currency": "EUR",
+  "shopper_currency": "GBP",
+  "conversion_rate": 0.8971993472,
+  "created_at": "2025-09-18T06:13:34Z",
+  "expires_at": "2025-09-18T07:13:34Z",
+  "status": "CREATED"
+}
+```
+
+The MCP API integration involves three main steps: querying convertible shopper currencies, creating a conversion quote, and applying that quote to a payment intent. This chunk walks through each step with full API request and response examples.
+
+## Integration Guide
+
+### Step 1: Query convertible shopper currencies
+
+To give your shoppers flexibility, you can allow them to choose the currency in which they view prices and make payments. To enable this, first retrieve the list of convertible shopper currencies and display these currencies to your shoppers so they can select their preferred currency. Alternatively, you may auto-select a currency for them using criteria such as IP address or billing address. Use [Get convertible shopper currencies](https://www.airwallex.com/docs/api/payments/config/convertible_shopper_currencies.md) to get the list of supported currencies.
+
+Request:
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/pa/config/convertible_shopper_currencies \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}'
+```
+
+Response:
+
+```json
+{
+  "items": [
+    "AUD",
+    "USD",
+    "CNY",
+    "EUR",
+    "JPY",
+    "GBP",
+    …,
+  ]
+}
+```
+
+### Step 2: Create a conversion quote
+
+After determining the currency in which the shopper will view prices and make payments, obtain the corresponding exchange rate to display prices in that currency. The exchange rate used for customer pricing includes a margin to ensure rate certainty. Retrieve this rate using [Create a Conversion Quote](https://www.airwallex.com/docs/api/payments/conversion_quotes/create.md).
+
+Request:
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/pa/conversion_quotes/create \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "request_id": "71e0ff5a-d4c0-4c1d-b77b-64b2966d5411",
+    "merchant_currency": "EUR",
+    "shopper_currency": "GBP",
+    "validity_period": "HR_1"
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "cvq_sgst7hjl7hb7yws8rjt",
+  "merchant_currency": "EUR",
+  "shopper_currency": "GBP",
+  "conversion_rate": 0.8971993472,
+  "created_at": "2025-09-18T06:13:34Z",
+  "expires_at": "2025-09-18T07:13:34Z",
+  "status": "CREATED"
+}
+```
+
+The above example illustrates how to create a quote with a 1-hour validity period. To create a quote with a 24 hour validity period, pass a value of `HR_24` within `validity_period` instead, as shown below.
+
+Request:
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/pa/conversion_quotes/create \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "request_id": "71e0ff5a-d4c0-4c1d-b77b-64b2966d5411",
+    "merchant_currency": "EUR",
+    "shopper_currency": "GBP",
+    "validity_period": "HR_24"
+  }'
+```
+
+> **\[INFORMATIONAL]**
+>
+> Quotes with a 24-hour validity period will incur a shopper FX markup that is 15 bps higher than that of 1 hour quotes to guarantee the rate.
+
+### Step 3: Apply quote to payment intent
+
+When the shopper chooses to pay in their preferred currency, follow these steps:
+Create a payment intent using your default currency, as you would when not using MCP.
+Update the payment intent to link it to the FX quote for the shopper's selected currency.
+Complete the payment process as usual.
+
+Call [Update Payment Intent](https://www.airwallex.com/docs/api/payments/payment_intents/update.md) to associate the payment intent with a conversion quote.
+
+Request:
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/pa/payment_intents/int_hkpdskz7vg1xc7uscdj/update \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "request_id": "28f0a16f-4e97-4d77-a310-3cf7be2ba6ed",
+    "conversion_quote_id": "cvq_sgst7hjl7hb7yws8rjt"
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "int_hkpdskz7vg1xc7uscdj",
+  "amount": 89.72,
+  "currency": "GBP",
+  ...,
+  "conversion_quote_id": "cvq_sgst7hjl7hb7yws8rjt"
+}
+```
+
+Depending on the currency selected, the available payment methods you can offer to your shoppers may change. After applying a quote to a payment intent, query the available payment methods for the target currency using [Payment Method Types](https://www.airwallex.com/docs/api/payments/config/payment_method_types.md) to confirm which payment methods you can offer. This ensures that only available payment options are presented to your shoppers.
+
+After you apply the quote to your payment intent and verify that only valid payment methods are displayed, you can finalize the payment using [Confirm Payment Intent](https://www.airwallex.com/docs/api/payments/payment_intents/confirm.md). The shopper will then be charged in their preferred currency based on the conversion rate specified in the quote.
+
+
+The Retrieve a Quote endpoint returns a specific FX quote by its unique identifier, including rate details, amounts, and validity information.
+
+# Retrieve a Quote
+
+Get a specific quote by specifying the `quote_id`.
+
+## Endpoint
+
+`GET /api/v1/fx/quotes/{quote_id}`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Path Parameters
+
+- `quote_id` (string, format: uuid, required)
+  Unique identifier of the quote to retrieve.
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/api/v1/fx/quotes/quote_id' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "application_fees": [
+    {
+      "amount": "5",
+      "currency": "AUD",
+      "source_type": "TRANSFER"
+    }
+  ],
+  "awx_rate": 0.7622,
+  "buy_amount": 10000,
+  "buy_currency": "AUD",
+  "client_rate": 0.7632,
+  "conversion_date": "2017-04-01",
+  "currency_pair": "AUDUSD",
+  "dealt_currency": "AUD",
+  "mid_rate": 0.7612,
+  "quote_id": "a08c0f2f-3f26-4443-b5df-fad15582eb94",
+  "rate_details": [
+    {
+      "buy_amount": 10000,
+      "level": "CLIENT",
+      "rate": 0.781523,
+      "sell_amount": 12794.27
+    }
+  ],
+  "sell_amount": 7632,
+  "sell_currency": "USD",
+  "usage": "SINGLE_USE",
+  "valid_from_at": "2019-05-03T02:49:05+0000",
+  "valid_to_at": "2019-05-04T02:49:05+0000",
+  "validity": "HR_24"
+}
+```
+
+- `awx_rate` (number, required)
+  For reference purposes only. This is a reference rate Airwallex compiles by analyzing prices across multiple banking providers and independent rate publishers.
+- `buy_amount` (number, required)
+  `buy_amount` copied from the Quote request (if specified).  Otherwise, this is calculated by multiplying/dividing the `sell_amount` by the FX quote depending on the direction of the currency pair.
+- `buy_currency` (string, required)
+  Buy currency of the quote (3-letter ISO-4217 code).
+- `client_rate` (number, required)
+  The returned quote.
+- `conversion_date` (string, required)
+  Date on which the conversion will be settled. `conversion_date` defaults to current date, if funding is available, unless specified.
+- `currency_pair` (string, required)
+  The currency pair that the quote is for.  The direction of the currency pair is per market convention where possible.
+- `dealt_currency` (string, required)
+  The currency where the client provided the exact amount for in the request.
+- `mid_rate` (number, required)
+  For reference purposes only. This rate represents the midpoint of the current bid and ask price.
+- `quote_id` (string, format: uuid, required)
+  The quote unique identifier.
+- `rate_details` (array[object], required)
+  Breakdown of rates at different user levels.
+  - `buy_amount` (number, optional)
+    The total amount being bought at the respective level.
+  - `level` (string, optional)
+    Possible values:
+    - `CLIENT`
+    - `AWX`
+    - `PLATFORM_CLIENT`
+  - `rate` (number, optional)
+    The exchange rate from the respective level's perspective.
+  - `sell_amount` (number, optional)
+    The total amount being sold at the respective level.
+- `sell_amount` (number, required)
+  `sell_amount` copied from the Quote request (if specified).  Otherwise, this is calculated by multiplying/dividing the `buy_amount` by the FX quote depending on the direction of the currency pair.
+- `sell_currency` (string, required)
+  Sell currency of the quote (3-letter ISO-4217 code).
+- `usage` (string, required)
+  Quote usage.
+  Possible values:
+  - `SINGLE_USE`
+  - `MULTI_USE`
+- `valid_from_at` (string, required)
+  Quote valid from in ISO8601 format (inclusive).
+- `valid_to_at` (string, required)
+  Quote valid to in ISO8601 format (inclusive).
+- `validity` (string, required)
+  Quote validity period in the create request.
+  Possible values:
+  - `MIN_1`
+  - `MIN_15`
+  - `MIN_30`
+  - `HR_1`
+  - `HR_4`
+  - `HR_8`
+  - `HR_24`
+- `application_fees` (array[object], optional)
+  Application fees in this transaction.
+  - `amount` (string, optional)
+    The application fee amount.
+  - `currency` (string, optional)
+    The currency of the application fee.
+  - `source_type` (string, optional)
+    Specify the type of source transaction for this application fee.
+    Possible values:
+    - `CONVERSION`
+    - `TRANSFER`
+
+## Errors
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 404 Not found
+
+Possible errors: `not_found`
+
+### 429 Too many requests
+
+Too many requests
+
+### 500 Server error
+
+Service unavailable
+
+Airwallex's Quotes API allows you to create and retrieve FX quotes that can be used in subsequent conversion requests within a specified validity period.
+
+# Quotes
+
+Create a quote that can be used in a subsequent conversion request during the requested validity period.
+
+## Endpoints
+
+- [Create a Quote](https://www.airwallex.com/docs/api/transactional_fx/quotes/create.md) — `POST /api/v1/fx/quotes/create`
+- [Retrieve a Quote](https://www.airwallex.com/docs/api/transactional_fx/quotes/retrieve.md) — `GET /api/v1/fx/quotes/{quote_id}`
+
+The `POST /api/v1/batch_transfers/{id}/quote` endpoint locks FX rates for a batch transfer. Only valid items in the batch are quoted, and quoting is only permitted when the batch status is `DRAFTING` or `IN_APPROVAL`.
+
+# Quote a Batch Transfer
+
+After adding valid transfer items to the batch, you can quote/lock FX rates by specifying the batch transfer `id`. Please note that only valid items in the batch will be quoted; you can only quote a batch transfer when its status is `DRAFTING` or `IN_APPROVAL`.
+
+## Endpoint
+
+`POST /api/v1/batch_transfers/{id}/quote`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Path Parameters
+
+- `id` (string, format: uuid, required)
+  Unique identifier of the batch transfer to quote.
+
+### Request Body
+
+- `validity` (string, optional)
+  Quote validity period.. The value will default to MIN_1 if not specified.
+  Possible values:
+  - `MIN_1`
+  - `MIN_15`
+  - `MIN_30`
+  - `HR_1`
+  - `HR_4`
+  - `HR_8`
+  - `HR_24`
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/batch_transfers/batch_transfer_id/quote' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "validity": "HR_24"
+}'
+```
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "funding": {
+    "deposit_type": "DIRECT_DEBIT",
+    "failure_details": {
+      "code": "insufficient_funds",
+      "iso_code": "AM04",
+      "provider_failure_details": {
+        "code": "R01",
+        "local_clearing_system": "US_ACH",
+        "message": "INSUFFICIENT FUNDS"
+      }
+    },
+    "failure_reason": "regulatory_reason",
+    "funding_source_id": "b3856846-31b0-44d8-855d-e0eedf532282",
+    "reference": "DD for batch transfer 12345",
+    "status": "FUNDED"
+  },
+  "id": "d9af1614-a6a1-4d45-aae7-6858fc6d9ede",
+  "metadata": {
+    "order_id": "0123456789"
+  },
+  "name": "batch-name",
+  "quote_summary": {
+    "expires_at": "2024-01-24T18:03:02+1100",
+    "last_quoted_at": "2024-01-24T18:00:02+1100",
+    "quotes": [
+      {
+        "amount_beneficiary_receives": 200,
+        "amount_payer_pays": 1005,
+        "client_rate": 5,
+        "currency_pair": "AUDUSD",
+        "fee_amount": 5,
+        "fee_currency": "USD",
+        "source_currency": "USD",
+        "transfer_currency": "AUD"
+      }
+    ],
+    "validity": "MIN_1"
+  },
+  "remarks": "Any information",
+  "request_id": "7f687fe6-dcf4-4462-92fa-80335301d911",
+  "short_reference_id": "B231018-TMA1RTC",
+  "status": "SCHEDULED",
+  "total_item_count": 100,
+  "transfer_date": "2024-01-24",
+  "updated_at": "2024-01-24T18:00:02+1100",
+  "valid_item_count": 99
+}
+```
+
+- `id` (string, required)
+  System generated batch transfer id.
+- `request_id` (string, required)
+  A unique batch transfer reference specified by the client.
+- `short_reference_id` (string, required)
+  System generated batch short reference id.
+- `status` (string, required)
+  [Batch transfer statuses](https://www.airwallex.com/docs/payouts/batch-transfers/create-a-batch-transfer/batch-transfer-statuses.md), can be one of: `DRAFTING`, `IN_APPROVAL`, `APPROVAL_RECALLED`, `APPROVAL_REJECTED`, `APPROVAL_BLOCKED`, `SCHEDULED`, `OVERDUE`, `BOOKING`, `PARTIALLY_BOOKED`, `BOOKED`, `FAILED`, `CANCELLATION_REQUESTED`, `CANCELLED`.
+- `total_item_count` (integer, format: int32, required)
+  The total count of items within the batch transfer.
+- `updated_at` (string, required)
+  The time this batch transfer was last updated.
+- `valid_item_count` (integer, format: int32, required)
+  The total count of valid batch transfer items contained. Invalid items will also be stored in the batch, you can use add_items and delete_items API to update it or execute without those invalid items.
+- `funding` (object, optional)
+  The funding information of this batch transfer.
+  - `status` (string, required)
+    The [Funding statuses](https://www.airwallex.com/docs/payouts/batch-transfers/create-a-batch-transfer/batch-transfer-statuses.md#funding-statuses) of this batch transfer, can be one of `SCHEDULED`, `PROCESSING`, `FUNDED`, `FAILED`, `REVERSED`.
+  - `deposit_type` (string, optional)
+    Can be one of: `FASTER_DIRECT_DEBIT`, `DIRECT_DEBIT`.
+  - `failure_details` (object, optional)
+    Details about why the funding has failed. Only present when the funding is in a failure state.
+    - `code` (string, optional)
+      Error code (details can be found [here](https://www.airwallex.com/docs/global-treasury/receive-funds/add-funds-via-direct-debits-from-linked-accounts/direct-debit-deposit-error-codes.md)).
+    - `iso_code` (string, optional)
+      Error code [ISO 20022](https://www.iso20022.org/about-iso-20022) (details can be found [here](https://www.airwallex.com/docs/global-treasury/receive-funds/add-funds-via-direct-debits-from-linked-accounts/direct-debit-deposit-error-codes.md)).
+    - `provider_failure_details` (object, optional)
+      A set of original information received from the local clearing system.
+      - `code` (string, optional)
+        The original error code received from the local clearing system.
+      - `local_clearing_system` (string, optional)
+        The local clearing system used for the direct debit deposit. Possible values are `AU_BECS`, `US_ACH`, `GB_BACS`, `EU_SEPA`.
+      - `message` (string, optional)
+        The original error message received from the local clearing system.
+  - `funding_source_id` (string, optional)
+    The id of the funding source, it can be null if using a wallet.
+  - `reference` (string, optional)
+    A user specified reference that will be displayed to the Direct Debit bank account owner on the bank statement.
+- `metadata` (object, optional)
+  A set of key-value pairs for storing your own data together with the batch transfer.
+- `name` (string, optional)
+  The name of the batch transfer.
+- `quote_summary` (object, optional)
+  Summary of all transfer quotes in the batch. Quotes are consolidated based on currency pairs.
+  - `expires_at` (string, required)
+    The time this batch transfer's quote will expire.
+  - `last_quoted_at` (string, required)
+    The time this batch transfer last quoted.
+  - `quotes` (array[object], optional)
+    The quote details of the batch transfer.
+    - `amount_beneficiary_receives` (number, optional)
+      Total amount beneficiary will need receive quoted in `transfer_currency`.
+    - `amount_payer_pays` (number, optional)
+      Total amount payer need to pays quoted in `source_currency`.
+    - `client_rate` (number, optional)
+      Conversion rate. If pure transfer, it will be null.
+    - `currency_pair` (string, optional)
+      Currency pair related with the conversion rate. If pure transfer, it will be null.
+    - `fee_amount` (number, optional)
+      Total fee for this quote.
+    - `fee_currency` (string, optional)
+      Fee currency.
+    - `source_currency` (string, optional)
+      Source currency, i.e. the currency that the Payer uses to fund the transfer (3-letter ISO-4217 code).
+    - `transfer_currency` (string, optional)
+      Transfer currency, i.e. the currency that the beneficiary receives (3-letter ISO-4217 code).
+  - `validity` (string, optional)
+    Quote validity period in the request.
+    Possible values:
+    - `MIN_1`
+    - `MIN_15`
+    - `MIN_30`
+    - `HR_1`
+    - `HR_4`
+    - `HR_8`
+    - `HR_24`
+- `remarks` (string, optional)
+  Additional information about this batch transfer, which will not be passed to the beneficiary.
+- `transfer_date` (string, optional)
+  Date when batch transfer is scheduled to be processed.
+
+## Errors
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 429 Too many requests
+
+Too many requests
+
+### 500 Server error
+
+Service unavailable

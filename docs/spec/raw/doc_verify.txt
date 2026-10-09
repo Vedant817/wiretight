@@ -1,0 +1,670 @@
+After calling the Verify a Beneficiary Account API, use the response `code` and `account_name_match_result` fields to determine next steps. This section provides the full table of verification result scenarios with recommended handling, a note on misdirected transfer risk, and the currently supported regions and transfer methods.
+
+## Step 3: Handle verification results
+
+Use the `code` and `account_name_match_result` fields in the response to determine next steps in your workflow. Please refer to the full list of verification results below, as well as the region-specific guides (e.g., [United Kingdom](https://www.airwallex.com/docs/payouts/beneficiaries/verify-a-beneficiary-account/united-kingdom.md)).
+
+| Code                           | Account name match result      | Scenario                                                                                                                                   | Recommended handling                                                                                               |
+| ------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `VERIFIED`                     | `FULL_MATCH`                   | This is a valid account, and the account name matches the bank record.                                                                     | **Proceed** with creating the beneficiary or transfer.                                                             |
+| `VERIFIED`                     | `PARTIAL_MATCH`                | This is a valid account, and the account name is a partial match with the bank record.                                                     | **Confirm details** with your beneficiary before proceeding. Update the account name if confirmed.                 |
+| `VERIFIED`                     | `NOT_MATCHED`                  | This is a valid account, but the account name doesn’t match the bank record.                                                               | **Confirm details** with your beneficiary before proceeding. Update the account name if confirmed.                 |
+| `VERIFIED`                     | `FULL_MATCH_INCORRECT_TYPE`    | This is a valid account and the account name matches, but the `entity_type` provided is wrong.                                             | **Confirm details** with your beneficiary before proceeding. Update the entity type if confirmed.                  |
+| `VERIFIED`                     | `PARTIAL_MATCH_INCORRECT_TYPE` | This is a valid account and the account name is a partial match, but the `entity_type` provided is wrong.                                  | **Confirm details** with your beneficiary before proceeding. Update the account name and entity type if confirmed. |
+| `INVALID`                      | -                              | The account does not exist or has been closed.                                                                                             | **Do NOT proceed**. We do not support transferring to this account.                                                |
+| `CANNOT_VERIFY`                | -                              | This account cannot be verified because the bank/branch/account is outside the verification coverage, or the account holder has opted out. | **Proceed with caution** after confirming your beneficiary details.                                                |
+| `EXTERNAL_SERVICE_UNAVAILABLE` | -                              | The downstream service is unavailable at the moment.                                                                                       | **Retry later**; or proceed after confirming beneficiary details.                                                  |
+
+Please note that for any result other than `FULL_MATCH`, there is a risk of misdirected transfers. Transfers cannot be created for INVALID accounts, but for all other scenarios you can still proceed at your own discretion. We strongly recommend that you double-check all details with your intended beneficiary, as funds sent to the wrong account might not be recoverable.
+
+## Supported transfer methods
+
+| Region                                                                                                                 | Transfer method | Payment scheme         | Verification source         | Name matching supported |
+| ---------------------------------------------------------------------------------------------------------------------- | --------------- | ---------------------- | --------------------------- | ----------------------- |
+| [Europe](https://www.airwallex.com/docs/payouts/beneficiaries/verify-a-beneficiary-account/europe.md) (SEPA countries) | LOCAL           | SEPA Instant / SEPA    | Verification of Payee (VoP) | Yes                     |
+| [United Kingdom](https://www.airwallex.com/docs/payouts/beneficiaries/verify-a-beneficiary-account/united-kingdom.md)  | LOCAL           | Faster Payments, CHAPS | Confirmation of Payee (CoP) | Yes                     |
+| [Viet Nam](https://www.airwallex.com/docs/payouts/beneficiaries/verify-a-beneficiary-account/viet-nam.md)              | LOCAL           |                        | NAPAS                       | Yes                     |
+| Australia  *(Upcoming)*                                                                                                | LOCAL           | NPP, BANK\_TRANSFER    | Confirmation of Payee (CoP) | No                      |
+
+The Verify Beneficiary Account API endpoint allows you to submit beneficiary account details to verify existence and retrieve name-matching results before creating a transfer, helping mitigate fraud and prevent failures.
+
+# Verify a Beneficiary Account
+
+Submit beneficiary account details to verify its existance and retreive name-matching result (where supported) across supported regions and transfer methods (see [Product Docs](https://www.airwallex.com/docs/payouts/beneficiaries/verify-a-beneficiary-account.md)). The results can be used to mitigate fraud and prevent failures before creating a transfer.
+
+## Endpoint
+
+`POST /api/v1/beneficiaries/verify_account`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Request Body
+
+- `entity_type` (string, required)
+  Entity type of the beneficiary, i.e., COMPANY, PERSONAL.
+- `transfer_method` (string, required)
+  Transfer method, i.e., SWIFT, LOCAL.
+- `bank_details` (object, optional)
+  Beneficiary's bank account details where the payment will be credited.
+  - `account_name` (string, optional)
+    Account holder name of the beneficiary’s bank account.
+  - `account_number` (string, optional)
+    Account number, mostly for non-european countries, either account_number or iban should be filled.
+  - `account_routing_type1` (string, optional)
+    Routing code type.
+  - `account_routing_value1` (string, optional)
+    Routing code value.
+  - `bank_country_code` (string, optional)
+    Bank country code (2-letter ISO 3166-2 country code).
+  - `iban` (string, optional)
+    International bank account number, mostly for european countries.
+  - `local_clearing_system` (string, optional)
+    Which clearing system should be used for this local bank transfer.
+
+    Please refer to our [payout guide](https://airwallex.com/guides/payout) for details about each option.
+
+    We suggest explicitly specifying this value, however if it's not provided we will select a default (using the specified account routing type and/or what's most often the best option).
+  - `swift_code` (string, optional)
+    Bank swift code.
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/beneficiaries/verify_account' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "bank_details": {
+    "account_name": "Betty Morris",
+    "account_number": "10006132",
+    "account_routing_type1": "sort_code",
+    "account_routing_value1": "040568",
+    "bank_country_code": "GB",
+    "iban": "<string>",
+    "local_clearing_system": "<string>",
+    "swift_code": "<string>"
+  },
+  "entity_type": "PERSONAL",
+  "transfer_method": "LOCAL"
+}'
+```
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "code": "VERIFIED",
+  "details": {
+    "account_name_match_result": "FULL_MATCH",
+    "resolved_account_name": "Betty Morris",
+    "resolved_bank_name": "ClearBank Limited"
+  },
+  "message": "This is a valid account. Refer to the details object for verification details."
+}
+```
+
+- `code` (string, optional)
+  The high-level outcome of account verification. Could be one of the following:
+  - `VERIFIED`: This is a valid account (name match is not guaranteed).
+  - `INVALID`: This account does not exist.
+  - `CANNOT_VERIFY`: We cannot verify this account due to external restrictions.
+  - `EXTERNAL_SERVICE_UNAVAILABLE`: The request failed due to unavailability of external services. Trying again later.
+- `details` (object, optional)
+  Detailed verification results including name match results if available.
+  - `account_name_match_result` (string, optional)
+    The result of account name check based on the `account_name` provided. See details in [Product Docs](https://www.airwallex.com/docs/payouts/beneficiaries/verify-a-beneficiary-account.md).
+  - `resolved_account_name` (string, optional)
+    The account holder's name of the account specified if available.
+  - `resolved_bank_name` (string, optional)
+    Name of the account-holding bank if available.
+- `message` (string, optional)
+  A descriptional message of the verification result.
+
+## Errors
+
+### 400 Bad request
+
+Possible errors: `validation_failed`, `service_unavailable`
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 429 Too many requests
+
+Too many requests
+
+### 500 Server error
+
+Service unavailable
+
+Airwallex supports Verification of Payee (VoP) for local EUR accounts from SEPA countries, facilitated by the European Payments Council. This covers the scheme overview, required bank details, and applicable verification result codes.
+
+# Europe
+
+## Overview
+
+Local EUR accounts from SEPA (Single Euro Payments Area) countries can be verified via the Verification of Payee (VoP) scheme, facilitated by the European Payments Council.
+
+| Attribute                 | Details                                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Transfer method           | LOCAL                                                                                                                                                  |
+| Payment scheme            | SEPA Instant / SEPA                                                                                                                                    |
+| Name matching supported   | Yes                                                                                                                                                    |
+| Beneficiary name returned | Yes, only when the name match result is one of `FULL_MATCH` or `PARTIAL_MATCH`                                                                         |
+| Notes                     | Name matching is performed by each participating bank based on its own rules, so the standards of each matching result may vary slightly across banks. |
+
+## Required bank details
+
+The following request parameters should be included in the `bank_details` object:
+
+| Field          | Permitted data                               | Notes                                                                                                                                                                                                                                                                                                             |
+| -------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `iban`         | A valid IBAN                                 | The IBAN should belong to a country/region where Airwallex supports EUR LOCAL transfers, i.e. the leading 2 characters (country code) should be one of AT, BE, BG, CH, CY, CZ, DE, DK, EE, ES, FI, FR, GB, GG, GI, GR, HR, HU, IE, IS, IT, LI, LT, LU, LV, MC, MQ, MT, NL, NO, PL, PM, PT, RO, SE, SI, SK, SM, YT |
+| `account_name` | 2-200 alphanumeric characters or punctuation | Account holder name to be verified against local bank records                                                                                                                                                                                                                                                     |
+
+## Applicable verification results
+
+| Code                           | Name match result values                         |
+| ------------------------------ | ------------------------------------------------ |
+| `VERIFIED`                     | `FULL_MATCH`, `PARTIAL_MATCH`, or  `NOT_MATCHED` |
+| `CANNOT_VERIFY` \*             | -                                                |
+| `EXTERNAL_SERVICE_UNAVAILABLE` | -                                                |
+
+\* For VoP, this code covers the scenario where the IBAN provided is invalid. A standalone `INVALID` code is not available.
+
+UK Confirmation of Payee (CoP) enables verification of UK local bank accounts via the Pay.UK service. CoP must be enabled on request, and any custom CoP user interface requires approval from Airwallex and its local partners before go-live.
+
+> **\[WARNING]**
+>
+> UK Confirmation of Payee (CoP) is enabled on request. If you are building a custom CoP user interface, Airwallex and our local partners must approve your user-facing messaging before go-live.
+>
+> Messaging templates are account-specific legal copy. They are not a single public snippet. Contact your Airwallex Account Manager to request CoP enablement and template review. Include screenshots of your custom UI, the copy you intend to show for each match result (`FULL_MATCH`, `PARTIAL_MATCH`, `NOT_MATCHED`, `FULL_MATCH_INCORRECT_TYPE`, and `PARTIAL_MATCH_INCORRECT_TYPE`), and whether you use Airwallex-hosted verification or your own UI.
+
+## Overview
+
+UK local bank accounts are verified via the Confirmation of Payee (CoP) service managed by `Pay.UK`.
+
+| Attribute                 | Details                                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Transfer method           | LOCAL                                                                                                                                                  |
+| Payment scheme            | Faster Payments, CHAPS\*                                                                                                                               |
+| Name matching supported   | Yes                                                                                                                                                    |
+| Beneficiary name returned | Yes, only when the name match result is one of `FULL_MATCH`, `PARTIAL_MATCH`, `FULL_MATCH_INCORRECT_TYPE`, or `PARTIAL_MATCH_INCORRECT_TYPE`           |
+| Notes                     | Name matching is performed by each participating bank based on its own rules, so the standards of each matching result may vary slightly across banks. |
+
+\* CoP is the authoritative verification source for Faster Payments accounts, covering most CHAPS accounts. However, some CHAPS-only accounts are not supported and will return `CANNOT_VERIFY`. Please apply discretion when relying on CoP results for CHAPS transfers.
+
+## Required bank details
+
+The following request parameters should be included in the `bank_details` object:
+
+| Field                    | Permitted data                               | Notes                                                         |
+| ------------------------ | -------------------------------------------- | ------------------------------------------------------------- |
+| `bank_country_code`      | `GB` only                                    |                                                               |
+| `account_routing_type1`  | `sort_code` only                             |                                                               |
+| `account_routing_value1` | 6 digits                                     | Sort code of the beneficiary account                          |
+| `account_number`         | 8 digits                                     |                                                               |
+| `account_name`           | 2-200 alphanumeric characters or punctuation | Account holder name to be verified against local bank records |
+
+## Applicable verification results
+
+| Code                           | Name match result values                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `VERIFIED`                     | `FULL_MATCH`, `PARTIAL_MATCH`, `NOT_MATCHED`, `FULL_MATCH_INCORRECT_TYPE`, or  `PARTIAL_MATCH_INCORRECT_TYPE` |
+| `INVALID`                      | -                                                                                                             |
+| `CANNOT_VERIFY`                | -                                                                                                             |
+| `EXTERNAL_SERVICE_UNAVAILABLE` | -                                                                                                             |
+
+Airwallex provides real-time bank account verification to reduce transfer failures, mitigate fraud, and prevent misdirected payments. This covers how to prepare beneficiary information and call the Verify a Beneficiary Account API endpoint, including request parameters, response fields, and error handling.
+
+# Verify a beneficiary account
+
+Airwallex offers real-time bank account verification to enable customers to transfer funds with confidence. By verifying bank account details before transfers are created, Airwallex can help to reduce failures, mitigate fraud and prevent misdirected funds being sent.
+
+Airwallex is continuously expanding its geographical and clearing system coverage to verify bank accounts. See [Supported transfer methods](https://www.airwallex.com/docs/payouts/beneficiaries/verify-a-beneficiary-account.md#supported-transfer-methods) for details. By navigating to the subpages on the left menu, you can find region-specific guides with detailed request field requirements, applicable verification results, and other key considerations.
+
+Call [Verify a beneficiary account](https://www.airwallex.com/docs/api/payouts/beneficiaries/verify_account.md) to confirm if a beneficiary bank account is valid and, where supported, check if the specified account name matches the registered bank account details.
+
+## Step 1: Prepare required beneficiary information
+
+This API accepts beneficiary bank account details in the same structure as the [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md). Before calling the API, please collect the required account details in the correct format, which can vary depending on the region and transfer method. See more details in [Create a transfer](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#step-1-prepare-required-beneficiary-information) to learn more about preparing beneficiary account details.
+
+We also recommend to [Validate a beneficiary](https://www.airwallex.com/docs/payouts/beneficiaries/validate-a-beneficiary.md) first and resolve any errors before calling this API for advanced verifications.
+
+## Step 2: Verify a beneficiary account
+
+Include the following request parameters to provide beneficiary account details:
+
+- `account_details`: The beneficiary account details to be verified. Refer to the region-specific guides for required fields within this object.
+- `transfer_method`: Currently, only `LOCAL` is supported. Note that for API versions prior to `2024-09-27`, specify the `payment_method` parameter instead.
+- `entity_type`: Specify whether the beneficiary is an individual (`PERSONAL`) or a business (`COMPANY`).
+
+The API responds with the following fields:
+
+- `code`: The high-level outcome of account verification.
+
+  - `VERIFIED`: The account provided is valid, regardless of whether the account name matches. When available, the name match result will be disclosed in the `details` object.
+  - `INVALID`: The account does not exist or has been closed.
+  - `CANNOT_VERIFY`: This account cannot be verified.
+  - `EXTERNAL_SERVICE_UNAVAILABLE`: The downstream service is temporarily unavailable.
+
+- `message`: Description of the `code`.
+
+- `details`: An object containing additional verification details (if available).
+
+  - `account_name_match_result`: Name match result for the `account_name` provided under `account_details`. Could be one of `FULL_MATCH`, `PARTIAL_MATCH`, `NOT_MATCHED`, `FULL_MATCH_INCORRECT_TYPE`, or `PARTIAL_MATCH_INCORRECT_TYPE`. See detailed handling instructions in **Step 3**.
+  - `resolved_account_name`: Name of the account holder.
+  - `resolved_bank_name`: Name of the account-holding financial institution.
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/beneficiaries/verify_account \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "transfer_method": "LOCAL",
+    "entity_type": "PERSONAL",
+    "bank_details": {
+      "account_name": "Betty Morras",
+      "account_routing_type1": "sort_code",
+      "account_routing_value1": "040568",
+      "account_number": "10006132",
+      "bank_country_code": "GB"
+    }
+  }'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+### Example response
+
+```json
+{
+  "code": "VERIFIED",
+  "message": "This is a valid account. Refer to the details object for verification details.",
+  "details": {
+    "account_name_match_result": "PARTIAL_MATCH",
+    "resolved_account_name": "Betty Morris",
+    "resolved_bank_name": "ClearBank Limited"
+  }
+}
+```
+
+### Errors
+
+Airwallex uses conventional [HTTP response codes](https://www.airwallex.com/docs/api/errors.md) to indicate the success or failure of an API request.
+
+A HTTP 400 status code indicates an error triggered due to the information provided in the request, including but not limited to incorrect request structures and invalid field formats for this API. See [Error codes](https://www.airwallex.com/docs/payouts/errors/transfer-error-codes.md) to learn about the possible errors associated with invalid beneficiary details.
+
+
+Vietnamese local bank accounts are verified via the Vietnam National Payment Corporation (NAPAS). This page covers the verification overview, banks that cannot be verified, required bank details, and applicable verification result codes.
+
+# Viet Nam
+
+## Overview
+
+Vietnamese local bank accounts are verified via the Vietnam National Payment Corporation (NAPAS) and its participating banks.
+
+| Attribute                 | Details                                                      |
+| ------------------------- | ------------------------------------------------------------ |
+| Transfer method           | LOCAL                                                        |
+| Payment scheme            | NAPAS                                                        |
+| Name matching supported   | Yes                                                          |
+| Beneficiary name returned | Only a masked name is available (e.g. "N\*\*\* V\*\* A\*\*") |
+| Notes                     | We cannot verify accounts with some banks. See below.        |
+
+Airwallex supports transferring to the following beneficiary banks locally, but cannot verify their bank accounts. The `CANNOT_VERIFY` code will be returned in this case.
+
+| SWIFT code | Beneficiary bank name                             |
+| ---------- | ------------------------------------------------- |
+| ANZBVNVX   | ANZ BANK(VIETNAM) LIMITED                         |
+| CITIVNVX   | CITIBANK N.A.                                     |
+| GTBAVNVX   | CONSTRUCTION BANK                                 |
+| IBKOVNVX   | INDUSTRIAL BANK OF KOREA, VIETNAM - HA NOI BRANCH |
+| NACFVNVH   | NONGHYUP BANK HANOI BRANCH                        |
+| SCBLVNVX   | STANDARD CHARTERED BANK (VIETNAM) LIMITED         |
+
+## Required bank details
+
+The following request parameters should be included in the `bank_details` object:
+
+| Field               | Permitted data                               | Notes                                                         |
+| ------------------- | -------------------------------------------- | ------------------------------------------------------------- |
+| `bank_country_code` | `VN` only                                    |                                                               |
+| `swift_code`        | 8-11 alphanumeric characters                 | SWIFT code to identify the beneficiary bank                   |
+| `account_number`    | 8 digits                                     | Local VND account number                                      |
+| `account_name`      | 2-200 alphanumeric characters or punctuation | Account holder name to be verified against local bank records |
+
+## Applicable verification results
+
+| Code                           | Name match result             |
+| ------------------------------ | ----------------------------- |
+| `VERIFIED`                     | `FULL_MATCH`\*  `NOT_MATCHED` |
+| `INVALID`                      | -                             |
+| `CANNOT_VERIFY`                | -                             |
+| `EXTERNAL_SERVICE_UNAVAILABLE` | -                             |
+
+\*Fuzzy matching is applied. `FULL_MATCH` can indicate an exact match or a close match with up to 3 character differences.
+
+The Beneficiaries API provides endpoints to create and manage beneficiary resources required before making payouts. A beneficiary captures the individual or organisation being paid, their bank details, and payment method, and generates a unique identifier used when creating payments.
+
+# Beneficiaries
+
+A beneficiary resource needs to be created before a payment can be made, the beneficiary notes the individual or organisation being paid along with the bank details and payment method. A beneficiary unique identifier is generated upon the creation can be used for creating payment using a payment resource.
+
+## Endpoints
+
+- [Create a Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) — `POST /api/v1/beneficiaries/create`
+- [Retrieve a Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/retrieve.md) — `GET /api/v1/beneficiaries/{id}`
+- [List all Beneficiaries](https://www.airwallex.com/docs/api/payouts/beneficiaries/list.md) — `GET /api/v1/beneficiaries`
+- [Update an Existing Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/update.md) — `POST /api/v1/beneficiaries/{id}/update`
+- [Validate a Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/validate.md) — `POST /api/v1/beneficiaries/validate`
+- [Verify a Beneficiary Account](https://www.airwallex.com/docs/api/payouts/beneficiaries/verify_account.md) — `POST /api/v1/beneficiaries/verify_account`
+- [Delete an Existing Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/delete.md) — `POST /api/v1/beneficiaries/{id}/delete`
+- [Retrieve the API Schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) — `POST /api/v1/beneficiary_api_schemas/generate`
+- [Retrieve the Form Schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_form_schemas.md) — `POST /api/v1/beneficiary_form_schemas/generate`
+- [List all Supported Financial Institutions](https://www.airwallex.com/docs/api/payouts/beneficiaries/supported_financial_institutions.md) — `GET /api/v1/beneficiary_form_schemas/supported_financial_institutions`
+
+The `beneficiary` object supports `bank_details`, `card`, `digital_wallet`, and `stablecoin_wallet` sub-objects for specifying the payment destination, along with top-level identity fields.
+
+- `beneficiary` (object, required)
+  Details of the beneficiary.
+  - `bank_details` (object, optional)
+    Beneficiary's bank account details where the payment will be credited.
+    - `account_currency` (string, required)
+      Account Currency.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s bank account.
+    - `bank_country_code` (string, required)
+      Bank country code (2-letter ISO 3166-2 country code).
+    - `account_name_alias` (string, optional)
+      The beneficiary’s account name known in the payment system. This is only supported in some regions and transfer methods. See detailed definitions in the [Payouts Product Docs](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md).
+    - `account_number` (string, optional)
+      Account number, mostly for non-european countries, either account_number or iban should be filled.
+    - `account_routing_type1` (string, optional)
+      Routing code type.
+    - `account_routing_type2` (string, optional)
+      Routing code sub type.
+    - `account_routing_value1` (string, optional)
+      Routing code value.
+    - `account_routing_value2` (string, optional)
+      Routing code sub type value.
+    - `bank_account_category` (string, optional)
+      bank account type.
+    - `bank_branch` (string, optional)
+      Specific branch of bank account.
+    - `bank_name` (string, optional)
+      Bank name of the beneficiary's bank account.
+    - `bank_state` (string, optional)
+      Bank State.
+    - `bank_street_address` (string, optional)
+      Bank street address.
+    - `binding_mobile_number` (string, optional)
+      The mobile number tied to the Beneficiary's bank account.
+    - `fingerprint` (string, optional)
+      Fingerprint of current beneficiary's bank account.
+    - `iban` (string, optional)
+      International bank account number, mostly for european countries.
+    - `intermediary_bank_name` (string, optional)
+      Bank name of the beneficiary's intermediary bank.
+    - `intermediary_bank_swift_code` (string, optional)
+      Intermediary bank SWIFT code / BIC,Should contain alphanumeric characters only, Should be a valid and supported SWIFT code / BIC.
+    - `local_clearing_system` (string, optional)
+      Which clearing system should be used for this local bank transfer.
+
+      Please refer to our [payout guide](https://airwallex.com/guides/payout) for details about each option.
+
+      We suggest explicitly specifying this value, however if it's not provided we will select a default (using the specified account routing type and/or what's most often the best option).
+    - `swift_code` (string, optional)
+      Bank swift code.
+  - `card` (object, optional)
+    Beneficiary's card details where the payment will be credited.
+    - `cardholder_name` (string, required)
+      Cardholder name.
+    - `token` (string, required)
+      Tokenised card number, which can be retrieved from Airwallex beneficiary component.
+    - `brand` (string, optional)
+      Card brand.
+    - `currency` (string, optional)
+      Card currency.
+    - `expiry_month` (string, optional)
+      Expiry month.
+    - `expiry_year` (string, optional)
+      Expiry year.
+    - `number` (string, optional)
+      Card number.
+  - `company_name` (string, optional)
+    Company name of the beneficiary.
+  - `date_of_birth` (string, optional)
+    beneficiary date of birth.
+  - `digital_wallet` (object, optional)
+    Beneficiary's digital wallet details where the payment will be credited.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s digital wallet.
+    - `id_type` (string, required)
+      Account identifier type of the beneficiary’s digital wallet.
+    - `id_value` (string, required)
+      Account identifier value of the beneficiary’s digital wallet.
+    - `provider` (string, required)
+      Service provider of the beneficiary's digital wallet.
+    - `country_code` (string, optional)
+      Digital wallet country code (2-letter ISO 3166-2 country code).
+  - `entity_type` (string, optional)
+    Entity type of the beneficiary.
+  - `first_name` (string, optional)
+    First name of the beneficiary.
+  - `last_name` (string, optional)
+    Last name of the beneficiary.
+  - `stablecoin_wallet` (object, optional)
+    - `address` (string, required)
+      Blockchain wallet address of the beneficiary. Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds. Always verify the recipient wallet address and network before initiating a transfer.
+    - `asset` (string, required)
+      Stablecoin asset type, e.g., `USDC`.
+    - `network` (string, required)
+      Blockchain network, e.g., `ETHEREUM`.
+  - `type` (string, optional)
+    Type of the beneficiary, indicating the type of account or method through which the beneficiary receives funds. Possible values: `BANK_ACCOUNT`, `DIGITAL_WALLET`, `CARD`, `STABLECOIN_WALLET`.
+
+Airwallex provides a beneficiary validation endpoint that lets you check for errors before creating a beneficiary. A 400 response is returned with all errors if validation fails, or a 200 OK response if all parameters are valid.
+
+# Validate a beneficiary
+
+Call [Validate a beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) to check for errors before creating a beneficiary:
+
+- If validation errors are found, a list of all errors will be returned as a 400 response.
+- If all parameters provided for the payout are valid, the endpoint will return a 200 (`OK`) response.
+
+To learn more about error response structures and detailed descriptions of error codes, please see [Error codes](https://www.airwallex.com/docs/payouts/errors/transfer-error-codes.md).
+
+## Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/beneficiaries/validate \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "beneficiary": {
+      "additional_info": {
+        "personal_email": "john.walker@gmail.com"
+      },
+      "address": {
+        "city": "Seattle",
+        "country_code": "US",
+        "postcode": "98104",
+        "state": "Washington",
+        "street_address": "412 5th Avenue"
+      },
+      "bank_details": {
+        "account_currency": "USD",
+        "account_name": "John Walker",
+        "account_number": "50001121",
+        "account_routing_type1": "aba",
+        "account_routing_value1": "021000021",
+        "bank_country_code": "US",
+        "local_clearing_system": "ACH"
+      },
+      "entity_type": "COMPANY"
+    },
+    "nickname": "Complete Concrete Pty Ltd",
+    "transfer_methods": [
+      "LOCAL"
+    ]
+  }'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+## Example error response
+
+```json
+{
+    "code": "validation_failed",
+    "message": "This is not valid.",
+    "details": {
+      "errors": [
+          {
+              "source": "beneficiary.address.postcode",
+              "code": "030"
+          },
+          {
+               "source": "beneficiary.address.street_address",
+               "code": "018",
+               "params": { 
+                  "length_min": 5,
+                  "length_max": 200
+              }
+         }
+     ]
+  }
+}
+```
+
+The following cURL example demonstrates a complete validation request, along with the possible response codes and error states for the Validate a Beneficiary endpoint.
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/beneficiaries/validate' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "beneficiary": {
+    "additional_info": {
+      "business_area": "Travel",
+      "business_phone_number": "689342234",
+      "business_registration_number": "IT593003",
+      "external_identifier": "<string>",
+      "legal_rep_bank_account_number": "44250100003700000000",
+      "legal_rep_first_name_in_chinese": "小芳",
+      "legal_rep_id_number": "110108199304203520",
+      "legal_rep_last_name_in_chinese": "刘",
+      "legal_rep_mobile_number": "13651362890",
+      "personal_email": "john.walker@gmail.com",
+      "personal_first_name_in_chinese": "大明",
+      "personal_id_number": "1234567890",
+      "personal_id_type": "NATIONAL_ID",
+      "personal_last_name_in_chinese": "李",
+      "personal_mobile_number": "13651362890",
+      "recipient_account_id": "<string>",
+      "security_question": "What is the name of my second puppy?",
+      "security_question_answer": "Scooby Doo"
+    },
+    "address": {
+      "city": "Melbourne",
+      "country_code": "AU",
+      "postcode": "3000",
+      "state": "VIC",
+      "street_address": "15 William Street"
+    },
+    "bank_details": {
+      "account_currency": "AUD",
+      "account_name": "Lee Da Ming",
+      "account_name_alias": "Lee D M",
+      "account_number": "12750852",
+      "account_routing_type1": "bsb",
+      "account_routing_type2": "sort_code",
+      "account_routing_value1": "083064",
+      "account_routing_value2": "123456",
+      "bank_account_category": "Checking,Savings,Vista,Maestra",
+      "bank_branch": "Melbourne",
+      "bank_country_code": "AU",
+      "bank_name": "National Australia Bank",
+      "bank_state": "<string>",
+      "bank_street_address": "500 Bourke Street, Melbourne 3000, Australia",
+      "binding_mobile_number": "654897612345",
+      "fingerprint": "2e99758548972a8e8822ad47fa1017ff72f06f3ff6a016851f45c398732bc50c",
+      "iban": "ES8023100001180000012345",
+      "intermediary_bank_name": "National Australia Bank",
+      "intermediary_bank_swift_code": "CTBAAU2S",
+      "local_clearing_system": "ACH",
+      "swift_code": "CTBAAU2S"
+    },
+    "card": {
+      "brand": "VISA",
+      "cardholder_name": "John Walker",
+      "currency": "USD",
+      "expiry_month": "10",
+      "expiry_year": "2033",
+      "number": "************1111",
+      "token": "AKvN4TqxI04SNFZ+oYRXaECtDA=="
+    },
+    "company_name": "Complete Concrete Pty Ltd",
+    "date_of_birth": "1976-08-26",
+    "digital_wallet": {
+      "account_name": "John Walker Corporation",
+      "country_code": "US",
+      "id_type": "account_number",
+      "id_value": "1033106816639334",
+      "provider": "AIRWALLEX"
+    },
+    "entity_type": "COMPANY",
+    "first_name": "John",
+    "last_name": "Walker",
+    "type": "<string>"
+  },
+  "nickname": "Complete Concrete Pty Ltd",
+  "payer_entity_type": "COMPANY",
+  "sca_exemptible": false,
+  "transfer_methods": [
+    "SWIFT"
+  ],
+  "transfer_reason": "travel"
+}'
+```
+
+## Response
+
+### 200 OK
+
+OK
+
+## Errors
+
+### 400 Bad request
+
+Possible errors: `validation_failed`, `service_unavailable`
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 429 Too many requests
+
+Too many requests
+
+### 500 Server error
+
+Service unavailable

@@ -1,0 +1,608 @@
+Airwallex supports payouts to stablecoin wallets on supported blockchain networks. This page covers prerequisites, setup requirements, and the current stablecoin wallet payout coverage.
+
+> **\[INFORMATIONAL]**
+>
+> Stablecoin payments are currently available via API only and are not supported in the Airwallex web app.
+
+> **\[CRITICAL]**
+>
+> Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds. Always verify the recipient wallet address and network before initiating a transfer.
+
+Airwallex supports payouts to stablecoin wallets on supported blockchain networks.
+
+By clicking on the stablecoin names or the subpages on the left menu, you can find stablecoin-specific guides which provide an overview of payout capabilities, specific beneficiary detail requirements, and other key considerations.
+
+To [create a transfer](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#step-2-create-a-transfer) with our [Transfer API endpoints](https://www.airwallex.com/docs/api/introduction.md), specify the beneficiary type as `STABLECOIN_WALLET`. For the full request requirements, see our [dynamic schema](https://www.airwallex.com/docs/api/introduction.md).
+
+## Before you begin
+
+Contact your Airwallex Account Manager to enable stablecoin payouts for your account. The following setup is managed by your Account Manager:
+
+- Stablecoin beneficiary configuration
+- Stablecoin transfer type configuration
+- Payout fee configuration
+- Routing configuration
+
+## Stablecoin wallet coverage
+
+For an overview of Airwallex's stablecoin wallet payout coverage, see the table below:
+
+| Stablecoin                                                                               | Network  | Supported currency | Flight time                              |
+| ---------------------------------------------------------------------------------------- | -------- | ------------------ | ---------------------------------------- |
+| [USDC](https://www.airwallex.com/docs/payouts/payout-network/stablecoin-wallets/usdc.md) | Ethereum | USD                | Minutes (4 block confirmations required) |
+
+A **block confirmation** occurs when the blockchain network validates and adds a new block containing your transaction. Ethereum typically produces a block every \~12 seconds, so 4 confirmations take roughly 1 minute.
+
+A stablecoin wallet beneficiary (`STABLECOIN_WALLET` type) requires a `stablecoin_wallet` object with `asset`, `network`, and `address` fields. Sending stablecoins to an incorrect address or unsupported network results in irreversible loss of funds.
+
+## Stablecoin wallet beneficiary
+
+Specify the beneficiary type as `STABLECOIN_WALLET` and provide a `stablecoin_wallet` object with the `asset`, `network`, and `address`. See [Stablecoin wallet payout network](https://www.airwallex.com/docs/payouts/payout-network/stablecoin-wallets.md) for supported coverage.
+
+> **\[CRITICAL]**
+>
+> Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds. Always verify the recipient wallet address and network before initiating a transfer.
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/beneficiaries/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "beneficiary": {
+      "additional_info": {
+        "business_registration_number": "123456789"
+      },
+      "address": {
+        "country_code": "US"
+      },
+      "entity_type": "COMPANY",
+      "company_name": "Acme Web3 Ltd",
+      "stablecoin_wallet": {
+        "asset": "USDC",
+        "network": "ETHEREUM",
+        "address": "0x5abfe17b2e9e1234567890abcdef1234567890"
+      },
+      "type": "STABLECOIN_WALLET"
+    },
+    "nickname": "Acme-USDC-Rail"
+  }'
+```
+
+### Example response
+
+```json
+{
+    "beneficiary": {
+        "additional_info": {
+            "business_registration_number": "123456789"
+        },
+        "address": {
+            "country_code": "US"
+        },
+        "company_name": "Acme Web3 Ltd",
+        "entity_type": "COMPANY",
+        "stablecoin_wallet": {
+            "asset": "USDC",
+            "network": "ETHEREUM",
+            "address": "0x5abfe17b2e9e1234567890abcdef1234567890"
+        },
+        "type": "STABLECOIN_WALLET"
+    },
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "nickname": "Acme-USDC-Rail",
+    "payer_entity_type": "COMPANY"
+}
+```
+
+Stablecoin transfers via the Airwallex Transfer API allow you to pay out stablecoins to a beneficiary's blockchain wallet. This feature is available via API only and requires account manager enablement. Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds — always verify the recipient wallet address and network before initiating a transfer.
+
+# Transfers via Stablecoin
+
+> **\[INFORMATIONAL]**
+>
+> Stablecoin payments are currently available via API only and are not supported in the Airwallex web app.
+
+> **\[CRITICAL]**
+>
+> Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds. Always verify the recipient wallet address and network before initiating a transfer.
+
+You can pay out stablecoins to a beneficiary's wallet on a supported blockchain network by creating a transfer with our [Transfer API](https://www.airwallex.com/docs/api/introduction.md) endpoints. Learn how to do this in the following sections.
+
+The current [transfer approval workflow](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) also applies to transfers via stablecoin.
+
+For supported stablecoins and networks, see [Stablecoin wallet payout network](https://www.airwallex.com/docs/payouts/payout-network/stablecoin-wallets.md).
+
+## Before you begin
+
+- Contact your Airwallex Account Manager to enable stablecoin payouts for your account. The following setup is managed by your Account Manager:
+  - Stablecoin beneficiary configuration
+  - Stablecoin transfer type configuration
+  - Payout fee configuration
+  - Routing configuration
+- [Obtain your access token](https://www.airwallex.com/docs/api/authentication/api_access/login.md) by authenticating to Airwallex using your unique Client ID and API key. You will need the access token to make API calls.
+
+## Step 1: Create a stablecoin wallet beneficiary
+
+Call the [Create a beneficiary](https://www.airwallex.com/docs/api/introduction.md) endpoint with `type` set to `STABLECOIN_WALLET` and a `stablecoin_wallet` object.
+
+| Required fields                                | Permitted data                   | Notes                                     |
+| ---------------------------------------------- | -------------------------------- | ----------------------------------------- |
+| `type`                                         | `STABLECOIN_WALLET`              | Beneficiary type                          |
+| `entity_type`                                  | `COMPANY` or `PERSONAL`          | Entity type of the beneficiary            |
+| `company_name`                                 | String                           | Required when `entity_type` is `COMPANY`  |
+| `additional_info.business_registration_number` | String                           | Required when `entity_type` is `COMPANY`  |
+| `first_name`                                   | String                           | Required when `entity_type` is `PERSONAL` |
+| `last_name`                                    | String                           | Required when `entity_type` is `PERSONAL` |
+| `date_of_birth`                                | `YYYY-MM-DD`                     | Required when `entity_type` is `PERSONAL` |
+| `address.country_code`                         | 2-letter ISO 3166-2 country code | Country of the beneficiary                |
+| `stablecoin_wallet.asset`                      | `USDC`                           | Stablecoin asset type                     |
+| `stablecoin_wallet.network`                    | `ETHEREUM`                       | Blockchain network                        |
+| `stablecoin_wallet.address`                    | Ethereum address (0x...)         | Wallet address of the beneficiary         |
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/beneficiaries/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "beneficiary": {
+      "additional_info": {
+        "business_registration_number": "123456789"
+      },
+      "address": {
+        "country_code": "US"
+      },
+      "entity_type": "COMPANY",
+      "company_name": "Acme Web3 Ltd",
+      "stablecoin_wallet": {
+        "asset": "USDC",
+        "network": "ETHEREUM",
+        "address": "0x5abfe17b2e9e1234567890abcdef1234567890"
+      },
+      "type": "STABLECOIN_WALLET"
+    },
+    "nickname": "Acme-USDC-Rail"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "beneficiary": {
+    "additional_info": {
+      "business_registration_number": "123456789"
+    },
+    "address": {
+      "country_code": "US"
+    },
+    "company_name": "Acme Web3 Ltd",
+    "stablecoin_wallet": {
+      "asset": "USDC",
+      "network": "ETHEREUM",
+      "address": "0x5abfe17b2e9e1234567890abcdef1234567890"
+    },
+    "entity_type": "COMPANY",
+    "type": "STABLECOIN_WALLET"
+  },
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "nickname": "Acme-USDC-Rail",
+  "payer_entity_type": "COMPANY"
+}
+```
+
+Airwallex supports payouts of USDC on the Ethereum network via API only. This page covers the supported features, flight time, and the required fields for creating a USDC stablecoin transfer.
+
+# USDC on Ethereum
+
+> **\[INFORMATIONAL]**
+>
+> Stablecoin payments are currently available via API only and are not supported in the Airwallex web app.
+
+> **\[CRITICAL]**
+>
+> Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds. Always verify the recipient wallet address and network before initiating a transfer.
+
+USDC is a dollar-backed stablecoin issued by Circle. Airwallex supports payouts of USDC on the Ethereum network.
+
+For a step-by-step guide on creating a stablecoin payout, see [Transfers via Stablecoin](https://www.airwallex.com/docs/payouts/transfers/transfers-via-stablecoin.md).
+
+## Overview
+
+| Features           | USDC on Ethereum network                 |
+| ------------------ | ---------------------------------------- |
+| Supported currency | USD                                      |
+| Network            | Ethereum                                 |
+| Flight time        | Minutes (4 block confirmations required) |
+
+A **block confirmation** occurs when the blockchain network validates and adds a new block containing your transaction. Ethereum typically produces a block every \~12 seconds, so 4 confirmations take roughly 1 minute.
+
+Please refer to the section below for this stablecoin's key required fields and other considerations.
+
+## Transfer to USDC
+
+| Required fields                                | Permitted data                   | Notes                                     |
+| ---------------------------------------------- | -------------------------------- | ----------------------------------------- |
+| `type`                                         | `STABLECOIN_WALLET`              | Beneficiary type                          |
+| `entity_type`                                  | `COMPANY` or `PERSONAL`          | Entity type of the beneficiary            |
+| `company_name`                                 | String                           | Required when `entity_type` is `COMPANY`  |
+| `additional_info.business_registration_number` | String                           | Required when `entity_type` is `COMPANY`  |
+| `first_name`                                   | String                           | Required when `entity_type` is `PERSONAL` |
+| `last_name`                                    | String                           | Required when `entity_type` is `PERSONAL` |
+| `date_of_birth`                                | `YYYY-MM-DD`                     | Required when `entity_type` is `PERSONAL` |
+| `address.country_code`                         | 2-letter ISO 3166-2 country code | Country of the beneficiary                |
+| `stablecoin_wallet.asset`                      | `USDC`                           | Stablecoin asset type                     |
+| `stablecoin_wallet.network`                    | `ETHEREUM`                       | Blockchain network                        |
+| `stablecoin_wallet.address`                    | Ethereum address (0x...)         | Wallet address of the beneficiary         |
+
+The `beneficiary` object supports `bank_details`, `card`, `digital_wallet`, and `stablecoin_wallet` sub-objects for specifying the payment destination, along with top-level identity fields.
+
+- `beneficiary` (object, required)
+  Details of the beneficiary.
+  - `bank_details` (object, optional)
+    Beneficiary's bank account details where the payment will be credited.
+    - `account_currency` (string, required)
+      Account Currency.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s bank account.
+    - `bank_country_code` (string, required)
+      Bank country code (2-letter ISO 3166-2 country code).
+    - `account_name_alias` (string, optional)
+      The beneficiary’s account name known in the payment system. This is only supported in some regions and transfer methods. See detailed definitions in the [Payouts Product Docs](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md).
+    - `account_number` (string, optional)
+      Account number, mostly for non-european countries, either account_number or iban should be filled.
+    - `account_routing_type1` (string, optional)
+      Routing code type.
+    - `account_routing_type2` (string, optional)
+      Routing code sub type.
+    - `account_routing_value1` (string, optional)
+      Routing code value.
+    - `account_routing_value2` (string, optional)
+      Routing code sub type value.
+    - `bank_account_category` (string, optional)
+      bank account type.
+    - `bank_branch` (string, optional)
+      Specific branch of bank account.
+    - `bank_name` (string, optional)
+      Bank name of the beneficiary's bank account.
+    - `bank_state` (string, optional)
+      Bank State.
+    - `bank_street_address` (string, optional)
+      Bank street address.
+    - `binding_mobile_number` (string, optional)
+      The mobile number tied to the Beneficiary's bank account.
+    - `fingerprint` (string, optional)
+      Fingerprint of current beneficiary's bank account.
+    - `iban` (string, optional)
+      International bank account number, mostly for european countries.
+    - `intermediary_bank_name` (string, optional)
+      Bank name of the beneficiary's intermediary bank.
+    - `intermediary_bank_swift_code` (string, optional)
+      Intermediary bank SWIFT code / BIC,Should contain alphanumeric characters only, Should be a valid and supported SWIFT code / BIC.
+    - `local_clearing_system` (string, optional)
+      Which clearing system should be used for this local bank transfer.
+
+      Please refer to our [payout guide](https://airwallex.com/guides/payout) for details about each option.
+
+      We suggest explicitly specifying this value, however if it's not provided we will select a default (using the specified account routing type and/or what's most often the best option).
+    - `swift_code` (string, optional)
+      Bank swift code.
+  - `card` (object, optional)
+    Beneficiary's card details where the payment will be credited.
+    - `cardholder_name` (string, required)
+      Cardholder name.
+    - `token` (string, required)
+      Tokenised card number, which can be retrieved from Airwallex beneficiary component.
+    - `brand` (string, optional)
+      Card brand.
+    - `currency` (string, optional)
+      Card currency.
+    - `expiry_month` (string, optional)
+      Expiry month.
+    - `expiry_year` (string, optional)
+      Expiry year.
+    - `number` (string, optional)
+      Card number.
+  - `company_name` (string, optional)
+    Company name of the beneficiary.
+  - `date_of_birth` (string, optional)
+    beneficiary date of birth.
+  - `digital_wallet` (object, optional)
+    Beneficiary's digital wallet details where the payment will be credited.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s digital wallet.
+    - `id_type` (string, required)
+      Account identifier type of the beneficiary’s digital wallet.
+    - `id_value` (string, required)
+      Account identifier value of the beneficiary’s digital wallet.
+    - `provider` (string, required)
+      Service provider of the beneficiary's digital wallet.
+    - `country_code` (string, optional)
+      Digital wallet country code (2-letter ISO 3166-2 country code).
+  - `entity_type` (string, optional)
+    Entity type of the beneficiary.
+  - `first_name` (string, optional)
+    First name of the beneficiary.
+  - `last_name` (string, optional)
+    Last name of the beneficiary.
+  - `stablecoin_wallet` (object, optional)
+    - `address` (string, required)
+      Blockchain wallet address of the beneficiary. Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds. Always verify the recipient wallet address and network before initiating a transfer.
+    - `asset` (string, required)
+      Stablecoin asset type, e.g., `USDC`.
+    - `network` (string, required)
+      Blockchain network, e.g., `ETHEREUM`.
+  - `type` (string, optional)
+    Type of the beneficiary, indicating the type of account or method through which the beneficiary receives funds. Possible values: `BANK_ACCOUNT`, `DIGITAL_WALLET`, `CARD`, `STABLECOIN_WALLET`.
+
+Airwallex supports local and SWIFT payouts to bank accounts, digital wallets, cards, and stablecoin wallets across a broad global network.
+
+# Payout network
+
+Airwallex currently supports local and SWIFT payouts to bank accounts in over 200 countries/regions and over 90 currencies, and continues to expand its coverage. With connections to local clearing systems in over 120 countries/regions, Airwallex offers local payouts which are faster and more cost-effective in comparison to SWIFT. In addition, Airwallex also supports payouts to digital wallets, including Airwallex and PayPal, and continues to expand its digital wallet coverage. Airwallex also supports payouts to stablecoin wallets, such as USDC on supported blockchain networks.
+
+> **\[INFORMATIONAL]**
+>
+> **New feature:** Airwallex now supports instant, in-network payouts to other Airwallex accounts  via Airwallex Pay. Refer to [Transfers via Airwallex Pay](https://www.airwallex.com/docs/payouts/transfers/transfers-via-airwallex-pay.md) to learn more about how it works.
+
+### Explore our payout network
+
+By clicking on the country or wallet names on the left menu, you can find the specific guides which provide an overview of payout capabilities, specific bank or wallet detail requirements and other key considerations. For the full request requirements of each payout scenario, see our [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+- [Bank accounts](https://www.airwallex.com/docs/payouts/payout-network/bank-accounts.md)\
+  Efficiently pay out to 200+ countries and regions
+
+- [Digital wallets](https://www.airwallex.com/docs/payouts/payout-network/digital-wallets.md)\
+  Instantly pay out to digital wallets
+
+- [Cards](https://www.airwallex.com/docs/payouts/payout-network/cards.md)\
+  Pay out directly to Visa and Mastercard cards
+
+- [Stablecoin wallets](https://www.airwallex.com/docs/payouts/payout-network/stablecoin-wallets.md)\
+  Pay out USDC on supported blockchain networks
+
+The Create Beneficiaries API allows saving and managing beneficiaries for use in payouts via `beneficiary_id`. Key parameters and their requirements vary by payout scenario.
+
+# Create beneficiaries
+
+Call [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) to save and manage beneficiaries that you can use for creating payouts using `beneficiary_id`.
+
+Refer to the [dynamic schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) for precise field requirements specific to the intended payout scenario. If you specify a parameter that is either not required or not on the full schema, it will be ignored and removed from the response. Please find below further considerations on some of the required parameters:
+
+- `beneficiary.type`: Specify whether the beneficiary type is a `BANK_ACCOUNT`, a `DIGITAL_WALLET` (including Airwallex Pay), or a `STABLECOIN_WALLET`. The value will default to `BANK_ACCOUNT` if not specified.
+- `beneficiary.bank_details`: required beneficiary bank account details parameters will vary according to the specified payout scenario. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+- `beneficiary.digital_wallet`: Required beneficiary digital wallet parameters will vary according to the specified digital wallet provider. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+- `beneficiary.stablecoin_wallet`: Required beneficiary stablecoin wallet parameters (`asset`, `network`, `address`) will vary according to the specified stablecoin and network. See [Stablecoin wallet payout network](https://www.airwallex.com/docs/payouts/payout-network/stablecoin-wallets.md) for supported coverage.
+- `beneficiary.address`: required address parameters such as `street_address`, `city`, `state` and `postcode` will vary according to the specified address country. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements. The `street_address` must not be a P.O. box address.
+- `beneficiary.entity_type`: Specify whether the beneficiary is an individual (`PERSONAL`) or a business (`COMPANY`).
+- `beneficiary.transfer_methods`: Specify `SWIFT` to create an international SWIFT payout; or `LOCAL` to create a payout via the local clearing system, which is faster and more cost-effective. See [Payout network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported transfer methods by countries/regions and currencies.
+- `beneficiary.additional_info.personal_email` (Optional): Specify this parameter if you want the beneficiary to receive an email notification upon payout being dispatched. Please contact your Account Manager to enable this feature beforehand.
+
+
+Once a stablecoin wallet beneficiary is created, you can create a transfer, monitor its status, and track the on-chain transaction. This section covers Step 2 (create transfer), Step 3 (check status), the transfer lifecycle statuses, and sandbox testing notes.
+
+## Step 2: Create a transfer
+
+Call the [Create a transfer](https://www.airwallex.com/docs/api/introduction.md) endpoint. You can either reference a saved `beneficiary_id` or pass the beneficiary details inline.
+
+For stablecoin transfers, set `transfer_method` to `LOCAL`. This routes the payout through Airwallex's stablecoin infrastructure to the blockchain network.
+
+### Example request (inline beneficiary)
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/transfers/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "beneficiary": {
+      "additional_info": {
+        "business_registration_number": "123456789"
+      },
+      "address": {
+        "country_code": "US"
+      },
+      "company_name": "Acme Web3 Ltd",
+      "entity_type": "COMPANY",
+      "stablecoin_wallet": {
+        "asset": "USDC",
+        "network": "ETHEREUM",
+        "address": "0x5abfe17b2e9e1234567890abcdef1234567890"
+      },
+      "type": "STABLECOIN_WALLET"
+    },
+    "reason": "pay_for_goods",
+    "reference": "STABLECOIN-PMT-001",
+    "request_id": "b2c3d4e5-f6a7-8901-bcde-f01234567890",
+    "source_amount": 1000,
+    "source_currency": "USD",
+    "transfer_method": "LOCAL"
+  }'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+### Example response
+
+```json
+{
+  "beneficiary": {
+    "additional_info": {
+      "business_registration_number": "123456789"
+    },
+    "address": {
+      "country_code": "US"
+    },
+    "company_name": "Acme Web3 Ltd",
+    "entity_type": "COMPANY",
+    "stablecoin_wallet": {
+      "asset": "USDC",
+      "network": "ETHEREUM",
+      "address": "0x5abfe17b2e9e1234567890abcdef1234567890"
+    },
+    "type": "STABLECOIN_WALLET"
+  },
+  "created_at": "2025-04-20T12:00:00+0000",
+  "fee_amount": 0,
+  "fee_currency": "USD",
+  "id": "c3d4e5f6-a7b8-9012-cdef-012345678901",
+  "reason": "pay_for_goods",
+  "reference": "STABLECOIN-PMT-001",
+  "request_id": "b2c3d4e5-f6a7-8901-bcde-f01234567890",
+  "source_amount": 1000,
+  "source_currency": "USD",
+  "status": "PROCESSING",
+  "transfer_amount": 1000,
+  "transfer_currency": "USD",
+  "transfer_method": "LOCAL"
+}
+```
+
+## Step 3: Check transfer status
+
+Call [Get a transfer](https://www.airwallex.com/docs/api/introduction.md) to check the status. Once the on-chain transaction is submitted, `dispatch_info` will contain:
+
+- `external_reference`: the blockchain transaction hash
+- `external_reference_type`: `NETWORK_TRANSACTION_ID`
+
+You can use the transaction hash to verify the payout on a blockchain explorer (e.g., Etherscan).
+
+## Transfer lifecycle
+
+Stablecoin transfers follow this status progression:
+
+| Status       | Description                                     |
+| ------------ | ----------------------------------------------- |
+| `SCHEDULED`  | Transfer created and queued for processing      |
+| `PROCESSING` | Transfer is being processed                     |
+| `SENT`       | On-chain transaction submitted to the network   |
+| `PAID`       | On-chain transaction confirmed, funds delivered |
+
+## Sandbox testing
+
+> **\[INFORMATIONAL]**
+>
+> Sandbox simulation for stablecoin transfers is not currently available. To test your integration end-to-end, contact your Airwallex Account Manager to set up a demo environment with stablecoin payments enabled.
+
+## Next steps
+
+- [Create a transfer](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md)
+
+Airwallex's payout network covers local clearing systems, SWIFT, digital wallets, and stablecoin wallets across a broad range of countries and currencies. Related products such as Banking as a Service, Global Treasury, and Transactional FX can be integrated to strengthen a global financial infrastructure.
+
+### Our payout network
+
+Explore our regional and currency coverage for payouts to bank accounts, digital wallets, and stablecoin wallets.
+
+- [Local payout coverage](https://www.airwallex.com/docs/payouts/payout-network/bank-accounts.md#local-payout-coverage)\
+  Send funds via local clearing systems in 100+ countries and regions
+
+- [SWIFT payout coverage](https://www.airwallex.com/docs/payouts/payout-network/bank-accounts.md#swift-payout-coverage)\
+  Efficiently pay out to 200+ countries and regions
+
+- [Digital wallet coverage](https://www.airwallex.com/docs/payouts/payout-network/digital-wallets.md)\
+  Instantly pay out to digital wallets
+
+- [Stablecoin wallet coverage](https://www.airwallex.com/docs/payouts/payout-network/stablecoin-wallets.md)\
+  Pay out USDC on supported blockchain networks
+
+### Explore related products
+
+Integrate your payouts solution with Airwallex products to strengthen your global financial infrastructure.
+
+- [Banking as a Service](https://www.airwallex.com/docs/banking-as-a-service/overview.md)\
+  Offer a full-featured fintech solution including accounts and card issuing
+
+- [Global Treasury](https://www.airwallex.com/docs/global-treasury/overview.md)\
+  Enable your platform to collect and disburse funds globally
+
+- [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md)\
+  Access interbank FX rates and intelligently manage currency risk
+
+Step 2 of creating a transfer covers calling the Create a new transfer endpoint, the two ways to supply beneficiary information (by saved `beneficiary_id` or inline), and all required and optional request parameters including currency, method, date, rate-locking, fees, and payer details.
+
+## Step 2: Create a transfer
+
+> **\[INFORMATIONAL]**
+>
+> **New features**
+>
+> - [Transfers via Airwallex Pay](https://www.airwallex.com/docs/payouts/transfers/transfers-via-airwallex-pay.md): Transfer to other Airwallex accounts via Airwallex Pay by specifying `DIGITAL_WALLET` for type under the beneficiary object.
+> - [Transfers via Stablecoin](https://www.airwallex.com/docs/payouts/transfers/transfers-via-stablecoin.md): Pay out stablecoins to a beneficiary's wallet on a supported blockchain network by specifying `STABLECOIN_WALLET` for type under the beneficiary object.
+> - Schedule transfers: Create future-dated transfers up to 180 days with the flexibility to lock in the FX rate with an upfront prepayment using the `lock_rate_on_create` field. Learn more in [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction).
+
+Call [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md) with the required beneficiary and transaction information (currency, amount, date, reference) to create a transfer.
+
+Beneficiary information can be specified within the request in two ways:
+
+1. Beneficiary ID
+
+   If you prefer to save beneficiary information with Airwallex in advance to simplify the transfer creation process, you can call [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md), and a unique `beneficiary_id` will be returned. This can be used in place of the `beneficiary` object to create the transfer subsequently.
+
+   See [Create beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md) and [Manage beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/manage-beneficiaries.md) to learn more.
+
+2. Directly within the request
+
+   If you prefer to manage all beneficiary information outside of Airwallex, you can provide beneficiary information directly under the beneficiary object each time when calling [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+Refer to the [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) for precise field requirements specific to the intended transfer scenario. If you specify a parameter that is either not required or not on the full schema, it will be ignored and removed from the response. Please find below further considerations on some of the required parameters:
+
+- `beneficiary`: beneficiary details should be provided directly in this object if `beneficiary_id` is not used:
+  - `type`: Specify whether the beneficiary type is a `BANK_ACCOUNT`, a `DIGITAL_WALLET` (including Airwallex Pay), a `CARD`, or a `STABLECOIN_WALLET`. The value will default to `BANK_ACCOUNT` if not specified.
+  - `bank_details`, `digital_wallet`, `card`, or `stablecoin_wallet`: Required beneficiary bank account details, digital wallet, card, or stablecoin wallet parameters (depending on the type specified), varies according to the specified transfer scenario. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `address`:  Required address parameters such as street address, city, state and postcode will vary according to the specified address country. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `entity_type`: Specify whether the beneficiary is an individual (`PERSONAL`) or a business (`COMPANY`).
+  - `company_name`, OR `first_name` and `last_name`: The beneficiary’s name according to the `entity_type`.
+
+- `transfer_currency`: The currency (3-letter ISO 4217 code) in which the beneficiary receives. It must match `account_currency` of the beneficiary’s bank account details. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported currencies.
+
+- `source_currency`: The currency (3-letter ISO 4217 code) in which to fund the transfer. If it is different from `transfer_currency`, an underlying currency conversion will be booked (Refer to [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) for more details).
+
+- `transfer_amount` OR `source_amount`: Please only specify one of these two amounts in their respective currencies. The other amount will be calculated and returned in the response.
+
+  Actual amounts with transfer fees applied (if any) are returned as `amount_beneficiary_receives` and `amount_payer_pays` in the response. If a transfer was initially [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), these amounts are tentative based on the exchange rate at the time of creation until the transfer status changes to `SCHEDULED`, at which point the exchange rate is confirmed. By default, transfer fees are charged to the payer i.e. added to `transfer_amount` and resulted in `amount_payer_pays`. If you wish to pass on the fees to the beneficiary, you can specify using the `fee_paid_by` parameter (see below for more details).
+
+- `transfer_method`: Specify `SWIFT` to create an international SWIFT transfer; or `LOCAL` to create a transfer via the local clearing system, which is faster and more cost-effective. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported transfer methods by countries/regions and currencies.
+
+- `reference`:  A custom reference for this transfer, intended to identify the transaction to the beneficiary. Whether this reference appears on the beneficiary's bank statement depends on the local clearing system and our banking partners. Contact your Account Manager to confirm whether display of reference is supported for your transfer scenarios.
+
+- `reason`: Specify the purpose of the transfer from one of the accepted values: `audio_visual_services`, `bill_payment`, `business_expenses`, `construction`, `donation_charitable_contribution`, `education_training`, `freight`, `goods_purchased`, `investment_capital`, `investment_proceeds`, `living_expenses`, `loan_credit_repayment`, `medical_services`, `pension`, `professional_business_services`, `real_estate`, `taxes`, `technical_services`, `transfer_to_own_account`, `travel`, `wages_salary`, `other_services`. Note that a different set of reasons applies for international transfers from customers registered in Israel. See [Israel](https://www.airwallex.com/docs/payouts/transfers/transfers-to-from-countries-with-regulatory-requirements/israel.md) for the list of accepted values.
+
+In addition, you may also choose to specify the following optional parameters in your request to further customize the transfer or leverage other related features:
+
+- `beneficiary.additional_info.personal_email`: Specify this parameter if you want the beneficiary to receive an email notification upon transfer being dispatched. Please contact your Account Manager to enable this feature beforehand.
+
+- `fee_paid_by`: By default, transfer fees will be charged to the `PAYER` and included in the `amount_payer_pays` within the response. If you wish to pass on the fees to the beneficiary, set the value to `BENEFICIARY`.
+
+- `swift_charge_option`: By default, `SHARED` will be applied, in which case the SWIFT charges will be shared between the payer and the beneficiary, i.e. the beneficiary will receive  the `amount_beneficiary_receives` less corresponding SWIFT charges by the beneficiary bank. If you want the beneficiary to receive the full `amount_beneficiary_receives`, set the value to PAYER to cover the additional SWIFT charges.
+
+- `transfer_date`: Specify a current or future date (ISO 8601 format) for when the transfer should be processed. If left blank, the transfer date will default to the earliest possible date and your transfer will be dispatched as soon as possible.
+
+  > **\[WARNING]**
+  >
+  > To dispatch a transfer as soon as possible, omit `transfer_date`. Setting `transfer_date` (including today's date) routes the transfer through scheduled-transfer logic and is not equivalent to omitting the field.
+  >
+  >
+  >
+  >
+  >
+  > `transfer_date` is interpreted in your request account owning entity timezone. For related transfer lifecycle behavior (`SCHEDULED` / `OVERDUE`) and fund deduction timing, see [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) and [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction). To learn more about account timezone and settlement timing, see [Funding and Settlement Models](https://www.airwallex.com/docs/transactional-fx/funding-and-settlement-models.md).
+
+  For transfers with the same source and transfer currency, you can specify a date up to 180 days into the future. For transfers with currency conversions, generally you can specify a date up to 90 days into the future (varies by currency pairs). Longer tenors up to 180 days (varies by currency pair) is possible with our FX forwards product. Please confirm the acceptable value dates by currency pair with your Account Manager.
+
+  For transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), the `transfer_date` will be updated if it was approved after the original specified date; at which point the transfer status transitions to `SCHEDULED` and `transfer_date` is fixed. The date when the transfer is `SENT` will be returned in `dispatch_date`.
+
+- `lock_rate_on_create`: Specify whether to lock the conversion rate for a future-dated transfer upon creation. This field should only be specified for transfers with currency conversions. The value will default to `TRUE` if not specified.
+  - If `TRUE`: The transfer is created with a **confirmed** conversion rate. A `prepayment` (amount varies by currency pair and tenor) is held upfront to cover any FX delta fee in the event of transfer cancellation, and the full amount will be deducted on the scheduled `transfer_date`. Further details are returned under the `prepayment` object.
+  - If `FALSE`: The transfer is created with an **unconfirmed** conversion rate, which will be confirmed on the scheduled `transfer_date`, when the full amount will be deducted.
+
+    See [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction) for more details.
+
+- `quote_id`: Specify the `quote_id` returned from a previously created [quote](https://www.airwallex.com/docs/transactional-fx/get-started/choose-your-fx-solution/quotes.md) to fix the conversion rate of the transfer. You must also ensure that the `source_currency` and `transfer_currency` in your transfer request match the `sell_currency` and `buy_currency` from the quote. Quotes cannot be applied for [creating and submitting a transfer for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md).
+
+  If not specified, the system will automatically book the underlying currency conversion based on `transfer_date` and `lock_rate_on_create` parameters. See [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) to learn more about the options you have in performing conversions and how you can leverage the corresponding API endpoints.
+
+- `payer` or `payer_id`: Specify the payer information other than the Airwallex account owner with POBO (Pay On Behalf Of) enabled on a case-by-case approval basis. Similar to beneficiaries, the payer information may be provided directly within the `payer` object, or by specifying the `payer_id` of a saved payer. See [Create a payer](https://www.airwallex.com/docs/payouts/payers/create-a-payer.md) for more information. By default, Airwallex identifies the payer as the Airwallex account owner creating the transfer (connected account owner in a platform use case), and it is not necessary to specify the payer information.
+

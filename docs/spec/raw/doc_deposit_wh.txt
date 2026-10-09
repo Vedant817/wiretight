@@ -1,0 +1,611 @@
+The `deposit.settled` webhook event fires when a deposit is successfully settled to the Wallet. The `data` object includes `settled_at` timestamp and fee details.
+
+### deposit.settled
+
+**Payload example:**
+
+```json
+{
+    "accountId": "acct_TOslkS7-MnyXlQuV8Lb4og",   
+    "data":Object{...},
+    "id":"86b69f91-06f0-3fe8-8faf-4de58954ca8e",
+    "name": "deposit.settled"  
+}
+```
+
+**data**
+
+```json
+{
+    "id": "67f687fe-dcf4-4462-92fa-20335301d9d8",
+    "type": "DIRECT_DEBIT",
+    "status": "SETTLED",
+    "created_at": "2017-03-20T14:00:01+1100",
+    "currency": "AUD",
+    "amount": 12794.27,
+    "settled_at": "2017-03-22T14:00:00+0000",
+    "funding_source_id": "fcfc369c-ce9d-4ab7-b9af-80df61848f8f",
+    "reference": "5487287788",
+    "provider_transaction_id": "5487287788",
+    "fee": {
+      "currency": "AUD",
+      "amount": 12.79
+    }
+}     
+```
+
+Airwallex provides webhook events for deposit status changes as part of the Accounts integration. The following events cover both bank transfer and direct debit deposits, with payload examples for each.
+
+# Deposits
+
+Subscribe to webhook events for deposit status changes.
+
+The following webhook events are available for your [Accounts](https://www.airwallex.com/docs/accounts/overview.md) integration.
+
+| Event            | Description                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| deposit.pending  | Deposit is pending.                                                                  |
+| deposit.settled  | Deposit is successfully settled to Wallet.                                           |
+| deposit.rejected | Deposit is rejected after being reviewed by Airwallex or the clearing system.        |
+| deposit.reversed | Deposit is recalled by the payer's bank after the funds were settled to your Wallet. |
+
+## Payload examples
+
+Relevant webhook events (covers both bank transfer and direct debit deposits):
+
+- deposit.pending
+- deposit.rejected
+- deposit.settled
+- deposit.reversed
+
+A PSP settlement deposit is created when an acquiring PSP deposits funds to a Global Account connected to the platform's Holding Account. The statuses below track the deposit's lifecycle, followed by notes on how intent, split, and deposit statuses are linked.
+
+## PSP settlement deposit
+
+Status transitions for a PSP settlement deposit object during settlement handling.
+
+![PSP Settlement deposit status](https://www.airwallex.com/docs/assets/contentful/images.ctfassets.net/c3n7jozh84hr/LPBikLudfw260yjw39BF4/510b556976964718329283aab36cdf64/image.png)
+
+| Status           | Description                                                                                                                                                                                                                                                              | Emitted webhook                           | Next steps                                                                                                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NEW              | Airwallex has successfully created the PSP settlement deposit object. This occurs when the acquiring PSP deposits the funds to a Global Account connected to the platform's Holding Account using a predetermined settlement reference in the bank transfer description. | psp\_settlement\_deposit.new              | No action needed.                                                                                                                                                                                                                                                    |
+| ACTION\_REQUIRED | Unsuccessful match between the deposit and PSP settlement intents.                                                                                                                                                                                                       | psp\_settlement\_deposit.action\_required | For information on the types of unsuccessful matches and how to troubleshoot, see [Failure notifications.](https://www.airwallex.com/docs/payments-for-platforms/psp-agnostic/implement-your-psp-agnostic-solution/deposit-matching.md#failure-notifications)        |
+| MATCHED          | The amount of the PSP settlement deposits matches the amount of the associated PSP settlement intent.                                                                                                                                                                    | psp\_settlement\_deposit.matched          | You can proceed to release settlement splits comprising this intent. See [Release settlement split](https://www.airwallex.com/docs/payments-for-platforms/psp-agnostic/implement-your-psp-agnostic-solution/handle-settlements.md#step-3-release-settlement-splits). |
+| SETTLED          | Platform has successfully released all the PSP settlement splits comprising the intent and the funds have moved from the Holding Account into the sellers' connected account wallets.                                                                                    | psp\_settlement\_deposit.settled          | Pay out funds from the sellers’ connected accounts to their external bank accounts whenever you choose.                                                                                                                                                              |
+
+You can subscribe to [PSP Settlement Deposit](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/psp-agnostic.md) webhooks to receive notifications on these status transitions.
+
+## Linked statuses
+
+- When a PSP settlement intent is cancelled (status `CANCELLED`), the associated PSP settlement splits are also set to `CANCELLED` but the `psp_settlement_split.cancelled` webhook is not sent.
+- When the amount of the PSP settlement deposits matches the associated PSP settlement intent, the status of the matched intent, splits, and deposits will all be simultaneously changed to `MATCHED`, and webhooks of type `matched` will be sent for all objects.
+- When all PSP settlement splits are settled, the intent and deposit statuses simultaneously change to `SETTLED`.
+
+Webhook events are available for Global Account integrations, covering both status changes and deposit notifications. Note that status webhooks apply only to API version 2025-04-25 and later, while the deposit webhook applies only to API version 2025-02-14 and before.
+
+# Global Accounts
+
+Subscribe to webhook events for Global Account status changes.
+
+The following webhook events are available for your [Accounts](https://www.airwallex.com/docs/accounts/overview.md) integration.
+
+## Global Account statuses
+
+> **\[WARNING]**
+>
+> This section describes Global Account status webhooks, which are only applicable for API version 2025-04-25 and later.
+
+| Event                  | Description                               |
+| ---------------------- | ----------------------------------------- |
+| global\_account.active | Global Account is active and can be used. |
+| global\_account.closed | Global Account has been closed.           |
+| global\_account.failed | Global Account creation has failed.       |
+
+## Global Account deposits
+
+> **\[WARNING]**
+>
+> This section describes the Global account deposit webhook, which are only applicable for API version 2025-02-14 and before.
+
+| Event  | Description                                                                |
+| ------ | -------------------------------------------------------------------------- |
+| ga.new | Deposit received via Global Account, pending settlement to Wallet balance. |
+
+Webhook events are available for PSP agnostic settlement status changes as part of the Payments integration. The following tables list all events for PSP settlement intents, deposits, and splits.
+
+# PSP Agnostic
+
+Subscribe to webhook events for PSP agnostic settlement status changes.
+
+The following webhook events are available for your [Payments](https://www.airwallex.com/docs/payments/overview.md) integration.
+
+## PSP settlement intent
+
+| Event                                    | Description                                                                      |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| psp\_settlement\_intent.new              | The PSP settlement intent has been successfully created.                         |
+| psp\_settlement\_intent.cancelled        | The PSP settlement intent has been successfully canceled.                        |
+| psp\_settlement\_intent.submitted        | The PSP settlement intent has been successfully submitted.                       |
+| psp\_settlement\_intent.action\_required | The PSP settlement intent does not match the associated PSP settlement deposits. |
+| psp\_settlement\_intent.matched          | The PSP settlement intent matches the associated PSP settlement deposits.        |
+| psp\_settlement\_intent.settled          | All the PSP settlement splits of the PSP settlement intent have been settled.    |
+
+## PSP settlement deposit
+
+| Event                                     | Description                                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| psp\_settlement\_deposit.new              | Funds have been deposited into a holding account.                                            |
+| psp\_settlement\_deposit.action\_required | The PSP settlement deposit does not match any PSP settlement intent.                         |
+| psp\_settlement\_deposit.matched          | The PSP settlement deposits match the associated PSP settlement intent.                      |
+| psp\_settlement\_deposit.settled          | All the PSP settlement splits associated with this PSP settlement deposit have been settled. |
+
+## PSP settlement split
+
+| Event                                 | Description                                                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| psp\_settlement\_split.new            | The PSP settlement split has been successfully created.                                                             |
+| psp\_settlement\_split.create\_failed | The PSP settlement split could not be created.                                                                      |
+| psp\_settlement\_split.cancelled      | The PSP settlement split has been successfully canceled.                                                            |
+| psp\_settlement\_split.matched        | The PSP settlement split is part of a PSP settlement intent that has been matched with its associated PSP deposits. |
+| psp\_settlement\_split.pending        | The PSP settlement split has been successfully queued for releasing funds to the target account.                    |
+| psp\_settlement\_split.failed         | The release of the PSP settlement split has failed, and no funds have been transferred to the target account.       |
+| psp\_settlement\_split.settled        | The release of the PSP settlement split has succeeded, and the funds have settled to the target account.            |
+
+Webhook events for wallet balance changes are available as part of the Airwallex Accounts integration. The following events cover deposits via Virtual Account, deposits via Global Account, and balance adjustments.
+
+# Balance
+
+Subscribe to webhook events for wallet balance changes.
+
+The following webhook events are available for your [Accounts](https://www.airwallex.com/docs/accounts/overview.md) integration.
+
+| Event              | Description                                                          |
+| ------------------ | -------------------------------------------------------------------- |
+| balance.va.top\_up | Wallet balance increase due to deposit received via Virtual Account. |
+| balance.ga.top\_up | Wallet balance increase due to deposit received via Global Account.  |
+| balance.adjustment | Balance change due to adjustment.                                    |
+
+
+The following are payload examples for Global Account webhook events, including status events (active, closed, failed) applicable to API version 2025-04-25 and later, and the deposit event applicable to API version 2025-02-14 and before.
+
+## Payload examples
+
+### Global Account statuses
+
+> **\[WARNING]**
+>
+> This section describes Global Account status webhooks, which are only applicable for API version 2025-04-25 and later.
+
+#### global\_account.active
+
+```json
+{
+    "accountId":"acct_TOslkS7-MnyXlQuV8Lb4og",
+    "data":Object{...},
+    "id":"86b69f91-06f0-3fe8-8faf-4de58954ca8e",
+    "name":"global_account.active"
+}
+```
+
+**data** is the item of [Get global account by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve.md):
+
+```json
+{
+    "account_name": "John Smith",
+    "account_number": "03345102",
+    "account_type": "Checking",
+    "alternate_account_identifiers": {
+        "email": "tester@airwallex.com"
+    },
+    "country_code": "GB",
+    "iban": "GB06MODR00000003345102",
+    "id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+    "institution": {
+        "address": "58 Wood Ln",
+        "city": "London",
+        "name": "Modulr FS Limited",
+        "zip_code": "W12 7RZ"
+    },
+    "nick_name": "GBP GA",
+    "request_id": "8d411ad4-aed6-1261-92fa-51225212e2e1",
+    "required_features": [
+        {
+            "currency": "GBP",
+            "transfer_method": "LOCAL"
+        }
+    ],
+    "status": "ACTIVE",
+    "supported_features": [
+        {
+            "currency": "GBP",
+            "local_clearing_system": "BACS",
+            "routing_codes": [
+                {
+                    "type": "sort_code",
+                    "value": "000000"
+                }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+        }
+    ],
+    "swift_code": "MODRGB21"
+}
+
+```
+
+#### global\_account.closed
+
+```json
+{
+    "accountId":"acct_TOslkS7-MnyXlQuV8Lb4og",
+    "data":Object{...},
+    "id":"86b69f91-06f0-3fe8-8faf-4de58954ca8e",
+    "name":"global_account.closed"
+}
+```
+
+**data** is the item of [Get global account by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve.md):
+
+```json
+{
+    "account_name": "John Smith",
+    "account_number": "03345102",
+    "account_type": "Checking",
+    "alternate_account_identifiers": {
+        "email": "tester@airwallex.com"
+    },
+    "country_code": "GB",
+    "iban": "GB06MODR00000003345102",
+    "id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+    "institution": {
+        "address": "58 Wood Ln",
+        "city": "London",
+        "name": "Modulr FS Limited",
+        "zip_code": "W12 7RZ"
+    },
+    "nick_name": "GBP GA",
+    "request_id": "8d411ad4-aed6-1261-92fa-51225212e2e1",
+    "required_features": [
+        {
+            "currency": "GBP",
+            "transfer_method": "LOCAL"
+        }
+    ],
+    "status": "CLOSED",
+    "close_reason": "Closed upon customer request.",
+    "supported_features": [
+        {
+            "currency": "GBP",
+            "local_clearing_system": "BACS",
+            "routing_codes": [
+                {
+                    "type": "sort_code",
+                    "value": "000000"
+                }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+        }
+    ],
+    "swift_code": "MODRGB21"
+}
+```
+
+#### global\_account.failed
+
+```json
+{
+    "accountId":"acct_TOslkS7-MnyXlQuV8Lb4og",
+    "data":Object{...},
+    "id":"86b69f91-06f0-3fe8-8faf-4de58954ca8e",
+    "name":"global_account.failed"
+}
+```
+
+**data** is the item of [Get global account by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve.md):
+
+```json
+{
+    "account_name": "John Smith",
+    "account_number": "03345102",
+    "account_type": "Checking",
+    "alternate_account_identifiers": {
+        "email": "tester@airwallex.com"
+    },
+    "country_code": "GB",
+    "iban": "GB06MODR00000003345102",
+    "id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+    "institution": {
+        "address": "58 Wood Ln",
+        "city": "London",
+        "name": "Modulr FS Limited",
+        "zip_code": "W12 7RZ"
+    },
+    "nick_name": "GBP GA",
+    "request_id": "8d411ad4-aed6-1261-92fa-51225212e2e1",
+    "required_features": [
+        {
+            "currency": "GBP",
+            "transfer_method": "LOCAL"
+        }
+    ],
+    "status": "FAILED",
+    "failure_reason": "Your Global Account creation request has been rejected by the Institution. Please contact our support team for further assistance.",
+    "supported_features": [
+        {
+            "currency": "GBP",
+            "local_clearing_system": "BACS",
+            "routing_codes": [
+                {
+                    "type": "sort_code",
+                    "value": "000000"
+                }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+        }
+    ],
+    "swift_code": "MODRGB21"
+}
+```
+
+### Global Account deposits
+
+> **\[WARNING]**
+>
+> This section describes the Global account deposit webhook, which are only applicable for API version 2025-02-14 and before.
+
+```json
+{
+    "accountId":"acct_TOslkS7-MnyXlQuV8Lb4og",
+    "data":Object{...},
+    "id":"86b69f91-06f0-3fe8-8faf-4de58954ca8e",
+    "name":"ga.new"
+}
+```
+
+**data** is the item of [Get global account transactions](https://www.airwallex.com/docs/api/core_resources/global_accounts/transactions.md):
+
+```json
+{
+  "has_more": false,
+  "items": [
+    {
+      "amount": 10000,
+      "create_time": "2017-03-22T16:08:02+1100",
+      "currency": "AUD",
+      "description": "string",
+      "fee_amount": 10,
+      "fee_currency": "AUD",
+      "id": "90b98dc6-63a0-403f-816b-ac5305b42a11",
+      "payer_country": "US",
+      "payer_name": "AMZNnt70paD1",
+      "status": "NEW",
+      "type": "CREDIT"
+    }
+  ]
+}
+```
+
+The Deposits API allows retrieval of transaction details for deposits received into the Wallet via bank transfers to Global Accounts and direct debits from Linked Accounts. Deposit availability details (e.g. payer name, payer bank account number) vary by Global Account financial institution and payment method.
+
+# Retrieve your deposits
+
+The [Deposits API](https://www.airwallex.com/docs/api/core_resources/deposits.md) enables you to retrieve transaction details for deposits received into the Wallet via [bank transfers to Global Accounts](https://www.airwallex.com/docs/global-treasury/receive-funds/receive-bank-transfers-to-global-accounts.md) and [direct debits from Linked Accounts](https://www.airwallex.com/docs/global-treasury/receive-funds/add-funds-via-direct-debits-from-linked-accounts.md).
+
+If you are retrieving a bank transfer deposit, you can subscribe to [Deposit webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/deposits.md) to receive any deposit status transitions. See [Bank transfer deposit statuses](https://www.airwallex.com/docs/global-treasury/receive-funds/receive-bank-transfers-to-global-accounts/bank-transfer-deposit-statuses.md) for more information.
+
+Depending on the Global Account financial institution & payment method, the availability of deposit details (e.g. payer name, payer bank account number etc.) will vary.
+
+## Retrieve all deposits
+
+You can retrieve deposits across all your Global Accounts using [Get a list of deposits](https://www.airwallex.com/docs/api/core_resources/deposits/list.md). Specify the time period (`from_created_at`, `to_created_at`) and the pagination parameters (`page_num`, `page_size`) to refine the results. If the time period is left unspecified or only the end date is specified, then deposits 30 days in arrears of today or the end date will be returned.
+
+> **\[WARNING]**
+>
+> When both `from_created_at` and `to_created_at` are specified, the maximum date range between them is **31 days**. Requests that exceed this window return `400 time_range_exceed`. To retrieve deposits over a longer period, split the range into multiple requests, each covering at most 31 days.
+
+### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/deposits \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --data-urlencode 'from_created_at=2017-03-19' \
+  --data-urlencode 'page_num=0' \
+  --data-urlencode 'page_size=100' \
+  --data-urlencode 'to_created_at=2017-03-22T03:52:34+0000'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+### Example response
+
+```json
+{
+  "has_more": false,
+  "items": [
+    {
+      "id": "67f687fe-dcf4-4462-92fa-20335301d9d8",
+      "type": "BANK_TRANSFER",
+      "status": "PENDING",
+      "created_at": "2017-03-20T14:00:01+1100",
+      "currency": "AUD",
+      "amount": 12794.27,
+      "global_account_id": "fcfc369c-ce9d-4ab7-b9af-80df61848f8f",
+      "payer": {
+        "name": "Tester Smith",
+        "country_code": "AU",
+        "bank_account": {
+          "type": "AU_BSB",
+          "au_bsb": {
+            "bsb": "063001",
+            "account_number": "89098199202"
+          },
+          "name": "Tester Smith",
+          "institution": {
+            "swift_code": "ANZBNZ22",
+            "name": "ANZ Bank Limited",
+            "country_code": "AU"
+          }
+        }
+      },
+      "reference": "5487287788",
+      "provider_transaction_id": "5487287788"
+    },
+    {
+      "id": "67f687fe-dcf4-4462-92fa-20335301d9d8",
+      "type": "BANK_TRANSFER",
+      "status": "SETTLED",
+      "created_at": "2017-03-20T14:00:01+1100",
+      "currency": "AUD",
+      "amount": 12794.27,
+      "settled_at": "2017-03-22T14:00:00+0000",
+      "global_account_id": "fcfc369c-ce9d-4ab7-b9af-80df61848f8f",
+      "payer": {
+        "name": "Tester Smith",
+        "country_code": "AU",
+        "bank_account": {
+          "type": "AU_BSB",
+          "au_bsb": {
+            "bsb": "063001",
+            "account_number": "89098199202"
+          },
+          "name": "Tester Smith",
+          "institution": {
+            "swift_code": "ANZBNZ22",
+            "name": "ANZ Bank Limited",
+            "country_code": "AU"
+          }
+        }
+      },
+      "reference": "5487287788",
+      "provider_transaction_id": "5487287788",
+      "fee": {
+        "currency": "AUD",
+        "amount": 12.79
+      }
+    }
+  ]
+}
+```
+
+Bank transfer deposit statuses describe the possible states for deposits received via bank transfer to Airwallex Global Accounts, and how those deposits transition between states.
+
+# Bank transfer deposit statuses
+
+This page describes the status transitions for deposits received via bank transfer to Global Accounts.
+
+## Deposits via bank transfer to Global Accounts
+
+Status transitions when deposits are made to Global Accounts via bank transfers.
+
+![Status machine - Global Account deposits](https://www.airwallex.com/docs/assets/contentful/images.ctfassets.net/c3n7jozh84hr/26ry1SzVipyWtiMsVL1YX2/a547413baf837d1dcd68c56dc040c3a2/image.png)
+
+| **Status** | **Description**                                                                                                 |
+| ---------- | --------------------------------------------------------------------------------------------------------------- |
+| PENDING    | Deposit has arrived and is on hold for review. Most deposits are auto-cleared and moved into the settled state. |
+| SETTLED    | Deposit has been credited to your Wallet balance.                                                               |
+| REJECTED   | Deposit was rejected and the funds will be returned to the original source.                                     |
+
+The Deposits API enables retrieval of transaction details for deposits received into the Airwallex Wallet via bank transfers to Global Accounts and direct debits from Linked Accounts. This chunk covers the API overview and how to retrieve a list of deposits across all Global Accounts.
+
+# Retrieve your deposits
+
+The [Deposits API](https://www.airwallex.com/docs/api/core_resources/deposits.md) enables you to retrieve transaction details for deposits received into the Wallet via [bank transfers to Global Accounts](https://www.airwallex.com/docs/global-treasury/receive-funds/receive-bank-transfers-to-global-accounts.md) and [direct debits from Linked Accounts](https://www.airwallex.com/docs/global-treasury/receive-funds/add-funds-via-direct-debits-from-linked-accounts.md).
+
+If you are retrieving a bank transfer deposit, you can subscribe to [Deposit webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/deposits.md) to receive any deposit status transitions. See [Bank transfer deposit statuses](https://www.airwallex.com/docs/global-treasury/receive-funds/receive-bank-transfers-to-global-accounts/bank-transfer-deposit-statuses.md) for more information.
+
+Depending on the Global Account financial institution & payment method, the availability of deposit details (e.g. payer name, payer bank account number etc.) will vary.
+
+## Retrieve all deposits
+
+You can retrieve deposits across all your Global Accounts using [Get a list of deposits](https://www.airwallex.com/docs/api/core_resources/deposits/list.md). Specify the time period (`from_created_at`, `to_created_at`) and the pagination parameters (`page_num`, `page_size`) to refine the results. If the time period is left unspecified or only the end date is specified, then deposits 30 days in arrears of today or the end date will be returned.
+
+> **\[WARNING]**
+>
+> When both `from_created_at` and `to_created_at` are specified, the maximum date range between them is **31 days**. Requests that exceed this window return `400 time_range_exceed`. To retrieve deposits over a longer period, split the range into multiple requests, each covering at most 31 days.
+
+### Example request
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/deposits \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --data-urlencode 'from_created_at=2017-03-19' \
+  --data-urlencode 'page_num=0' \
+  --data-urlencode 'page_size=100' \
+  --data-urlencode 'to_created_at=2017-03-22T03:52:34+0000'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+### Example response
+
+```json
+{
+  "has_more": false,
+  "items": [
+    {
+      "id": "67f687fe-dcf4-4462-92fa-20335301d9d8",
+      "type": "BANK_TRANSFER",
+      "status": "PENDING",
+      "created_at": "2017-03-20T14:00:01+1100",
+      "currency": "AUD",
+      "amount": 12794.27,
+      "global_account_id": "fcfc369c-ce9d-4ab7-b9af-80df61848f8f",
+      "payer": {
+        "name": "Tester Smith",
+        "country_code": "AU",
+        "bank_account": {
+          "type": "AU_BSB",
+          "au_bsb": {
+            "bsb": "063001",
+            "account_number": "89098199202"
+          },
+          "name": "Tester Smith",
+          "institution": {
+            "swift_code": "ANZBNZ22",
+            "name": "ANZ Bank Limited",
+            "country_code": "AU"
+          }
+        }
+      },
+      "reference": "5487287788",
+      "provider_transaction_id": "5487287788"
+    },
+    {
+      "id": "67f687fe-dcf4-4462-92fa-20335301d9d8",
+      "type": "BANK_TRANSFER",
+      "status": "SETTLED",
+      "created_at": "2017-03-20T14:00:01+1100",
+      "currency": "AUD",
+      "amount": 12794.27,
+      "settled_at": "2017-03-22T14:00:00+0000",
+      "global_account_id": "fcfc369c-ce9d-4ab7-b9af-80df61848f8f",
+      "payer": {
+        "name": "Tester Smith",
+        "country_code": "AU",
+        "bank_account": {
+          "type": "AU_BSB",
+          "au_bsb": {
+            "bsb": "063001",
+            "account_number": "89098199202"
+          },
+          "name": "Tester Smith",
+          "institution": {
+            "swift_code": "ANZBNZ22",
+            "name": "ANZ Bank Limited",
+            "country_code": "AU"
+          }
+        }
+      },
+      "reference": "5487287788",
+      "provider_transaction_id": "5487287788",
+      "fee": {
+        "currency": "AUD",
+        "amount": 12.79
+      }
+    }
+  ]
+}
+```

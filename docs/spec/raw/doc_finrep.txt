@@ -1,0 +1,694 @@
+The Create a Financial Report API endpoint allows you to generate balance activity, transaction reconciliation, settlement, account statement, or online payment transaction reports via a POST request.
+
+# Create a Financial Report
+
+Create a balance activity, transaction reconciliation, or settlement report.
+
+## Endpoint
+
+`POST /api/v1/finance/financial_reports/create`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Request Body
+
+- `file_format` (string, required)
+  File format of financial report to create.
+  Possible values:
+  - `CSV` — Supported formats for Balance Activity Reports, Settlement and Transaction Reconciliation Reports
+  - `EXCEL` — Supported formats for Balance Activity Reports, Settlement and Transaction Reconciliation Reports, Online Payment Transaction Reports
+  - `PDF` — Supported formats for Balance Activity Reports, Account Statement Reports
+- `from_date` (string, required)
+  Start date of the report (inclusive).
+- `to_date` (string, required)
+  End date of the report (inclusive).
+- `type` (string, required)
+  Type of financial report to create.
+  Possible values:
+  - `ACCOUNT_STATEMENT_REPORT`
+  - `BALANCE_ACTIVITY_REPORT`
+  - `ONLINE_PAYMENTS_TRANSACTION_REPORT`
+  - `SETTLEMENT_REPORT`
+  - `TRANSACTION_RECON_REPORT`
+- `additional_fields` (array[string], optional)
+  List of additional fields to include as extra columns in the report, identified by field code. Additional fields add business-context columns to each report row to support reconciliation, as in the web app. Supported only for `TRANSACTION_RECON_REPORT` and `BALANCE_ACTIVITY_REPORT`; available field codes depend on the report type. Any field code that is invalid for the requested report type is rejected with an `invalid_argument` error, including codes supplied for a report type that does not support additional fields. See [Additional fields in financial reports](https://www.airwallex.com/docs/banking-as-a-service/reporting/financial-reports/additional-fields-in-financial-reports.md) for the list of supported field codes.
+- `currencies` (array[string], optional)
+  Currencies to be included in the report. Required for `ACCOUNT_STATEMENT_REPORT` and supported as an optional filter for `BALANCE_ACTIVITY_REPORT` and `SETTLEMENT_REPORT`. Other report types do not support this filter.
+- `file_name` (string, optional)
+  File name of the report. If left empty, a file name will be automatic generated following `{REPORT_TYPE}_{DATE}`.
+- `report_options` (object, optional)
+  Additional options for configuring report generation behavior.
+  - `include_reservations` (boolean, optional)
+    Whether to include reservation transactions in the report. Defaults to true if not specified. This parameter is only applicable to `BALANCE_ACTIVITY_REPORT` for versions v1.2 and onwards.
+- `report_version` (string, optional)
+  Version of the report (Not applicable to `SETTLEMENT_REPORT`). If left empty, defaults to 1.1.0 for the `BALANCE_ACTIVITY_REPORT` and `TRANSACTION_RECON_REPORT`, and to 1.0.0 for other report types. See the [Financial Report Product Docs](https://www.airwallex.com/docs/global-treasury/reporting/financial-reports.md) for details on available report versions and the contents of each version.
+- `settlement_currencies` (array[string], optional)
+  Settlement currencies to be included in the report. The report will include all settlement currencies if left empty. This filter is only supported by `TRANSACTION_RECON_REPORT`.
+- `statuses` (array[string], optional)
+  Transaction statuses to be included in the report. The report will include all statuses if left empty. This filter is only supported by `TRANSACTION_RECON_REPORT`.
+- `time_zone` (string, optional)
+  Timezone of the user requesting the report (Not applicable to `SETTLEMENT_REPORT`).
+- `transaction_currencies` (array[string], optional)
+  Transaction currencies to be included in the report. The report will include all transaction currencies if left empty. This filter is only supported by `TRANSACTION_RECON_REPORT`.
+- `transaction_types` (array[string], optional)
+  Transaction types to be included in the report. Will include all transaction types if left empty. Supported Balance Activity Transaction Types: `ADJUSTMENT`, `CARD`, `CHARGE`, `CONVERSION`, `DEPOSIT`, `DIRECT_DEBIT`, `FEE`, `PAYIN`, `PAYOUT`, `TRANSFER`, `YIELD`. Supported Transaction Reconciliation Report Transaction Types: `ADJUSTMENT`, `CARD`, `CONVERSION`, `DEPOSIT`, `FEE`, `PAYMENT`, `PAYOUT`. Please leave blank when `type` is `ONLINE_PAYMENTS_TRANSACTION_REPORT` or `SETTLEMENT_REPORT`.
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/finance/financial_reports/create' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "additional_fields": [
+    "issuing_card_nickname",
+    "lending_credit_type"
+  ],
+  "currencies": [
+    "AUD",
+    "USD",
+    "EUR"
+  ],
+  "file_format": "CSV",
+  "file_name": "BALANCE_ACTIVITY_REPORT_2026_02_23.csv",
+  "from_date": "2026-02-22",
+  "to_date": "2026-02-25",
+  "report_options": {
+    "include_reservations": true
+  },
+  "report_version": "1.2.0",
+  "time_zone": "UTC",
+  "transaction_types": [
+    "CONVERSION"
+  ],
+  "type": "BALANCE_ACTIVITY_REPORT"
+}'
+```
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "file_format": "CSV",
+  "file_name": "BALANCE_ACTIVITY_REPORT_2026_02_23.csv",
+  "id": "ff13f14b-1624-4c24-b601-b4c018d2ea092",
+  "report_expires_at": "2026-03-23T23:59:59+1100",
+  "report_parameters": {
+    "currencies": [
+      "AUD",
+      "USD",
+      "EUR"
+    ],
+    "from_date": "2026-02-22",
+    "time_zone": "UTC",
+    "to_date": "2026-02-25",
+    "transaction_types": [
+      "conversion"
+    ]
+  },
+  "report_version": "1.2.0",
+  "status": "COMPLETED",
+  "type": "BALANCE_ACTIVITY_REPORT"
+}
+```
+
+- `file_format` (string, optional)
+  File format of the report. One of `CSV`, `PDF`, `EXCEL`.
+- `file_name` (string, optional)
+  File name.
+- `id` (string, optional)
+  Unique identifier of the financial report.
+- `report_expires_at` (string, optional)
+  Contents expiration date. Will be empty string if report is in `PENDING` state or the report does not expire.
+- `report_parameters` (object, optional)
+  Parameters used to generate report.
+  - `currencies` (array[string], optional)
+    Currencies included in the report.
+  - `from_date` (string, optional)
+    Start date of the report (inclusive).
+  - `time_zone` (string, optional)
+    Timezone of the user.
+  - `to_date` (string, optional)
+    End date of the report (inclusive).
+  - `transaction_types` (array[string], optional)
+    Transaction types included in the report.
+- `report_version` (string, optional)
+  Version of the report.
+- `status` (string, optional)
+  Status of the report.
+  Possible values:
+  - `COMPLETED`
+  - `FAILED`
+  - `PENDING`
+- `type` (string, optional)
+  Possible values:
+  - `ACCOUNT_STATEMENT_REPORT`
+  - `AGGREGATED_SETTLEMENT_REPORT`
+  - `BALANCE_ACTIVITY_REPORT`
+  - `ONLINE_PAYMENTS_TRANSACTION_REPORT`
+  - `SETTLEMENT_REPORT`
+  - `TRANSACTION_RECON_REPORT`
+
+## Errors
+
+### 400 Bad request
+
+`invalid_argument`. For any report type, this is returned if invalid arguments are provided. When type: `SETTLEMENT_REPORT`, this can be returned if the request ask for a report that is too large to be generated.
+
+### 401 Unauthorized
+
+`credentials_invalid`
+
+### 500 Server error
+
+`service_unavailable`
+
+The Financial Reports API provides endpoints to create and retrieve reports on historical transaction activity for your Airwallex account.
+
+# Financial Reports
+
+The Financial Reports resources provide the capability to create and get the contents of reports on your Airwallex account's historical transaction activity.
+
+## Endpoints
+
+- [Create a Financial Report](https://www.airwallex.com/docs/api/finance/financial_reports/create.md) — `POST /api/v1/finance/financial_reports/create`
+- [Retrieve a Financial Report](https://www.airwallex.com/docs/api/finance/financial_reports/retrieve.md) — `GET /api/v1/finance/financial_reports/{id}`
+- [List all Financial Reports](https://www.airwallex.com/docs/api/finance/financial_reports/list.md) — `GET /api/v1/finance/financial_reports`
+- [Retrieve a Contents of a Financial Report](https://www.airwallex.com/docs/api/finance/financial_reports/content.md) — `GET /api/v1/finance/financial_reports/{id}/content`
+
+The transaction reconciliation report lists all financial transactions across connected accounts. It is generated via the Create a platform report API using type `TRANSACTION_RECON_REPORT`.
+
+## Transaction reconciliation report
+
+The transaction reconciliation report lists all financial transactions across your connected accounts. Specify `type` as `TRANSACTION_RECON_REPORT` in [Create a platform report](https://www.airwallex.com/docs/api/scale/platform_reports/create.md).
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/platform_reports/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "file_format": "CSV",
+    "from_created_at": "2024-05-01T00:00:00+0000",
+    "to_created_at": "2024-05-10T07:00:00+0000",
+    "type": "TRANSACTION_RECON_REPORT"
+  }'
+```
+
+The downloadable report retrieved via [Get a platform report](https://www.airwallex.com/docs/api/scale/platform_reports/retrieve.md) will include the following fields.
+
+| Field                        | Description                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `transaction_id`             | The unique ID of the transaction.                                                    |
+| `request_id`                 | The client request ID submitted with the transaction.                                |
+| `source_id`                  | The ID of the source transaction.                                                    |
+| `batch_id`                   | The batch ID, if the transaction was part of a batch.                                |
+| `account_id`                 | The ID of the connected account.                                                     |
+| `conversion_id`              | The ID of the associated conversion, if applicable.                                  |
+| `created_at`                 | The timestamp when the transaction was created.                                      |
+| `estimated_settled_at`       | The estimated settlement timestamp.                                                  |
+| `settled_at`                 | The actual settlement timestamp.                                                     |
+| `last_update`                | The timestamp when the record was last updated.                                      |
+| `status`                     | The transaction status.                                                              |
+| `settlement_amount`          | The settlement amount. For `CONVERSION` type transactions, this equals `net_amount`. |
+| `fee`                        | The transaction fee amount.                                                          |
+| `net_amount`                 | The net transaction amount after fees.                                               |
+| `exchange_rate`              | The exchange rate applied to the transaction.                                        |
+| `currency`                   | The transaction currency.                                                            |
+| `currency_pair`              | The currency pair, for conversion transactions.                                      |
+| `type`                       | The transaction source type, for example `CONVERSION` or `TRANSFER`.                 |
+| `financial_transaction_type` | The financial transaction type.                                                      |
+| `payment_method`             | The payment method used.                                                             |
+| `description`                | The transaction description.                                                         |
+
+
+The 2024-08-07 version introduces new default report version 1.1.0 for Balance Activity and Transaction Reconciliation reports, renames financial report request fields (timezone to time_zone, from_created_at to from_date), updates Financial Transactions responses (currency_pair alignment, payout fees as separate line items), introduces multi-currency Global Accounts with restructured API fields and updated pagination, enriches the Deposits resource with payer object and fee details, and adds application_fee_options to Transfers.
+
+## 2024-08-07
+
+* Introduced new versions of the [Transaction Reconciliation Report](https://www.airwallex.com/docs/global-treasury/reporting/financial-reports/transaction-reconciliation-report.md) and [Balance Activity Report](https://www.airwallex.com/docs/global-treasury/reporting/financial-reports/balance-activity-report.md). The new version 1.1.0 will be the default `report_version` for these reports.
+
+  Affected endpoints:
+
+    * **POST `/api/v1/finance/financial_reports/create`**, request and response
+
+  Changes:
+
+    * The default report version for the `BALANCE_ACTIVITY_REPORT` and `TRANSACTION_RECON_REPORT` financial report types was changed to 1.1.0.
+
+* Modified request and response for create and get financial report(s) endpoints.
+
+  Affected endpoints:
+
+    * **POST `/api/v1/finance/financial_reports/create`**, request and response
+    * **GET `/api/v1/finance/financial_reports/{id}`**, response
+    * **GET `/api/v1/finance/financial_reports/`**, response
+
+  Changes:
+
+    * Renamed fields on the create financial report request payload
+      * `timezone` to `time_zone`
+      * `from_created_at` to `from_date`
+      * `to_created_at` to `date`
+    * Renamed fields on the create and get financial report(s) response payloads
+      * `report_parameters.from_created_at` to `report_parameters.from_date`
+      * `report_parameters.to_created_at to report_parameters.to_date`
+
+* Modified responses for [Financial Transactions](https://www.airwallex.com/docs/api/finance/financial_transactions.md) resources.
+
+  Affected endpoints:
+
+    * **GET `/api/v1/financial_transactions`**, response
+    * **GET `/api/v1/financial_transactions/{id}`**, response
+
+  Changes:
+
+    * Update `currency_pair` value to align with standard FX currency pair conventions
+    * For payouts created after 2024-11-21, payout fees will now appear as separate line items to respective payouts
+    * Payouts for which the source currency and the payment currency are different will no longer generate `CONVERSION_SELL` and `CONVERSION_BUY` financial transactions records
+
+* Modified response for **Get balance history** endpoint.
+
+  Affected endpoints:
+
+    * **GET `/api/v1/balances/history`**, response
+
+  Changes:
+
+    * For payouts created after 2024-11-21, payout fees will now appear as separate line items to respective payouts
+
+* This version introduces major changes to the [Global Accounts](https://www.airwallex.com/docs/api/2024-08-07/core_resources/global_accounts.md) resource, notably relating to the opening and querying of Global Accounts due to:
+
+* Introduction of Multi-currency Global Accounts which can now receive funds in multiple currencies
+* Alignment to latest Airwallex API convention on pagination and URL naming
+
+  Affected endpoint:
+
+    * **POST `/api/v1/global_accounts/create`** request only
+
+  Changes:
+
+    * Renamed **payment_methods** to **transfer_method**
+    * Moved **currency** and **transfer_method** under a new **required_features** object
+
+  Affected endpoints:
+
+    * **POST `/api/v1/global_accounts/create`** response only
+    * **GET `/api/v1/global_accounts`** response only
+    * **GET `/api/v1/global_accounts/{id}`** response only
+    * **POST `/api/v1/global_accounts/{id}/close`** response only
+    * **POST `/api/v1/global_accounts/{id}/update`** response only
+
+  Changes:
+
+    * Renamed **payment_methods** to **transfer_method**
+    * Renamed **clearing_system** to **local_clearing_system**
+    * Removed **capability** object and moved **transfer_methods** and **local_clearing_system** under a new **supported_features** object, together with **currency** and **routing_codes**
+    * Replaced **support_direct_debit** by new **type** field under new **supported_features** object
+    * Added **required_features** object containing **currency** and **transfer_method**
+
+  Affected endpoint:
+
+    * **GET `/api/v1/global_accounts`**
+
+  Changes:
+
+    * Replaced **page_num** with **page** on request payload
+    * Renamed **currency** to **supported_features.currency** on request payload
+    * Added **required_features.currency** to request payload
+    * Replaced **has_more** with **page_before** and **page_after** on response payload
+
+* Update existing Global Account endpoint URL updated from **POST `/api/v1/global_accounts/update/{id}`**
+
+  Affected endpoint:
+
+    * **POST `/api/v1/global_accounts/{id}/update`**
+
+* This version also introduces major changes to the **Deposits** resource, notably relating to the responses and webhooks of deposits to include additional details such as remitter and fee information
+
+  Affected endpoints (Refer to [direct debit](https://www.airwallex.com/docs/global-treasury/receive-funds/receive-bank-transfers-to-global-accounts/retrieve-your-deposits.md) for more details)
+
+    * **GET `/api/v1/deposits`** response only
+    * **GET `/api/v1/deposits/{id}`** response only
+
+  Changes:
+
+    * Renamed `payer_name` to `name` under new `payer` object, containing additional deposit information:
+      * `bank_account` object added which details payer bank account information
+      * `country_code` added
+    * Added `provider_transaction_id` to response body
+    * Added `fee` object to response body
+      * `amount` added
+      * `currency` added
+    * Removed `source` object from response body, moving `funding_source_id` and `global_account_id` directly under items
+    * Renamed `deposit_id` to `id` in response body
+    * Renamed `estimated_settlement_time` to `estimated_settled_at` in response body
+    * Renamed `statement_ref` to `reference` in response body
+    * Note that additional fields in the response are conditional based on the type of deposit and the data available from our banking partners. For example, the `payer` object is now only included for bank transfer deposits, but not for direct debit deposits (Refer to [response body](https://www.airwallex.com/docs/api/2024-08-07/core_resources/deposits/list.md) for more details)
+
+* Deposits webhook events now cover bank transfer deposits in addition to direct debit deposits, distinguished by modified `type` field to be either `BANK_TRANSFER` or, `DIRECT_DEBIT`
+* Added new `deposit.pending` webhook event
+
+  Affected webhook events (Refer to webhook [event types](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/deposits.md) for more details)
+
+    * `deposit.settled`
+    * `deposit.rejected`
+    * `deposit.reversed`
+
+  Payload Changes:
+
+    * Added `data` object that includes all enriched details retrieved from **GET `/api/v1/deposits`** endpoints
+
+* This version also introduces major changes to the **Transfers** and **Batch Transfers** resource, notably relating to the responses and webhooks of transfers to include application fees for Platform Revenue Control.
+
+  Affected endpoints:
+
+    * **POST `/api/v1/transfers/create`**, request and response
+    * **GET `/api/v1/transfers/{id}`**, response only
+    * **GET `/api/v1/transfers`**, response only
+    * **POST `/api/v1/batch_transfers/{{batch_id}}/add_items`**, request and response
+    * **GET `/api/v1/batch_transfers/{{batch_id}}/items`**, response only
+
+  Changes:
+
+    * Added `application_fee_options` to request payload
+    * Added `application_fee_options` to response payload
+    * Added `application_fees` to response payload
+
+
+The request body for creating a platform report accepts parameters to specify the report type, file format, and date range filters.
+
+## Request Parameters
+
+### Request Body
+
+- `file_format` (string, required)
+  File format of the report. Currently supported formats: `CSV`.
+  Possible values:
+  - `CSV`
+- `type` (string, required)
+  Type of report requested.
+  Possible values:
+  - `TRANSACTION_RECON_REPORT` — All financial transactions having occurred on your Platform account and connected accounts.
+  - `PAYOUT_REPORT` — Details of all payouts out of your Platform account and connected accounts, across all payout statuses.
+  - `BALANCE_REPORT` — Balances of your Platform account and connected accounts.
+  - `ACCOUNT_REPORT` — Account-related information for your Platform and connected accounts, including KYC & KYB information.
+  - `ISSUING_TRANSACTION_REPORT` — All issuing transactions having occurred on your Platform account and connected accounts.
+  - `APPLICATION_FEE_REPORT` — A consolidated list of application fees that Platform account charges their connected accounts.
+- `file_name` (string, optional)
+  File name requested for the report. If not provided, a file name will be automatically generated by Airwallex in the following format: `{REPORT_TYPE}_{TIMESTAMP}`. Format of `TIMESTAMP` is `YYYY-MM-DDThh:mm:ss+0000`.
+- `from_created_at` (string, optional)
+  Timestamp (inclusive, in ISO8601 standard, UTC) to specify data records that the report should include. This parameter is a filter for:
+   * `created_at` field in the `TRANSACTION_RECON_REPORT`
+   * `created_at` field in the `PAYOUT_REPORT`
+   * `created_at` field in the `ISSUING_TRANSACTION_REPORT`
+   * `created_at` field in the `APPLICATION_FEE_REPORT`
+
+  For example, request a Platform report with `from_created_at` = `2023-01-01` and `to_created_at` = `2023-01-02` to obtain records created during the day `2023-01-01` in UTC.
+
+  The max interval size between `from_created_at` and `to_created_at` is 366 days.
+- `from_updated_at` (string, optional)
+  Timestamp (inclusive, in ISO8601 standard, UTC) to specify data records that the report should include. This parameter is a filter for:
+   * `last_update` field in the `TRANSACTION_RECON_REPORT`
+   * `last_update` field in the `PAYOUT_REPORT`
+   * `last_update` field in the `ISSUING_TRANSACTION_REPORT`
+   * `last_update` field in the `APPLICATION_FEE_REPORT`
+
+  For example, request a Platform report with `from_updated_at` = `2023-01-01` and `to_updated_at` = `2023-01-02` to obtain records last updated during the day `2023-01-01` in UTC.
+
+  The max interval size between `from_updated_at` and `to_updated_at` is 366 days.
+- `to_created_at` (string, optional)
+  Timestamp (exclusive, in ISO8601 standard, UTC) to specify data records that the report should include. This parameter is a filter for:
+   * `created_at` field in the `TRANSACTION_RECON_REPORT`
+   * `created_at` field in the `PAYOUT_REPORT`
+   * `created_at` field in the `ISSUING_TRANSACTION_REPORT`
+   * `created_at` field in the `APPLICATION_FEE_REPORT`
+
+  For example, request a Platform report with `from_created_at` = `2023-01-01` and `to_created_at` = `2023-01-02` to obtain records created during the day `2023-01-01` in UTC.
+
+  The max interval size between `from_created_at` and `to_created_at` is 366 days.
+- `to_updated_at` (string, optional)
+  Timestamp (exclusive, in ISO8601 standard, UTC) to specify data records that the report should include. This parameter is a filter for:
+   * `last_update` field in the `TRANSACTION_RECON_REPORT`
+   * `last_update` field in the `PAYOUT_REPORT`
+   * `last_update` field in the `ISSUING_TRANSACTION_REPORT`
+   * `last_update` field in the `APPLICATION_FEE_REPORT`
+
+  For example, request a Platform report with `from_updated_at` = `2023-01-01` and `to_updated_at` = `2023-01-02` to obtain records last updated during the day `2023-01-01` in UTC.
+
+  The max interval size between `from_updated_at` and `to_updated_at` is 366 days.
+
+The following cURL example demonstrates how to call the Create Platform Report endpoint, along with the expected response and error codes.
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/platform_reports/create' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "file_format": "CSV",
+  "file_name": "my_report_1",
+  "from_created_at": "2023-01-01",
+  "from_updated_at": "<string>",
+  "to_created_at": "2023-01-02",
+  "to_updated_at": "<string>",
+  "type": "TRANSACTION_RECON_REPORT"
+}'
+```
+
+## Response
+
+### 201 Created
+
+**Example:**
+
+```json
+{
+  "id": "b4ac9a1e-8cd8-11ed-a1eb-0242ac1200a2"
+}
+```
+
+- `id` (string, required)
+  Airwallex-generated unique identifier for the report.
+
+## Errors
+
+### 400 Bad request
+
+Possible errors: `field_required`, `invalid_argument`
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 429 Too many requests
+
+Too many requests
+
+### 500 Server error
+
+Service unavailable
+
+The Transaction reconciliation report details every confirmed financial transaction in an Airwallex account. This covers the report's purpose, current version (v1.1.0), its enhancements over the prior version, and the full set of header and transaction detail fields.
+
+# Transaction reconciliation report
+
+The **Transaction reconciliation report** details every confirmed financial transaction in your Airwallex account, including those that are pending at the time the report is generated. This report helps you to reconcile your transactions to your own internal records.
+
+Note that financial transactions are recorded on the date that they are created.
+
+The **Transaction reconciliation report** is currently on version 1.1.0, released in August 2024. Enhancements made in v1.1.0 to improve the usability of the reports include:
+
+- Fees for payout transactions created after August 21, 2024 will be recorded as a separate financial transaction in the report.
+- Payouts for which the currency that the recipient receives (the transaction currency) is different from the currency sender pays in (the settlement currency) will be recorded as a single record rather than as a Conversion Sell record, a Conversion Buy record and a Payout record. The payout record will now include the Transaction Currency, Transaction Amount and Exchange Rate.
+- The Beneficiary Bank Account Name column has been renamed to Beneficiary Name.
+- The Note field has been added.
+
+For details on the legacy version, see [Transaction reconciliation report v1.0.0](https://www.airwallex.com/docs/global-treasury/reporting/financial-reports/transaction-reconciliation-report.md#transaction-reconciliation-report-v1.0.0).
+
+> **\[INFORMATIONAL]**
+>
+> All transaction types are confirmed immediately at the time they are created, except Payments. Payments will be typically confirmed within 2 business days after capture with the exception of Klarna, which are confirmed within 8 days of capture. We recommend that you wait 2 business days (or 8 days for Klarna) before generating the report to ensure all transactions are included.
+
+## Report data
+
+You can download the report in Excel (.xlsx readable with Microsoft Excel or equivalent) or CSV formats.
+
+The report includes a header with information described below.
+
+| Field name   | Description                                                                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Legal Entity | The legal entity that owns the account. Only included in Transaction Reconciliation Reports generated by Account Groups.                             |
+| Account Name | Name of your account as registered with Airwallex.                                                                                                   |
+| Account Id   | Identity of your account assigned by Airwallex.                                                                                                      |
+| Time Zone    | The time zone used for all dates and times in the report (in the IANA time zone identifier format).                                                  |
+| Date Range   | The date field from the report used to select which financial transactions will be included in the report. Currently only `Created at` is supported. |
+| From Date    | The date and time when the report starts (in YYYY-MM-DD hh:mm:ss format).                                                                            |
+| To Date      | The date and time when the report ends (in YYYY-MM-DD hh:mm:ss format).                                                                              |
+
+The Transaction Details contains the details of each financial transaction. The columns are described below.
+
+| Field name                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Type                            | The type of the transaction. Possible values: `Payout`, `Batch Payout`, `Conversion`, `Deposit`, `Adjustment`, `Fee`, `Payin`, `Charge`, `Transfer`, `Yield`, `Card`, `Purchase`.                                                                                                                                                                                                                                                                                                                                     |
+| Transaction Id                  | The reference identifier associated with the financial transaction.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Financial Transaction Type      | The type of the financial transaction. Possible values: `Payment`, `Payment Reserve Hold`, `Payment Reserve Release`, `Dispute`, `Dispute Reversal`, `Dispute Lost`, `Refund`, `Refund Reversal`, `Refund Failure`, `Payout`, `Payout Failure`, `Payout Reversal`, `Conversion Sell`, `Conversion Buy`, `Conversion Reversal`, `Deposit`, `Issuing Authorisation Hold`, `Issuing Authorisation Release`, `Issuing Capture`, `Issuing Refund, Purchase`, `Transfer`, `DD Credit`, `DD Debit`, `DC Credit`, `DC Debit`. |
+| Source Id                       | The reference identifier for the overall transaction to which the financial transaction is related.                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Source Entity                   | The overall transaction to which the financial transaction is related. Possible values: `Payout`, `Conversion`, `Deposit`, `Adjustment`, `Fee`, `Payment Attempt`, `Refund`, `Refund Reversal`, `Dispute`, `Charge`, `Transfer`, `Yield`, `Batch Payout`, `Card Purchase`, `Card Refund`, `Purchase`.                                                                                                                                                                                                                 |
+| Request Id                      | The unique identifier specified in the transaction creation request.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Created At                      | The date and time at which the financial transaction was created (in YYYY-MM-DD hh:mm:ss format).                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Estimated settled At            | The estimated settlement date and time for the financial transaction (in YYYY-MM-DD hh:mm:ss format).                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Settled At                      | The date and time that the financial transaction was settled (in YYYY-MM-DD hh:mm:ss format).                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Status                          | The status of the financial transaction at the time the report was generated. This can be `Pending`, `Settled` or `Cancelled`.                                                                                                                                                                                                                                                                                                                                                                                        |
+| Settlement Currency             | The currency in which the financial transaction was, or will be, settled in the Wallet.                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Settlement Amount               | The amount to be settled in the Wallet before fees are applied.                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Fee                             | Any fees on the transaction, specified in the Settlement Currency.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Net Amount                      | The amount to be settled in the Wallet after fees are applied.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Transaction Currency            | The currency in which the external sender paid or the external recipient received funds, in cases where this is different from the Settlement Currency.                                                                                                                                                                                                                                                                                                                                                               |
+| Transaction Amount              | The amount paid by the external sender or received by the external recipient, in the Transaction Currency.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Exchange Rate                   | The exchange rate used to convert funds from the Settlement Currency to the Transaction Currency.                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Settlement Type                 | Whether the financial transaction will be settled individually (`Single`) or in a daily batch (`Batch`). `None` for all Card financial transactions.                                                                                                                                                                                                                                                                                                                                                                  |
+| Batch Id                        | For financial transactions in a batch, the identifier for the batch.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Payment Method                  | The method used to pay the transaction. For Payments, the payment method used by the end customer. For Card transactions, the card used in the transaction. For Payouts, the method used to send the payout.                                                                                                                                                                                                                                                                                                          |
+| Payment Attempt Id              | The identifier for the Payment Attempt that resulted in the financial transaction. Only available for Payments.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Payment Intent Id               | The identifier for the Payment Intent that resulted in the financial transaction. Only available for Payments.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Order Id                        | The order ID created in the merchant’s order system and provided in the Payment Intent. Only available for Payments.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Reference                       | The shared reference for the transaction. For Deposits, Payouts and Transfers, the bank reference set by the sender. For Card transactions, the Retrieval Reference Number and Authorization Code.                                                                                                                                                                                                                                                                                                                    |
+| Reason                          | The reason for an Adjustment.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Note                            | The internal transaction description for a Payout. Only available for Payouts.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Beneficiary Name                | The beneficiary or recipient in the financial transaction. For Payouts and Transfers, the recipient of the payout. For Card transactions, the merchant.                                                                                                                                                                                                                                                                                                                                                               |
+| Beneficiary Bank Account Number | The Bank Account Number of the beneficiary. Only available for Payouts.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Remitting Bank                  | The bank that sent the deposit. Only available for Deposits.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Remitter Name                   | The external sender of the deposit. Only available for Deposits.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+Transaction reconciliation reports can be generated for Account Groups, and a legacy version (v1.0.0) of the report is also documented below with its own header and transaction detail field definitions.
+
+## Reports for Account Groups
+
+When **Transaction reconciliation reports** are generated for an Account Group, one CSV or Excel file will be generated for each legal entity and these files will be returned in a zip file.
+
+In addition to the standard content of the report, **Transaction reconciliation reports** will include:
+
+- A Legal Entity field in the header and one header row per account owned by the legal entity
+- An Account Id field in the report’s content denoting the account associated with the financial transaction.
+
+## Transaction reconciliation report v1.0.0
+
+Version 1.0.0 of the report includes a header with information described below.
+
+| Field name   | Description                                                                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Legal Entity | The legal entity that owns the account. Only included in Transaction Reconciliation Reports generated by Organisations or Account Groups.            |
+| Account Name | Name of your account as registered with Airwallex.                                                                                                   |
+| Account Id   | Identity of your account assigned by Airwallex.                                                                                                      |
+| Time Zone    | The time zone used for all dates and times in the report (in the IANA time zone identifier format).                                                  |
+| Date Range   | The date field from the report used to select which financial transactions will be included in the report. Currently only `Created at` is supported. |
+| From Date    | The date and time when the report starts (in YYYY-MM-DD hh:mm:ss format).                                                                            |
+| To Date      | The date and time when the report ends (in YYYY-MM-DD hh:mm:ss format).                                                                              |
+
+In version 1.0.0 of the report, the **Transaction details** contains the details of each Financial Transaction. The columns are described below.
+
+| Field name                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Type                            | The type of the transaction. Possible values: `Payout`, `Batch Payout`, `Conversion`, `Deposit`, `Adjustment`, `Fee`, `Payin`, `Charge`, `Transfer`, `Yield`, `Card`, `Purchase`.                                                                                                                                                                                                                                                                                                                                     |
+| Transaction Id                  | The reference identifier associated with the financial transaction.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Financial Transaction Type      | The type of the financial transaction. Possible values: `Payment`, `Payment Reserve Hold`, `Payment Reserve Release`, `Dispute`, `Dispute Reversal`, `Dispute Lost`, `Refund`, `Refund Reversal`, `Refund Failure`, `Payout`, `Payout Failure`, `Payout Reversal`, `Conversion Sell`, `Conversion Buy`, `Conversion Reversal`, `Deposit`, `Issuing Authorisation Hold`, `Issuing Authorisation Release`, `Issuing Capture`, `Issuing Refund, Purchase`, `Transfer`, `DD Credit`, `DD Debit`, `DC Credit`, `DC Debit`. |
+| Source Id                       | The reference identifier for the overall transaction to which the financial transaction is related.                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Source Entity                   | The overall transaction to which the financial transaction is related. Possible values: `Payout`, `Conversion`, `Deposit`, `Adjustment`, `Fee`, `Payment Attempt`, `Refund`, `Refund Reversal`, `Dispute`, `Charge`, `Transfer`, `Yield`, `Batch Payout`, `Card Purchase`, `Card Refund`, `Purchase`.                                                                                                                                                                                                                 |
+| Request Id                      | The unique identifier specified in the transaction creation request.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Created At                      | The date and time at which the financial transaction was created (in YYYY-MM-DD hh:mm:ss format).                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Estimated settled At            | The estimated settlement date and time for the financial transaction (in YYYY-MM-DD hh:mm:ss format).                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Settled At                      | The date and time that the financial transaction was settled (in YYYY-MM-DD hh:mm:ss format).                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Status                          | The status of the financial transaction at the time the report was generated. This can be `Pending`, `Settled` or `Cancelled`.                                                                                                                                                                                                                                                                                                                                                                                        |
+| Settlement Currency             | The currency in which the financial transaction was, or will be, settled in the Wallet.                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Settlement Amount               | The amount to be settled in the Wallet before fees are applied.                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Fee                             | Not used in v1.0.0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Net Amount                      | The amount to be settled in the Wallet after fees are applied.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Transaction Currency            | The currency in which the external sender paid or the external recipient received funds, in cases where this is different from the Settlement Currency.                                                                                                                                                                                                                                                                                                                                                               |
+| Transaction Amount              | The amount paid by the external sender or received by the external recipient, in the Transaction Currency.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Exchange Rate                   | The exchange rate used to convert funds between the Settlement Currency and Transaction Currency.                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Settlement Type                 | Whether the financial transaction will be settled individually (`Single`) or in a daily batch (`Batch`). `None` for all Card financial transactions.                                                                                                                                                                                                                                                                                                                                                                  |
+| Batch Id                        | For financial transactions in a batch, the identifier for the batch.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Payment Method                  | The method used to pay the transaction. For Payments, the payment method used by the end customer. For Card transactions, the card used in the transaction. For Payouts, the method used to send the payout.                                                                                                                                                                                                                                                                                                          |
+| Payment Attempt Id              | The identifier for the Payment Attempt that resulted in the financial transaction. Only available for Payments.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Payment Intent Id               | The identifier for the Payment Intent that resulted in the financial transaction. Only available for Payments.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Order Id                        | The order identifier created in the merchant’s order system and provided in the Payment Intent. Only available for Payments.                                                                                                                                                                                                                                                                                                                                                                                          |
+| Reference                       | The shared reference for the transaction. For Deposits, Payouts and Transfers, the bank reference set by the sender. For Card transactions, the Retrieval Reference Number and Authorization Code.                                                                                                                                                                                                                                                                                                                    |
+| Reason                          | The reason for an Adjustment.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Beneficiary Bank Account Name   | The beneficiary or recipient in the financial transaction. For Payouts and Transfers, the recipient of the payout. For Card transactions, the merchant.                                                                                                                                                                                                                                                                                                                                                               |
+| Beneficiary Bank Account Number | The Bank Account Number of the beneficiary. Only available for Payouts.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Remitting Bank                  | The bank that sent the deposit. Only available for Deposits.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Remitter Name                   | The external sender of the deposit. Only available for Deposits.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+Airwallex provides a variety of reports to support reconciliation and financial operations. The table below maps common use cases to the appropriate report and how to access it.
+
+# Reporting
+
+Airwallex provides a variety of reports to meet your reconciliation and information needs.
+
+Refer to the table below to obtain the most appropriate one for your financial use case.
+
+| USE CASES                                                                                                                                                                           | REPORT                                                                                                                                               | HOW TO ACCESS                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| View all payment activities within a given period     Access transaction details across many payments at once                                                                       | [Payment activity export](https://www.airwallex.com/docs/payments/payment-operations/reporting/payment-activity-export.md)                           | Download from the [**Payments** > **Payment Activity**](https://www.airwallex.com/app/acquiring/list) tab on the web app.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| View the details and summary of settlements and reserves     Understand the transactions included in settlement batch(es) to your wallet, including payments, refunds, and disputes | [Settlement report](https://www.airwallex.com/docs/payments/payment-operations/reporting/settlement-report.md)                                       | For single settlement batches, you can download them from the web app [**Wallet** > **Transactions**](https://www.airwallex.com/app/wallet/transactions) tab or from the [Settlements API](https://www.airwallex.com/docs/api/finance/settlements.md?version=2025-02-14). For multiple settlements across a period, you can download them from the web app **[Reports](https://www.airwallex.com/app/reports)** page or from the [Financial Reports API](https://www.airwallex.com/docs/api/finance/financial_reports/create.md?version=2025-02-14). For JSON format, refer to the [Settlement Records API](https://www.airwallex.com/docs/api/payments/settlement_records.md). |
+| View the details and summary of payment fees     Understand the detailed fees for each transaction included in settlement batch(es) to your wallet                                  | [Fee report](https://www.airwallex.com/docs/payments/payment-operations/reporting/settlement-report.md#fee-section)                                  | Automatically downloaded as separate files when you choose to download settlement reports through the [**Wallet** > **Transactions**](https://www.airwallex.com/app/wallet/transactions) tab, [**Reports**](https://www.airwallex.com/app/reports) page, [Settlements API](https://www.airwallex.com/docs/api/finance/settlements.md?version=2020-04-30), or the [Financial Reports API](https://www.airwallex.com/docs/api/finance/financial_reports/create.md?version=2025-02-14).                                                                                                                                                                                            |
+| View all your Airwallex pending and settled financial transactions, including conversions, payins, payouts, and online payments                                                     | [Transaction reconciliation report](https://www.airwallex.com/docs/global-treasury/reporting/financial-reports/transaction-reconciliation-report.md) | Download from the web app **[Reports](https://www.airwallex.com/app/reports)** page or from the [Financial Reports API](https://www.airwallex.com/docs/api/finance/financial_reports.md?version=2020-04-30).                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| View list of settlements to your balance from Payments                                                                                                                              | [Balance activity report](https://www.airwallex.com/docs/global-treasury/reporting/financial-reports/balance-activity-report.md)                     | Download from the web app **[Reports](https://www.airwallex.com/app/reports)** page or from the [Financial Reports API](https://www.airwallex.com/docs/api/finance/financial_reports.md?version=2020-04-30).                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+
+The 2026-05-29 version removes customer_data_collection.enabled from Billing Checkout APIs and replaces it with new enum fields tax_id and billing_address. The 2026-02-27 version adds a FAILED status to financial reports to distinguish from the PENDING (in-progress) state. The 2025-11-11 version changes the Payment Source external_id field to reference a Payment Method ID instead of a Payment Consent ID.
+
+## 2026-05-29
+
+* `customer_data_collection.enabled` is removed from Billing Checkout APIs. New enum fields `customer_data_collection.tax_id` and `customer_data_collection.billing_address` are added.
+
+  Affected endpoints:
+
+    * **POST `/api/v1/billing_checkouts/create`**
+    * **GET `/api/v1/billing_checkouts/{id}`**
+    * **GET `/api/v1/billing_checkouts`**
+    * **POST `/api/v1/billing_checkouts/{id}/update`**
+    * **POST `/api/v1/billing_checkouts/{id}/cancel`**
+
+  Changes:
+
+    * `customer_data_collection.enabled`: removed
+    * `customer_data_collection.tax_id`: added enum field (`DISABLED`, `OPTIONAL_IF_SUPPORTED`, `REQUIRED_IF_SUPPORTED`; Default: `OPTIONAL_IF_SUPPORTED`)
+    * `customer_data_collection.billing_address`: added enum field (`AUTO`, `REQUIRED`; Default: `AUTO`)
+
+## 2026-02-27
+
+* Updated `status` of financial reports to indicate `FAILED` when report generation process had failed. This is distinct from the previous `PENDING` state, which now indicates that the report generation is still in progress.
+
+  Affected endpoints:
+
+    * **GET `/api/v1/finance/financial_reports`** (response only)
+    * **GET `/api/v1/finance/financial_report/{id}`** (response only)
+    * **POST `/api/v1/finance/financial_reports/create`** (response only)
+
+## 2025-11-11
+
+* In this version, the meaning of the field `external_id` on the **Payment Source** resource has changed from referencing a **Payment Consent ID** to referencing a **Payment Method ID**.
+
+  Affected endpoints:
+
+    * **POST `/api/v1/payment_sources/create`**
+    * **GET `/api/v1/payment_sources/{id}`**
+    * **GET `/api/v1/payment_sources`**
+    * **(Sandbox Only) POST `/api/v1/simulation/billing/payment_sources/{id}/fail_next_autocharge`**
+    
+  Changes:
+
+    * `external_id` accepts a Payment Method ID instead of a Payment Consent ID.
+

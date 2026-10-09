@@ -1,0 +1,1409 @@
+The Transition Transfer Status endpoint allows sandbox simulation of transfer status changes, including the endpoint definition, authentication, path and body parameters, and a cURL example.
+
+# Transition Transfer Status
+
+You can use this endpoint to simulate the status transition of your transfer. This is only available in the Sandbox environment. Learn about the [transfer status lifecycle](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md).
+
+## Endpoint
+
+`POST /api/v1/simulation/transfers/{id}/transition`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+- `x-api-version` (string, optional)
+  x-api-version.
+
+## Request Parameters
+
+### Path Parameters
+
+- `id` (string, format: uuid, required)
+  Unique identifier of the transfer to transition the status of.
+
+### Request Body
+
+- `next_status` (string, required)
+  The next status to transition to. Status can be OVERDUE, PROCESSING, SENT, PAID, FAILED, and CANCELLED.
+- `failure_type` (string, optional)
+  The type of failure to simulate.
+  Possible values:
+  - `ACCOUNT_CLOSED`
+  - `ACCOUNT_CURRENCY_MISMATCH`
+  - `ACCOUNT_INACTIVE_OR_DORMANT`
+  - `ACCOUNT_UNDER_RESTRICTION`
+  - `BENEFICIARY_BANK_RETURNED`
+  - `BENEFICIARY_NAME_MISMATCH`
+  - `BENEFICIARY_REQUESTED`
+  - `CARD_ISSUER_ERROR`
+  - `CHANNEL_POLICY`
+  - `CHANNEL_TIMEOUT`
+  - `CLIENT_REQUESTED`
+  - `DUPLICATION_RETURN`
+  - `EXCEEDED_TRANSACTION_AMOUNT_OR_LIMIT`
+  - `INBOUND_2B_CARD_NOT_SUPPORTED`
+  - `INBOUND_BENFICIARY_VALIDATION_ERROR`
+  - `INBOUND_COMPANY_REGISTRATION_NUMBER_ERROR`
+  - `INBOUND_ORDER_ERROR`
+  - `INSUFFICIENT_FUNDS`
+  - `INVALID_ACCOUNT_NAME_OR_NUMBER`
+  - `INVALID_BANK_INFORMATION`
+  - `INVALID_BANK_OR_BRANCH_CODE`
+  - `INVALID_BENEFICIARY_DETAILS`
+  - `INVALID_CORRESPONDENT_BANK_INFORMATION`
+  - `INVALID_PAYMENT_PURPOSE`
+  - `INVALID_SPECIAL_CHARACTER`
+  - `INVALID_SWIFT_BIC_CODE`
+  - `OTHER`
+  - `RECALL_REQUESTED`
+  - `SYSTEM_ERROR`
+  - `TM_SUSPENDED`
+  - `TRANSACTION_AMOUNT_NOT_COVERING_FEE`
+  - `UNABLE_TO_APPLY`
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/simulation/transfers/transfer_id/transition' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "failure_type": "INVALID_ACCOUNT_NAME_OR_NUMBER",
+  "next_status": "SENT"
+}'
+```
+
+Step 3 of the simulation guide covers how to call the Transition Transfer Status endpoint to move a transfer through its status lifecycle. Behavior differs depending on the API version in use, and specific failure types can be simulated using the failure_type parameter.
+
+## Step 3:  Transition transfer status
+
+### API version 2024-01-31 or later
+
+Call [Transition Transfer Status](https://www.airwallex.com/docs/api/simulation/transfers/transition.md) and specify the `transfer_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `PROCESSING`, `FAILED`, `SENT`, `PAID`, or `CANCELLED`. [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- The status can only be transitioned if the `next_status` specified is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md). Please note that `OVERDUE` can only be simulated when the transfer is not funded beyond the transfer date; `PAID` can only be simulated in API version 2024-04-30 or later.
+- If you specified an invalid status name, you will receive an error message about invalid next status.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+### API version 2023-10-01 or earlier
+
+Call [Transition Payment Status](https://www.airwallex.com/docs/api/2023-10-01/simulation/payouts/transition_payments.md) and specify the `payment_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `READY_FOR_DISPATCH`, `DISPATCHED`, `IN_REVIEW`, `SUSPENDED`, or `FAILED`. [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- If you use `IN_REVIEW`, `READY_FOR_DISPATCH` or `SUSPENDED`, the status can only be transitioned if it is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md).
+- If you use `DISPATCHED` or `FAILED`, the status will automatically transition through intermediary statuses into the status you designate.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+| `failure_type` in request                   | `failure_reason` in response                       |
+| ------------------------------------------- | -------------------------------------------------- |
+| `INVALID_ACCOUNT_NAME_OR_NUMBER`            | `90101: Invalid account name/number`               |
+| `INVALID_BANK_OR_BRANCH_CODE`               | `90201: Invalid bank/branch code`                  |
+| `INVALID_SWIFT_BIC_CODE`                    | `90202: Invalid SWIFT/BIC code`                    |
+| `INVALID_CORRESPONDENT_BANK_INFORMATION`    | `90203: Invalid correspondent bank information`    |
+| `INVALID_BANK_INFORMATION`                  | `90204: Invalid bank information`                  |
+| `BENEFICIARY_NAME_MISMATCH`                 | `90301: Beneficiary name mismatch`                 |
+| `ACCOUNT_CURRENCY_MISMATCH`                 | `90302: Account currency mismatch`                 |
+| `INVALID_BENEFICIARY_DETAILS`               | `90401: Invalid beneficiary details`               |
+| `INVALID_SPECIAL_CHARACTER`                 | `90402: Invalid special character`                 |
+| `CHANNEL_POLICY`                            | `90501: Channel policy`                            |
+| `TM_SUSPENDED`                              | `90502: TM suspended`                              |
+| `ACCOUNT_CLOSED`                            | `90701: Account closed`                            |
+| `ACCOUNT_INACTIVE_OR_DORMANT`               | `90702: Account inactive or dormant`               |
+| `ACCOUNT_UNDER_RESTRICTION`                 | `90703: Account under restriction`                 |
+| `BENEFICIARY_REQUESTED`                     | `90801: Beneficiary requested`                     |
+| `BENEFICIARY_BANK_RETURNED`                 | `90802: Beneficiary bank returned`                 |
+| `INBOUND_BENFICIARY_VALIDATION_ERROR`       | `90901: Inbound benficiary validation error`       |
+| `INBOUND_ORDER_ERROR`                       | `90902: Inbound order error`                       |
+| `INBOUND_2B_CARD_NOT_SUPPORTED`             | `90903: Inbound 2B card not supported`             |
+| `INBOUND_COMPANY_REGISTRATION_NUMBER_ERROR` | `90904: Inbound company registration number error` |
+| `RECALL_REQUESTED`                          | `91001: Recall requested`                          |
+| `CLIENT_REQUESTED`                          | `91002: Client requested`                          |
+| `INVALID_PAYMENT_PURPOSE`                   | `91101: Invalid payment purpose`                   |
+| `CARD_ISSUER_ERROR`                         | `91201: Card issuer error`                         |
+| `SYSTEM_ERROR`                              | `91401: System error`                              |
+| `CHANNEL_TIMEOUT`                           | `91402: Channel timeout`                           |
+| `OTHER`                                     | `99902: Other`                                     |
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/simulation/transfers/{{TRANSFER_ID}}/transition \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "next_status": "DISPATCHED"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "amount_beneficiary_receives":50.0,
+  "amount_payer_pays":345.17,
+  "beneficiary":{
+    "additional_info":{
+      "personal_email":"john.walker@gmail.com"
+    },
+    "address":{
+      "city":"Seattle",
+      "country_code":"US",
+      "postcode":"98104",
+      "state":"Washington",
+      "street_address":"412 5th Avenue"
+    },
+    "bank_details":{
+      "account_currency":"USD",
+      "account_name":"John Walker",
+      "account_number":"50001121",
+      "account_routing_type1":"aba",
+      "account_routing_value1":"021000021",
+      "bank_country_code":"US",
+      "bank_name":"JP Morgan Chase Bank",
+      "local_clearing_system":"ACH"
+    },
+    "company_name":"ABC University",
+    "entity_type":"COMPANY"
+  },
+  "beneficiary_id":"9a45987e-cffc-4f0a-81d7-82e80f0ce336",   //only shows for transfers created with a beneficiary ID
+  "created_at":"2022-10-21T05:23:03+0000",
+  "fee_amount":19.54,
+  "fee_currency":"CNY",
+  "fee_paid_by":"PAYER",
+  "last_updated_at":"2022-10-21T05:23:03+0000",
+  "metadata":{
+    "Order_id":"0123456789"
+  },
+  "payer":{
+    "additional_info":{
+      "business_incorporation_date":"1986-04-22",
+      "business_registration_number":"CN - 515-33-5315",
+      "business_registration_type":"COMPANY"
+    },
+    "address":{
+      "city":"Beijing",
+      "country_code":"CN",
+      "postcode":"100000",
+      "state":"CN-BJ",
+      "street_address":"Shanghai St, Shanghai St"
+    },
+    "entity_type":"COMPANY"
+  },
+  "payment_amount":50.0,
+  "payment_currency":"USD",
+  "payment_date":"2022-10-21",
+  "payment_id":"8e040623-d541-4096-a1f6-4074442a8823",
+  "payment_method":"LOCAL",
+  "reason":"travel",
+  "reference":"PMT1936398",
+  "request_id":"c02d2e3c-dedd-410b-a1cc-9b7e58444fa2",
+  "selling":true,
+  "short_reference_id":"P221021-RBQR1DZ",
+  "source_amount":325.63,
+  "source_currency":"CNY",
+  "status":"DISPATCHED",
+  "underlying_conversion_id":"6abec8da-9bdc-4805-9f76-ef44bc2be062"
+}
+```
+
+## Next steps
+
+As the transfer status transitions, you can then listen for the [webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) you have subscribed to, and test with the endpoints that only apply for transfers in specific statuses:
+
+- [Cancel a transfer](https://www.airwallex.com/docs/api/payouts/transfers/cancel.md): for transfers in `NEW` or `FAILED` status.
+
+Step 3 explains how to simulate transfer status transitions using the sandbox endpoint, covering both the current API version (2024-01-31 or later) and older API versions (2023-10-01 or earlier), including valid statuses, failure simulation types, and example requests and responses.
+
+## Step 3:  Transition transfer status
+
+### API version 2024-01-31 or later
+
+Call [Transition Transfer Status](https://www.airwallex.com/docs/api/simulation/transfers/transition.md) and specify the `transfer_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `PROCESSING`, `FAILED`, `SENT`, `PAID`, or `CANCELLED`. [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- The status can only be transitioned if the `next_status` specified is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md). Please note that `OVERDUE` can only be simulated when the transfer is not funded beyond the transfer date; `PAID` can only be simulated in API version 2024-04-30 or later.
+- If you specified an invalid status name, you will receive an error message about invalid next status.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+### API version 2023-10-01 or earlier
+
+Call [Transition Payment Status](https://www.airwallex.com/docs/api/2023-10-01/simulation/payouts/transition_payments.md) and specify the `payment_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `READY_FOR_DISPATCH`, `DISPATCHED`, `IN_REVIEW`, `SUSPENDED`, or `FAILED`. [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- If you use `IN_REVIEW`, `READY_FOR_DISPATCH` or `SUSPENDED`, the status can only be transitioned if it is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md).
+- If you use `DISPATCHED` or `FAILED`, the status will automatically transition through intermediary statuses into the status you designate.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+| `failure_type` in request                   | `failure_reason` in response                       |
+| ------------------------------------------- | -------------------------------------------------- |
+| `INVALID_ACCOUNT_NAME_OR_NUMBER`            | `90101: Invalid account name/number`               |
+| `INVALID_BANK_OR_BRANCH_CODE`               | `90201: Invalid bank/branch code`                  |
+| `INVALID_SWIFT_BIC_CODE`                    | `90202: Invalid SWIFT/BIC code`                    |
+| `INVALID_CORRESPONDENT_BANK_INFORMATION`    | `90203: Invalid correspondent bank information`    |
+| `INVALID_BANK_INFORMATION`                  | `90204: Invalid bank information`                  |
+| `BENEFICIARY_NAME_MISMATCH`                 | `90301: Beneficiary name mismatch`                 |
+| `ACCOUNT_CURRENCY_MISMATCH`                 | `90302: Account currency mismatch`                 |
+| `INVALID_BENEFICIARY_DETAILS`               | `90401: Invalid beneficiary details`               |
+| `INVALID_SPECIAL_CHARACTER`                 | `90402: Invalid special character`                 |
+| `CHANNEL_POLICY`                            | `90501: Channel policy`                            |
+| `TM_SUSPENDED`                              | `90502: TM suspended`                              |
+| `ACCOUNT_CLOSED`                            | `90701: Account closed`                            |
+| `ACCOUNT_INACTIVE_OR_DORMANT`               | `90702: Account inactive or dormant`               |
+| `ACCOUNT_UNDER_RESTRICTION`                 | `90703: Account under restriction`                 |
+| `BENEFICIARY_REQUESTED`                     | `90801: Beneficiary requested`                     |
+| `BENEFICIARY_BANK_RETURNED`                 | `90802: Beneficiary bank returned`                 |
+| `INBOUND_BENFICIARY_VALIDATION_ERROR`       | `90901: Inbound benficiary validation error`       |
+| `INBOUND_ORDER_ERROR`                       | `90902: Inbound order error`                       |
+| `INBOUND_2B_CARD_NOT_SUPPORTED`             | `90903: Inbound 2B card not supported`             |
+| `INBOUND_COMPANY_REGISTRATION_NUMBER_ERROR` | `90904: Inbound company registration number error` |
+| `RECALL_REQUESTED`                          | `91001: Recall requested`                          |
+| `CLIENT_REQUESTED`                          | `91002: Client requested`                          |
+| `INVALID_PAYMENT_PURPOSE`                   | `91101: Invalid payment purpose`                   |
+| `CARD_ISSUER_ERROR`                         | `91201: Card issuer error`                         |
+| `SYSTEM_ERROR`                              | `91401: System error`                              |
+| `CHANNEL_TIMEOUT`                           | `91402: Channel timeout`                           |
+| `OTHER`                                     | `99902: Other`                                     |
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/simulation/transfers/{{TRANSFER_ID}}/transition \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "next_status": "DISPATCHED"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "amount_beneficiary_receives":50.0,
+  "amount_payer_pays":345.17,
+  "beneficiary":{
+    "additional_info":{
+      "personal_email":"john.walker@gmail.com"
+    },
+    "address":{
+      "city":"Seattle",
+      "country_code":"US",
+      "postcode":"98104",
+      "state":"Washington",
+      "street_address":"412 5th Avenue"
+    },
+    "bank_details":{
+      "account_currency":"USD",
+      "account_name":"John Walker",
+      "account_number":"50001121",
+      "account_routing_type1":"aba",
+      "account_routing_value1":"021000021",
+      "bank_country_code":"US",
+      "bank_name":"JP Morgan Chase Bank",
+      "local_clearing_system":"ACH"
+    },
+    "company_name":"ABC University",
+    "entity_type":"COMPANY"
+  },
+  "beneficiary_id":"9a45987e-cffc-4f0a-81d7-82e80f0ce336",   //only shows for transfers created with a beneficiary ID
+  "created_at":"2022-10-21T05:23:03+0000",
+  "fee_amount":19.54,
+  "fee_currency":"CNY",
+  "fee_paid_by":"PAYER",
+  "last_updated_at":"2022-10-21T05:23:03+0000",
+  "metadata":{
+    "Order_id":"0123456789"
+  },
+  "payer":{
+    "additional_info":{
+      "business_incorporation_date":"1986-04-22",
+      "business_registration_number":"CN - 515-33-5315",
+      "business_registration_type":"COMPANY"
+    },
+    "address":{
+      "city":"Beijing",
+      "country_code":"CN",
+      "postcode":"100000",
+      "state":"CN-BJ",
+      "street_address":"Shanghai St, Shanghai St"
+    },
+    "entity_type":"COMPANY"
+  },
+  "payment_amount":50.0,
+  "payment_currency":"USD",
+  "payment_date":"2022-10-21",
+  "payment_id":"8e040623-d541-4096-a1f6-4074442a8823",
+  "payment_method":"LOCAL",
+  "reason":"travel",
+  "reference":"PMT1936398",
+  "request_id":"c02d2e3c-dedd-410b-a1cc-9b7e58444fa2",
+  "selling":true,
+  "short_reference_id":"P221021-RBQR1DZ",
+  "source_amount":325.63,
+  "source_currency":"CNY",
+  "status":"DISPATCHED",
+  "underlying_conversion_id":"6abec8da-9bdc-4805-9f76-ef44bc2be062"
+}
+```
+
+## Next steps
+
+As the transfer status transitions, you can then listen for the [webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) you have subscribed to, and test with the endpoints that only apply for transfers in specific statuses:
+
+
+Step 3 explains how to simulate transfer status transitions in the sandbox, covering both the current API version (2024-01-31 or later) and older versions (2023-10-01 or earlier), including the supported failure types and example request/response.
+
+## Step 3:  Transition transfer status
+
+### API version 2024-01-31 or later
+
+Call [Transition Transfer Status](https://www.airwallex.com/docs/api/simulation/transfers/transition.md) and specify the `transfer_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `PROCESSING`, `FAILED`, `SENT`, `PAID`, or `CANCELLED`. [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- The status can only be transitioned if the `next_status` specified is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md). Please note that `OVERDUE` can only be simulated when the transfer is not funded beyond the transfer date; `PAID` can only be simulated in API version 2024-04-30 or later.
+- If you specified an invalid status name, you will receive an error message about invalid next status.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+### API version 2023-10-01 or earlier
+
+Call [Transition Payment Status](https://www.airwallex.com/docs/api/2023-10-01/simulation/payouts/transition_payments.md) and specify the `payment_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `READY_FOR_DISPATCH`, `DISPATCHED`, `IN_REVIEW`, `SUSPENDED`, or `FAILED`. [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- If you use `IN_REVIEW`, `READY_FOR_DISPATCH` or `SUSPENDED`, the status can only be transitioned if it is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md).
+- If you use `DISPATCHED` or `FAILED`, the status will automatically transition through intermediary statuses into the status you designate.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+| `failure_type` in request                   | `failure_reason` in response                       |
+| ------------------------------------------- | -------------------------------------------------- |
+| `INVALID_ACCOUNT_NAME_OR_NUMBER`            | `90101: Invalid account name/number`               |
+| `INVALID_BANK_OR_BRANCH_CODE`               | `90201: Invalid bank/branch code`                  |
+| `INVALID_SWIFT_BIC_CODE`                    | `90202: Invalid SWIFT/BIC code`                    |
+| `INVALID_CORRESPONDENT_BANK_INFORMATION`    | `90203: Invalid correspondent bank information`    |
+| `INVALID_BANK_INFORMATION`                  | `90204: Invalid bank information`                  |
+| `BENEFICIARY_NAME_MISMATCH`                 | `90301: Beneficiary name mismatch`                 |
+| `ACCOUNT_CURRENCY_MISMATCH`                 | `90302: Account currency mismatch`                 |
+| `INVALID_BENEFICIARY_DETAILS`               | `90401: Invalid beneficiary details`               |
+| `INVALID_SPECIAL_CHARACTER`                 | `90402: Invalid special character`                 |
+| `CHANNEL_POLICY`                            | `90501: Channel policy`                            |
+| `TM_SUSPENDED`                              | `90502: TM suspended`                              |
+| `ACCOUNT_CLOSED`                            | `90701: Account closed`                            |
+| `ACCOUNT_INACTIVE_OR_DORMANT`               | `90702: Account inactive or dormant`               |
+| `ACCOUNT_UNDER_RESTRICTION`                 | `90703: Account under restriction`                 |
+| `BENEFICIARY_REQUESTED`                     | `90801: Beneficiary requested`                     |
+| `BENEFICIARY_BANK_RETURNED`                 | `90802: Beneficiary bank returned`                 |
+| `INBOUND_BENFICIARY_VALIDATION_ERROR`       | `90901: Inbound benficiary validation error`       |
+| `INBOUND_ORDER_ERROR`                       | `90902: Inbound order error`                       |
+| `INBOUND_2B_CARD_NOT_SUPPORTED`             | `90903: Inbound 2B card not supported`             |
+| `INBOUND_COMPANY_REGISTRATION_NUMBER_ERROR` | `90904: Inbound company registration number error` |
+| `RECALL_REQUESTED`                          | `91001: Recall requested`                          |
+| `CLIENT_REQUESTED`                          | `91002: Client requested`                          |
+| `INVALID_PAYMENT_PURPOSE`                   | `91101: Invalid payment purpose`                   |
+| `CARD_ISSUER_ERROR`                         | `91201: Card issuer error`                         |
+| `SYSTEM_ERROR`                              | `91401: System error`                              |
+| `CHANNEL_TIMEOUT`                           | `91402: Channel timeout`                           |
+| `OTHER`                                     | `99902: Other`                                     |
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/simulation/transfers/{{TRANSFER_ID}}/transition \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "next_status": "DISPATCHED"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "amount_beneficiary_receives":50.0,
+  "amount_payer_pays":345.17,
+  "beneficiary":{
+    "additional_info":{
+      "personal_email":"john.walker@gmail.com"
+    },
+    "address":{
+      "city":"Seattle",
+      "country_code":"US",
+      "postcode":"98104",
+      "state":"Washington",
+      "street_address":"412 5th Avenue"
+    },
+    "bank_details":{
+      "account_currency":"USD",
+      "account_name":"John Walker",
+      "account_number":"50001121",
+      "account_routing_type1":"aba",
+      "account_routing_value1":"021000021",
+      "bank_country_code":"US",
+      "bank_name":"JP Morgan Chase Bank",
+      "local_clearing_system":"ACH"
+    },
+    "company_name":"ABC University",
+    "entity_type":"COMPANY"
+  },
+  "beneficiary_id":"9a45987e-cffc-4f0a-81d7-82e80f0ce336",   //only shows for transfers created with a beneficiary ID
+  "created_at":"2022-10-21T05:23:03+0000",
+  "fee_amount":19.54,
+  "fee_currency":"CNY",
+  "fee_paid_by":"PAYER",
+  "last_updated_at":"2022-10-21T05:23:03+0000",
+  "metadata":{
+    "Order_id":"0123456789"
+  },
+  "payer":{
+    "additional_info":{
+      "business_incorporation_date":"1986-04-22",
+      "business_registration_number":"CN - 515-33-5315",
+      "business_registration_type":"COMPANY"
+    },
+    "address":{
+      "city":"Beijing",
+      "country_code":"CN",
+      "postcode":"100000",
+      "state":"CN-BJ",
+      "street_address":"Shanghai St, Shanghai St"
+    },
+    "entity_type":"COMPANY"
+  },
+  "payment_amount":50.0,
+  "payment_currency":"USD",
+  "payment_date":"2022-10-21",
+  "payment_id":"8e040623-d541-4096-a1f6-4074442a8823",
+  "payment_method":"LOCAL",
+  "reason":"travel",
+  "reference":"PMT1936398",
+  "request_id":"c02d2e3c-dedd-410b-a1cc-9b7e58444fa2",
+  "selling":true,
+  "short_reference_id":"P221021-RBQR1DZ",
+  "source_amount":325.63,
+  "source_currency":"CNY",
+  "status":"DISPATCHED",
+  "underlying_conversion_id":"6abec8da-9bdc-4805-9f76-ef44bc2be062"
+}
+```
+## Next steps
+
+As the transfer status transitions, you can then listen for the [webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) you have subscribed to, and test with the endpoints that only apply for transfers in specific statuses:
+
+- [Cancel a transfer](https://www.airwallex.com/docs/api/payouts/transfers/cancel.md): for transfers in `NEW` or `FAILED` status.
+
+Airwallex provides a sandbox simulation endpoint to test transfer status transitions, enabling unit and end-to-end testing of integrations with Airwallex Transfers. This guide walks through obtaining an access token, creating a transfer, and using the Transition Transfer Status API (sandbox only) to simulate all relevant statuses and failure scenarios.
+
+# Simulate transfer status transition
+
+You can conduct unit and end-to-end testing of your integration to Airwallex Transfers with [Transition Transfer Status](https://www.airwallex.com/docs/api/simulation/transfers/transition.md) to test all the [Transfers endpoints](https://www.airwallex.com/docs/api/payouts/transfers.md) that apply to transfers in different statuses. Please note that this sandbox simulation endpoint works in **sandbox environment** only.
+
+Key test scenarios include:
+
+- Creating transfers and triggering [webhook event](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) for Transfer status transitions
+- Canceling and retrying failed transfers
+- Calling Transfers endpoints on behalf of connected accounts by specifying an open ID in the `x-on-behalf-of` header
+
+## Step 1: Obtain your access token
+
+Call [obtain access token](https://www.airwallex.com/docs/api/authentication/api_access_token/login.md) to obtain an access token to use in your API requests.
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/authentication/login \
+-H 'Content-Type: application/json' \
+-H 'x-api-key: <REDACTED-AIRWALLEX-PUBLISHED-DOC-EXAMPLE>' \
+-H 'x-client-id: <REDACTED-AIRWALLEX-PUBLISHED-DOC-EXAMPLE>'
+```
+
+### Example response
+
+```json
+{
+    "expires_at": "2022-02-22T06:48:39+0000",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0b20iLCJyb2xlcyI6WyJ1c2VyIl0sImlhdCI6MTQ4ODQxNTI1NywiZXhwIjoxNDg4NDE1MjY3fQ.UHqau03y5kEk5lFbTp7J4a-U6LXsfxIVNEsux85hj-Q"
+}
+```
+
+## Step 2:  Create a transfer
+
+Create a transfer by calling [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md). See more details in **Step 2** in [Create a transfer](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md).
+
+## Step 3:  Transition transfer status
+
+### API version 2024-01-31 or later
+
+Call [Transition Transfer Status](https://www.airwallex.com/docs/api/simulation/transfers/transition.md) and specify the `transfer_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `PROCESSING`, `FAILED`, `SENT`, `PAID`, or `CANCELLED`. [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- The status can only be transitioned if the `next_status` specified is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md). Please note that `OVERDUE` can only be simulated when the transfer is not funded beyond the transfer date; `PAID` can only be simulated in API version 2024-04-30 or later.
+- If you specified an invalid status name, you will receive an error message about invalid next status.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+### API version 2023-10-01 or earlier
+
+Call [Transition Payment Status](https://www.airwallex.com/docs/api/2023-10-01/simulation/payouts/transition_payments.md) and specify the `payment_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `READY_FOR_DISPATCH`, `DISPATCHED`, `IN_REVIEW`, `SUSPENDED`, or `FAILED`. [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- If you use `IN_REVIEW`, `READY_FOR_DISPATCH` or `SUSPENDED`, the status can only be transitioned if it is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md).
+- If you use `DISPATCHED` or `FAILED`, the status will automatically transition through intermediary statuses into the status you designate.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+| `failure_type` in request                   | `failure_reason` in response                       |
+| ------------------------------------------- | -------------------------------------------------- |
+| `INVALID_ACCOUNT_NAME_OR_NUMBER`            | `90101: Invalid account name/number`               |
+| `INVALID_BANK_OR_BRANCH_CODE`               | `90201: Invalid bank/branch code`                  |
+| `INVALID_SWIFT_BIC_CODE`                    | `90202: Invalid SWIFT/BIC code`                    |
+| `INVALID_CORRESPONDENT_BANK_INFORMATION`    | `90203: Invalid correspondent bank information`    |
+| `INVALID_BANK_INFORMATION`                  | `90204: Invalid bank information`                  |
+| `BENEFICIARY_NAME_MISMATCH`                 | `90301: Beneficiary name mismatch`                 |
+| `ACCOUNT_CURRENCY_MISMATCH`                 | `90302: Account currency mismatch`                 |
+| `INVALID_BENEFICIARY_DETAILS`               | `90401: Invalid beneficiary details`               |
+| `INVALID_SPECIAL_CHARACTER`                 | `90402: Invalid special character`                 |
+| `CHANNEL_POLICY`                            | `90501: Channel policy`                            |
+| `TM_SUSPENDED`                              | `90502: TM suspended`                              |
+| `ACCOUNT_CLOSED`                            | `90701: Account closed`                            |
+| `ACCOUNT_INACTIVE_OR_DORMANT`               | `90702: Account inactive or dormant`               |
+| `ACCOUNT_UNDER_RESTRICTION`                 | `90703: Account under restriction`                 |
+| `BENEFICIARY_REQUESTED`                     | `90801: Beneficiary requested`                     |
+| `BENEFICIARY_BANK_RETURNED`                 | `90802: Beneficiary bank returned`                 |
+| `INBOUND_BENFICIARY_VALIDATION_ERROR`       | `90901: Inbound benficiary validation error`       |
+| `INBOUND_ORDER_ERROR`                       | `90902: Inbound order error`                       |
+| `INBOUND_2B_CARD_NOT_SUPPORTED`             | `90903: Inbound 2B card not supported`             |
+| `INBOUND_COMPANY_REGISTRATION_NUMBER_ERROR` | `90904: Inbound company registration number error` |
+| `RECALL_REQUESTED`                          | `91001: Recall requested`                          |
+| `CLIENT_REQUESTED`                          | `91002: Client requested`                          |
+| `INVALID_PAYMENT_PURPOSE`                   | `91101: Invalid payment purpose`                   |
+| `CARD_ISSUER_ERROR`                         | `91201: Card issuer error`                         |
+| `SYSTEM_ERROR`                              | `91401: System error`                              |
+| `CHANNEL_TIMEOUT`                           | `91402: Channel timeout`                           |
+| `OTHER`                                     | `99902: Other`                                     |
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/simulation/transfers/{{TRANSFER_ID}}/transition \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "next_status": "DISPATCHED"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "amount_beneficiary_receives":50.0,
+  "amount_payer_pays":345.17,
+  "beneficiary":{
+    "additional_info":{
+      "personal_email":"john.walker@gmail.com"
+    },
+    "address":{
+      "city":"Seattle",
+      "country_code":"US",
+      "postcode":"98104",
+      "state":"Washington",
+      "street_address":"412 5th Avenue"
+    },
+    "bank_details":{
+      "account_currency":"USD",
+      "account_name":"John Walker",
+      "account_number":"50001121",
+      "account_routing_type1":"aba",
+      "account_routing_value1":"021000021",
+      "bank_country_code":"US",
+      "bank_name":"JP Morgan Chase Bank",
+      "local_clearing_system":"ACH"
+    },
+    "company_name":"ABC University",
+    "entity_type":"COMPANY"
+  },
+  "beneficiary_id":"9a45987e-cffc-4f0a-81d7-82e80f0ce336",   //only shows for transfers created with a beneficiary ID
+  "created_at":"2022-10-21T05:23:03+0000",
+  "fee_amount":19.54,
+  "fee_currency":"CNY",
+  "fee_paid_by":"PAYER",
+  "last_updated_at":"2022-10-21T05:23:03+0000",
+  "metadata":{
+    "Order_id":"0123456789"
+  },
+  "payer":{
+    "additional_info":{
+      "business_incorporation_date":"1986-04-22",
+      "business_registration_number":"CN - 515-33-5315",
+      "business_registration_type":"COMPANY"
+    },
+    "address":{
+      "city":"Beijing",
+      "country_code":"CN",
+      "postcode":"100000",
+      "state":"CN-BJ",
+      "street_address":"Shanghai St, Shanghai St"
+    },
+    "entity_type":"COMPANY"
+  },
+  "payment_amount":50.0,
+  "payment_currency":"USD",
+  "payment_date":"2022-10-21",
+  "payment_id":"8e040623-d541-4096-a1f6-4074442a8823",
+  "payment_method":"LOCAL",
+  "reason":"travel",
+  "reference":"PMT1936398",
+  "request_id":"c02d2e3c-dedd-410b-a1cc-9b7e58444fa2",
+  "selling":true,
+  "short_reference_id":"P221021-RBQR1DZ",
+  "source_amount":325.63,
+  "source_currency":"CNY",
+  "status":"DISPATCHED",
+  "underlying_conversion_id":"6abec8da-9bdc-4805-9f76-ef44bc2be062"
+}
+```
+
+## Next steps
+
+As the transfer status transitions, you can then listen for the [webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) you have subscribed to, and test with the endpoints that only apply for transfers in specific statuses:
+
+- [Cancel a transfer](https://www.airwallex.com/docs/api/payouts/transfers/cancel.md): for transfers in `NEW` or `FAILED` status.
+
+Airwallex provides a sandbox simulation endpoint to test transfer status transitions, enabling unit and end-to-end testing of integrations with the Transfers API across all applicable statuses and API versions.
+
+# Simulate transfer status transition
+
+You can conduct unit and end-to-end testing of your integration to Airwallex Transfers with [Transition Transfer Status](https://www.airwallex.com/docs/api/simulation/transfers/transition.md) to test all the [Transfers endpoints](https://www.airwallex.com/docs/api/payouts/transfers.md) that apply to transfers in different statuses. Please note that this sandbox simulation endpoint works in **sandbox environment** only.
+
+Key test scenarios include:
+
+- Creating transfers and triggering [webhook event](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) for Transfer status transitions
+- Canceling and retrying failed transfers
+- Calling Transfers endpoints on behalf of connected accounts by specifying an open ID in the `x-on-behalf-of` header
+
+## Step 1: Obtain your access token
+
+Call [obtain access token](https://www.airwallex.com/docs/api/authentication/api_access_token/login.md) to obtain an access token to use in your API requests.
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/authentication/login \
+-H 'Content-Type: application/json' \
+-H 'x-api-key: <REDACTED-AIRWALLEX-PUBLISHED-DOC-EXAMPLE>' \
+-H 'x-client-id: <REDACTED-AIRWALLEX-PUBLISHED-DOC-EXAMPLE>'
+```
+
+### Example response
+
+```json
+{
+    "expires_at": "2022-02-22T06:48:39+0000",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0b20iLCJyb2xlcyI6WyJ1c2VyIl0sImlhdCI6MTQ4ODQxNTI1NywiZXhwIjoxNDg4NDE1MjY3fQ.UHqau03y5kEk5lFbTp7J4a-U6LXsfxIVNEsux85hj-Q"
+}
+```
+
+## Step 2:  Create a transfer
+
+Create a transfer by calling [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md). See more details in **Step 2** in [Create a transfer](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md).
+
+## Step 3:  Transition transfer status
+
+### API version 2024-01-31 or later
+
+Call [Transition Transfer Status](https://www.airwallex.com/docs/api/simulation/transfers/transition.md) and specify the `transfer_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `PROCESSING`, `FAILED`, `SENT`, `PAID`, or `CANCELLED`. [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- The status can only be transitioned if the `next_status` specified is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md). Please note that `OVERDUE` can only be simulated when the transfer is not funded beyond the transfer date; `PAID` can only be simulated in API version 2024-04-30 or later.
+- If you specified an invalid status name, you will receive an error message about invalid next status.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+### API version 2023-10-01 or earlier
+
+Call [Transition Payment Status](https://www.airwallex.com/docs/api/2023-10-01/simulation/payouts/transition_payments.md) and specify the `payment_id` in the endpoint URL to simulate the status transition of your transfer.
+
+Specify the `next_status` parameter in the request body to transition your  transfer to a subsequent status. See [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) to understand the definition and sequence of transfer statuses.
+
+This endpoint supports simulating these statuses: `READY_FOR_DISPATCH`, `DISPATCHED`, `IN_REVIEW`, `SUSPENDED`, or `FAILED`. [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md) that are only applicable to the transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md) are not currently supported.
+
+- If you use `IN_REVIEW`, `READY_FOR_DISPATCH` or `SUSPENDED`, the status can only be transitioned if it is the next valid status in [Transfer statuses (old versions)](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/transfer-statuses.md).
+- If you use `DISPATCHED` or `FAILED`, the status will automatically transition through intermediary statuses into the status you designate.
+- When you use `FAILED`, please also specify a `failure_type` with an acceptable value from the table below to simulate a specific failure reason (which will be the returned `failure_reason` in the response).
+
+| `failure_type` in request                   | `failure_reason` in response                       |
+| ------------------------------------------- | -------------------------------------------------- |
+| `INVALID_ACCOUNT_NAME_OR_NUMBER`            | `90101: Invalid account name/number`               |
+| `INVALID_BANK_OR_BRANCH_CODE`               | `90201: Invalid bank/branch code`                  |
+| `INVALID_SWIFT_BIC_CODE`                    | `90202: Invalid SWIFT/BIC code`                    |
+| `INVALID_CORRESPONDENT_BANK_INFORMATION`    | `90203: Invalid correspondent bank information`    |
+| `INVALID_BANK_INFORMATION`                  | `90204: Invalid bank information`                  |
+| `BENEFICIARY_NAME_MISMATCH`                 | `90301: Beneficiary name mismatch`                 |
+| `ACCOUNT_CURRENCY_MISMATCH`                 | `90302: Account currency mismatch`                 |
+| `INVALID_BENEFICIARY_DETAILS`               | `90401: Invalid beneficiary details`               |
+| `INVALID_SPECIAL_CHARACTER`                 | `90402: Invalid special character`                 |
+| `CHANNEL_POLICY`                            | `90501: Channel policy`                            |
+| `TM_SUSPENDED`                              | `90502: TM suspended`                              |
+| `ACCOUNT_CLOSED`                            | `90701: Account closed`                            |
+| `ACCOUNT_INACTIVE_OR_DORMANT`               | `90702: Account inactive or dormant`               |
+| `ACCOUNT_UNDER_RESTRICTION`                 | `90703: Account under restriction`                 |
+| `BENEFICIARY_REQUESTED`                     | `90801: Beneficiary requested`                     |
+| `BENEFICIARY_BANK_RETURNED`                 | `90802: Beneficiary bank returned`                 |
+| `INBOUND_BENFICIARY_VALIDATION_ERROR`       | `90901: Inbound benficiary validation error`       |
+| `INBOUND_ORDER_ERROR`                       | `90902: Inbound order error`                       |
+| `INBOUND_2B_CARD_NOT_SUPPORTED`             | `90903: Inbound 2B card not supported`             |
+| `INBOUND_COMPANY_REGISTRATION_NUMBER_ERROR` | `90904: Inbound company registration number error` |
+| `RECALL_REQUESTED`                          | `91001: Recall requested`                          |
+| `CLIENT_REQUESTED`                          | `91002: Client requested`                          |
+| `INVALID_PAYMENT_PURPOSE`                   | `91101: Invalid payment purpose`                   |
+| `CARD_ISSUER_ERROR`                         | `91201: Card issuer error`                         |
+| `SYSTEM_ERROR`                              | `91401: System error`                              |
+| `CHANNEL_TIMEOUT`                           | `91402: Channel timeout`                           |
+| `OTHER`                                     | `99902: Other`                                     |
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/simulation/transfers/{{TRANSFER_ID}}/transition \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "next_status": "DISPATCHED"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "amount_beneficiary_receives":50.0,
+  "amount_payer_pays":345.17,
+  "beneficiary":{
+    "additional_info":{
+      "personal_email":"john.walker@gmail.com"
+    },
+    "address":{
+      "city":"Seattle",
+      "country_code":"US",
+      "postcode":"98104",
+      "state":"Washington",
+      "street_address":"412 5th Avenue"
+    },
+    "bank_details":{
+      "account_currency":"USD",
+      "account_name":"John Walker",
+      "account_number":"50001121",
+      "account_routing_type1":"aba",
+      "account_routing_value1":"021000021",
+      "bank_country_code":"US",
+      "bank_name":"JP Morgan Chase Bank",
+      "local_clearing_system":"ACH"
+    },
+    "company_name":"ABC University",
+    "entity_type":"COMPANY"
+  },
+  "beneficiary_id":"9a45987e-cffc-4f0a-81d7-82e80f0ce336",   //only shows for transfers created with a beneficiary ID
+  "created_at":"2022-10-21T05:23:03+0000",
+  "fee_amount":19.54,
+  "fee_currency":"CNY",
+  "fee_paid_by":"PAYER",
+  "last_updated_at":"2022-10-21T05:23:03+0000",
+  "metadata":{
+    "Order_id":"0123456789"
+  },
+  "payer":{
+    "additional_info":{
+      "business_incorporation_date":"1986-04-22",
+      "business_registration_number":"CN - 515-33-5315",
+      "business_registration_type":"COMPANY"
+    },
+    "address":{
+      "city":"Beijing",
+      "country_code":"CN",
+      "postcode":"100000",
+      "state":"CN-BJ",
+      "street_address":"Shanghai St, Shanghai St"
+    },
+    "entity_type":"COMPANY"
+  },
+  "payment_amount":50.0,
+  "payment_currency":"USD",
+  "payment_date":"2022-10-21",
+  "payment_id":"8e040623-d541-4096-a1f6-4074442a8823",
+  "payment_method":"LOCAL",
+  "reason":"travel",
+  "reference":"PMT1936398",
+  "request_id":"c02d2e3c-dedd-410b-a1cc-9b7e58444fa2",
+  "selling":true,
+  "short_reference_id":"P221021-RBQR1DZ",
+  "source_amount":325.63,
+  "source_currency":"CNY",
+  "status":"DISPATCHED",
+  "underlying_conversion_id":"6abec8da-9bdc-4805-9f76-ef44bc2be062"
+}
+```
+
+## Next steps
+
+As the transfer status transitions, you can then listen for the [webhook events](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) you have subscribed to, and test with the endpoints that only apply for transfers in specific statuses:
+
+- [Cancel a transfer](https://www.airwallex.com/docs/api/payouts/transfers/cancel.md): for transfers in `NEW` or `FAILED` status.
+
+Transfer failure reason codes explain why a payout transfer failed. You can retrieve the `failure_reason` field via the `payout.transfer.failed` webhook event or the Get Transfer by ID API. Each failure reason includes a code and description, and failed transfers are automatically cancelled in seconds.
+
+# Failure reasons
+
+You can learn about the cause of a failure from the `failure_reason` field of a failed transfer, by either listening for the `payout.transfer.failed` [webhook event](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/transfers.md) or retrieving the transfer via API request ([Get transfer by ID](https://www.airwallex.com/docs/api/payouts/transfers/retrieve.md)). The `failure_reason` consists of a failure code and a failure description.
+
+Please note that failed transfers will be automatically cancelled in seconds.
+
+Use the table below to understand the `failure_reason` and determine the next steps to take. You can learn more in [Handle failed transfers](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/handle-failed-transfers.md).
+
+## Invalid account name/number (90101)
+
+| **Failure Code** | **Failure Description**     |
+| ---------------- | --------------------------- |
+| 90101            | Invalid account name/number |
+
+**Recommended action**: Create a new transfer with updated parameters.
+
+## Invalid bank information (90201 - 90204)
+
+| **Failure Code** | **Failure Description**                |
+| ---------------- | -------------------------------------- |
+| 90201            | Invalid bank/branch code               |
+| 90202            | Invalid SWIFT/BIC code                 |
+| 90203            | Invalid correspondent bank information |
+| 90204            | Invalid bank information               |
+
+**Recommended action**: Create a new transfer with updated parameters.
+
+## Account information mismatch (90301 - 90302)
+
+| **Failure Code** | **Failure Description**   |
+| ---------------- | ------------------------- |
+| 90301            | Beneficiary name mismatch |
+| 90302            | Account currency mismatch |
+
+**Recommended action**: Create a new transfer with updated parameters.
+
+## Invalid beneficiary details (90401 - 90402)
+
+| **Failure Code** | **Failure Description**     |
+| ---------------- | --------------------------- |
+| 90401            | Invalid beneficiary details |
+| 90402            | Invalid special character   |
+
+**Recommended action**: Create a new transfer with updated parameters.
+
+## Internal policy (90501 - 90502)
+
+| **Failure Code** | **Failure Description** |
+| ---------------- | ----------------------- |
+| 90501            | Channel policy          |
+| 90502            | TM suspended            |
+
+**Recommended action**: As it cannot be processed further after internal review, after the transfer is cancelled, please create a new one with updated parameters.
+
+## Funding error (90604)
+
+| **Failure Code** | **Failure Description** |
+| ---------------- | ----------------------- |
+| 90604            | Insufficient balance    |
+
+**Recommended action**: Please top up your wallet balance before creating the transfer again.
+
+## Abnormal account status (90701 - 90703)
+
+| **Failure Code** | **Failure Description**     |
+| ---------------- | --------------------------- |
+| 90701            | Account closed              |
+| 90702            | Account inactive or dormant |
+| 90703            | Account under restriction   |
+
+**Recommended action**: Inform your beneficiary that the transfer failed due to the beneficiary account being closed/inactive/restricted.
+
+## Beneficiary requested (90801 - 90802)
+
+| **Failure Code** | **Failure Description**   |
+| ---------------- | ------------------------- |
+| 90801            | Beneficiary requested     |
+| 90802            | Beneficiary bank returned |
+
+**Recommended action**: If beneficiary bank return is unexpected, please advise your beneficiary to check with the receiving bank.
+
+## China local transfer error (90901 - 90904, 91201)
+
+| **Failure Code** | **Failure Description**                           |
+| ---------------- | ------------------------------------------------- |
+| 90901            | China local transfer beneficiary validation error |
+| 90902            | China local transfer order error                  |
+| 90903            | Beneficiary account type not supported            |
+| 90904            | Chinese company registration number error         |
+| 91201            | China local transfer processing failure           |
+
+**Recommended action**: Contact Airwallex to troubleshoot the error.
+
+## Client requested (91001 - 91002)
+
+| **Failure Code** | **Failure Description** |
+| ---------------- | ----------------------- |
+| 91001            | Recall requested        |
+| 91002            | Client requested        |
+
+**Recommended action**: Contact Airwallex to troubleshoot the error.
+
+## Invalid payment purpose (91101)
+
+| **Failure Code** | **Failure Description** |
+| ---------------- | ----------------------- |
+| 91101            | Invalid payment purpose |
+
+**Recommended action**: Update the payment purpose or contact Airwallex to troubleshoot the error.
+
+## System error (91401 - 91402)
+
+| **Failure Code** | **Failure Description** |
+| ---------------- | ----------------------- |
+| 91401            | System error            |
+| 91402            | Channel timeout         |
+
+**Recommended action**: Contact Airwallex to troubleshoot the error.
+
+## Other (99901 - 99902)
+
+| **Failure Code** | **Failure Description** |
+| ---------------- | ----------------------- |
+| 99901            | Unable to apply         |
+| 99902            | Other                   |
+
+**Recommended action**: Contact Airwallex to troubleshoot the error.
+
+The optional response fields for the created transfer include application fee options, conversion details, dispatch information, failure details, and metadata. HTTP error codes and their possible error types are also listed.
+
+- `application_fee_options` (array[object], optional)
+  The application fee options applied to this transfer.
+  - `amount` (string, optional)
+    A positive integer specifying the amount of the fee expressed in the smallest unit of the currency. e.g. cents for USD. This field is required only when type is FIXED.
+  - `currency` (string, optional)
+    Specify the currency of the application fee in ISO 4217 currency code format, e.g., USD, AUD. This field is required when the type is FIXED.
+    When the type is PERCENTAGE and source_type is CONVERSION, the currency for the conversion if specified must be from the currency pair. If the currency is unspecified, the contra currency of the quote will be used.
+  - `metadata` (object, optional)
+    The metadata of the application fee. The value should be set in key:value format. (e.g., id:1).
+  - `percentage` (string, optional)
+    Required if the type is PERCENTAGE, and the value to be provided depends on the transaction context.
+    FX Conversions: The value acts as a markup on the FX rate, increasing the conversion cost by the specified percentage.
+    Others: The value represents a direct fee calculated as a percentage of the transaction amount.
+  - `source_type` (string, optional)
+    Specify type of the source transaction.
+    Possible values:
+    - `CONVERSION`
+    - `TRANSFER`
+  - `type` (string, optional)
+    Define the type of fee calculation. If the `source_type` is `CONVERSION`, then the type must be `PERCENTAGE`.
+    Possible values:
+    - `FIXED`
+    - `PERCENTAGE`
+- `application_fees` (array[object], optional)
+  Application fees in this transfer.
+  - `amount` (string, optional)
+    The application fee amount.
+  - `currency` (string, optional)
+    The currency of the application fee.
+  - `source_type` (string, optional)
+    Specify the type of source transaction for this application fee.
+    Possible values:
+    - `CONVERSION`
+    - `TRANSFER`
+- `batch_transfer_id` (string, optional)
+  Unique identifier of the batch containing the transfer.
+- `beneficiary_id` (string, format: uuid, optional)
+  beneficiary_id of the beneficiary contact used to create this transfer.
+- `conversion` (object, optional)
+  Conversion details of a transfer with currency conversions.
+  - `currency_pair` (string, required)
+    The currency pair of the conversion.
+  - `rate` (number, required)
+    The rate of the conversion.
+- `dispatch_date` (string, optional)
+  Actual payout dispatch date. Payouts are dispatched at this date in actual processing. This date could be later than the transfer date.
+- `dispatch_info` (object, optional)
+  Additional details populated after the transaction is sent to Airwallex's downstream for processing. Only available for some transfer methods - see [Product Docs](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md) for details.
+  - `external_reference` (string, optional)
+    A reference ID to track a transfer after it's dispatched from Airwallex. For stablecoin transfers, this is the on-chain transaction hash.
+  - `external_reference_type` (string, optional)
+    The definition of the `external_reference` in the payment system. Possible values include `NETWORK_TRANSACTION_ID` for stablecoin transfers (blockchain transaction hash).
+- `failure` (object, optional)
+  Failure details if the transfer is in an error state.
+  - `code` (string, optional)
+    Failure code.
+  - `details` (object, optional)
+    Additional failure details.
+    - `reason_codes` (array[string], optional)
+      Detailed reason code.
+    - `type` (string, optional)
+      Failure type.
+  - `message` (string, optional)
+    Failure message.
+- `lock_rate_on_create` (boolean, optional)
+  Denotes whether to lock the conversion rate for a scheduled transfer with value `TRUE` or `FALSE`.This field should only be specified when a conversion is involved. If not specified, the default value is `TRUE`.
+- `metadata` (object, optional)
+  A set of key-value pairs for storing your own data together with the transfer.
+- `payer_id` (string, format: uuid, optional)
+  payer_id of the payer contact used to create this transfer.
+- `prepayment` (object, optional)
+  Prepayment details for a schedule transfer with currency conversions at a confirmed rate.
+  - `amount` (number, required)
+    The prepayment amount to be paid.
+  - `currency` (string, required)
+    The prepayment currency.
+- `remarks` (string, optional)
+  Additional information about this transfer, which will not be passed to the beneficiary.
+- `swift_charge_option` (string, optional)
+  (For SWIFT transfers only), specify who should bear SWIFT charges, either `SHARED` (default) or `PAYER`.
+
+## Errors
+
+### 400 Bad request
+
+Possible errors: `request_id_duplicate`, `declaration_required`, `amount_beneficiary_receives_below_limit`, `amount_below_transfer_method_limit`, `source_amount_below_account_limit`, `transfer_amount_below_account_limit`, `amount_beneficiary_receives_above_cumulative_limit`, `amount_above_transfer_method_limit`, `source_amount_above_account_limit`, `transfer_amount_above_account_limit`, `fee_unknown`, `service_unavailable`, `currency_pair_invalid`, `order_info_unsupported`, `order_reconciliation_failed`, `transfer_currency_unsupported`, `source_currency_unsupported`, `open_position_limit_exceeded`, `balance_insufficient`, `payout_method_unsupported`, `payer_unsupported`, `validation_failed`, `quote_id_invalid`, `quote_id_required`, `beneficiary_type_unsupported`, `order_amount_insufficient`, `quote_expired`, `transfer_date_invalid`
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 409 Conflict
+
+Possible errors: `request_pending`
+
+### 429 Too many requests
+
+Too many requests
+
+### 500 Server error
+
+Service unavailable
+
+The endpoint returns a 200 OK response with full transfer details, including status, fees, and optional card payment data.
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "additional_info": {
+    "card_payment_data": {
+      "amount": "<string>",
+      "brand": "MASTERCARD",
+      "card_issuing_country": "<string>",
+      "card_token": "<string>",
+      "card_type": "CREDIT",
+      "cardholder_name": "<string>",
+      "created_at": "<string>",
+      "deposit_id": "<string>",
+      "ip_address": "<string>",
+      "payment_method": "APPLE_PAY",
+      "three_dsecure_outcome": "ATTEMPTED"
+    }
+  },
+  "amount": 10000,
+  "created_at": "2018-03-22T16:08:02+1100",
+  "currency": "AUD",
+  "destination": "acct_DjU6FcdYPYy6MEJsU0JAPg",
+  "failure_reasons": [
+    "EXPIRED_TRANSACTION_RFI_PAYER",
+    "EXPIRED_TRANSACTION_RFI_BENEFICIARY",
+    "DORMANCY_KYC_NO_RESPONSE_PAYER",
+    "DORMANCY_KYC_NO_RESPONSE_BENEFICIARY",
+    "WEBSITE_KYC_NO_RESPONSE_PAYER",
+    "WEBSITE_KYC_NO_RESPONSE_BENEFICIARY",
+    "WATCHLIST_RESTRICTION_PAYER",
+    "WATCHLIST_RESTRICTION_BENEFICIARY",
+    "OTHER_HIGH_RISK_PAYER",
+    "OTHER_HIGH_RISK_BENEFICIARY"
+  ],
+  "fee": 10,
+  "id": "d9af1614-a6a1-4d45-aae7-6858fc6d9ede",
+  "reason": "travel",
+  "reference": "PMT1936398",
+  "request_id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+  "short_reference_id": "D220926-QZ7BTZE",
+  "status": "NEW",
+  "updated_at": "2018-03-22T16:08:02+1100"
+}
+```
+
+- `amount` (number, required)
+  Amount of the transfer in `currency` specified in the request.
+- `created_at` (string, required)
+  The time this transfer was created.
+- `currency` (string, required)
+  Currency (3-letter ISO-4217 code) specified in the request.
+- `destination` (string, required)
+  Airwallex account unique identifier specified in the request.
+- `fee` (number, required)
+  Fee of the transfer in `currency` specified in the request.
+- `id` (string, required)
+  Unique identifier for the transfer.
+- `reason` (string, required)
+  Reason for the transfer instruction specified in the request.
+- `reference` (string, required)
+  User specified reference that will be displayed to the beneficiary specified in the request.
+- `request_id` (string, required)
+  Unique request identifier specified in the request.
+- `short_reference_id` (string, required)
+  Short reference for support purposes.
+- `status` (string, required)
+  Status of the transfer. One of: `NEW`, `SETTLED`, `PENDING`, `SUSPENDED`, `FAILED`.
+- `updated_at` (string, required)
+  The time this transfer was updated.
+- `additional_info` (object, optional)
+  Additional information about the transaction.
+  - `card_payment_data` (object, optional)
+    Additional information about the card payment funding the connected account transfer.
+    - `amount` (string, optional)
+      The payment amount for this transaction.
+    - `brand` (string, optional)
+      The card brand. Possible enum values:
+      Possible values:
+      - `MASTERCARD`
+      - `VISA`
+      - `UNION_PAY`
+      - `AMERICAN_EXPRESS`
+      - `JCB`
+      - `DISCOVER`
+      - `DINERS_CLUB_INTERNATIONAL`
+    - `card_issuing_country` (string, optional)
+      Country code where the card was issued (e.g., `US`, `GB`, `CN`).
+    - `card_token` (string, optional)
+      A unique token (GUID) representing the customer’s card number.
+    - `card_type` (string, optional)
+      The card type. Possible enum values:
+      Possible values:
+      - `CREDIT`
+      - `DEBIT`
+      - `PREPAID`
+    - `cardholder_name` (string, optional)
+      The cardholder's name. Not applicable to `APPLE_PAY` and `GOOGLE_PAY`.
+    - `created_at` (string, optional)
+      The timestamp when the customer created the payment transaction.
+    - `deposit_id` (string, optional)
+      The unique identifier of the deposit that corresponds to the settlement into Airwallex's Global Account.
+    - `ip_address` (string, optional)
+      IP address (IPv4 or IPv6) of the payer’s device at the time of payment.
+    - `payment_method` (string, optional)
+      The payment method used for this transaction. Possible enum values:
+      Possible values:
+      - `APPLE_PAY`
+      - `GOOGLE_PAY`
+      - `CARD_ON_FILE`
+    - `three_dsecure_outcome` (string, optional)
+      The outcome of a 3D Secure authentication process, which verifies the identity of a cardholder during an online purchase. Possible enum values:
+      Possible values:
+      - `ATTEMPTED`
+      - `AUTHENTICATED`
+      - `FAILED`
+      - `NOT_APPLICABLE`
+      - `NOT_REQUESTED`
+  - `merchant_data` (object, optional)
+    Structured merchant information for nested-flow transfers.
+    - `business_name` (string, optional)
+      The merchant's official legal name.
+    - `business_registration_date` (string, optional)
+      The date when the merchant's business was registered, in `YYYY-MM-DD` format. For example, `2025-03-15`.
+    - `business_registration_number` (string, optional)
+      The merchant's Business Registration Number (BRN) or equivalent identifier.
+    - `business_trading_name` (string, optional)
+      The merchant's trading or DBA (doing business as) name.
+    - `industry_category_code` (string, optional)
+      The merchant's industry category code.
+    - `merchant_identifier` (string, optional)
+      The merchant's unique identifier on the platform.
+    - `registration_country` (string, optional)
+      The merchant's country of registration in ISO 3166-1 alpha-2 format. For example, `CN` or `HK`.
+    - `store_urls` (array[string], optional)
+      The merchant's store URL(s).
+- `failure_reasons` (array[string], optional)
+  List of failure reason codes when status is FAILED.
+
+
+The 200 OK response returns details of the simulated refund transaction, including transaction identifiers, merchant info, processing result, and possible failure reasons.
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "auth_code": "000001",
+  "billing_amount": 100,
+  "billing_currency": "USD",
+  "card_id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+  "card_nickname": "<string>",
+  "client_data": "Some client data",
+  "masked_card_number": "************4242",
+  "merchant": {
+    "category_code": "4829",
+    "city": "Melbourne",
+    "country": "Australia",
+    "name": "Merchant A"
+  },
+  "network_transaction_id": "3951729271768745",
+  "process_result": "APPROVED",
+  "retrieval_ref": "909916088001",
+  "subtype": "CLEARING",
+  "transaction_amount": 100,
+  "transaction_currency": "USD",
+  "transacted_at": "2018-03-21T16:08:02+00:00",
+  "card_transaction_event_id": "6c2dc266-09ad-4235-b61a-767c7cd6d6ea",
+  "card_transaction_id": "7c2dc266-09ad-4235-b61a-767c7cd6d6ea",
+  "card_transaction_lifecycle_id": "3c2dc266-09ad-4235-b61a-767c7cd6d6ea",
+  "type": "CLEARING",
+  "updated_at": "2018-03-22T16:08:02+00:00"
+}
+```
+
+- `auth_code` (string, optional)
+  Authorization Code.
+- `billing_amount` (number, optional)
+  Billing amount.
+- `billing_currency` (string, optional)
+  Billing Currency.
+- `card_id` (string, format: uuid, optional)
+  Unique Identifier for card.
+- `card_nickname` (string, optional)
+  The nickname of the card used.
+- `card_transaction_event_id` (string, format: uuid, optional)
+  The unique identifier of the card transaction event created by the simulation operation.
+- `card_transaction_id` (string, format: uuid, optional)
+  The unique identifier of the card transaction created or updated by the simulation operation.
+- `card_transaction_lifecycle_id` (string, format: uuid, optional)
+  The unique identifier of the card transaction lifecycle created or updated by the simulation operation.
+- `client_data` (string, optional)
+  Client data stored against the card record.
+- `failure_reason` (string, optional)
+  The reason the event was declined. Only present when `process_result` is `DECLINED`. Learn more about [transaction failure reasons](https://www.airwallex.com/docs/issuing/transactions/transaction-failure-reasons.md).
+  Possible values:
+  - `ACCOUNT_INVALID`
+  - `CARDHOLDER_VERIFICATION_FAILED`
+  - `CARD_CLOSED`
+  - `CARD_INACTIVE`
+  - `CARD_INVALID`
+  - `CARD_LOST_STOLEN`
+  - `CARD_NOT_ACTIVATED`
+  - `CARD_REISSUED_TO_NEW_NUMBER`
+  - `CURRENCY_NOT_ALLOWED`
+  - `CVV_INVALID`
+  - `EXPIRY_MISSING`
+  - `INSUFFICIENT_AVAILABLE_CREDIT`
+  - `INSUFFICIENT_FUNDS`
+  - `INTERNAL_ERROR`
+  - `INVALID_EXPIRY_DATE`
+  - `LIMIT_EXCEEDED`
+  - `MERCHANT_CATEGORY_NOT_ALLOWED`
+  - `MERCHANT_COUNTRY_NOT_ALLOWED`
+  - `MERCHANT_BRAND_NOT_ALLOWED`
+  - `MERCHANT_BRAND_CATEGORY_NOT_ALLOWED`
+  - `MERCHANT_BRAND_SUBCATEGORY_NOT_ALLOWED`
+  - `NOT_SUPPORTED`
+  - `OUT_OF_ALLOWED_TIME_RANGE`
+  - `PIN_INVALID`
+  - `PIN_RETRIES_EXCEEDED`
+  - `REMOTE_AUTH_DECLINED`
+  - `RESTRICTED_COUNTRY`
+  - `SUSPECTED_FRAUD`
+  - `TRANSACTION_BLOCKED`
+  - `TRANSACTION_BLOCKED_AT_TERMINAL`
+  - `TRANSACTION_USAGE_DISABLED`
+- `masked_card_number` (string, optional)
+  Masked card number.
+- `merchant` (object, optional)
+  Merchant of the card transaction.
+  - `category_code` (string, optional)
+    Merchant category code.
+  - `city` (string, optional)
+    Merchant city.
+  - `country` (string, optional)
+    Merchant country.
+  - `name` (string, optional)
+    Merchant Name.
+- `network_transaction_id` (string, optional)
+  The transaction unique identifier from VISA network.
+- `process_result` (string, optional)
+  The processing result of the card transaction event.
+  Possible values:
+  - `APPROVED`
+  - `DECLINED`
+- `retrieval_ref` (string, optional)
+  Transaction retrieval reference number. Data element 37 of an financial transaction message (https://en.wikipedia.org/wiki/ISO_8583).
+- `subtype` (string, optional)
+  The card transaction event subtype.
+  Possible values:
+  - `AUTHORIZATION`
+  - `INCREMENTAL_AUTHORIZATION`
+  - `VERIFICATION`
+  - `REVERSAL`
+  - `PARTIAL_REVERSAL`
+  - `EXPIRED_AUTHORIZATION`
+  - `CLEARING`
+  - `PARTIAL_CLEARING`
+  - `CLEARING_REVERSAL`
+- `transacted_at` (string, format: date-time, optional)
+  The network-reported transaction time.
+- `transaction_amount` (number, optional)
+  Transaction amount.
+- `transaction_currency` (string, optional)
+  Transaction currency.
+- `type` (string, optional)
+  The card transaction event type.
+  Possible values:
+  - `AUTHORIZATION`
+  - `CLEARING`
+  - `REVERSAL_AUTH`
+- `updated_at` (string, format: date-time, optional)
+  Date and time when the card transaction event was last updated, in ISO 8601 format.
+
+## Errors
+
+### 400 Bad request
+
+invalid_argument
+
+### 401 Unauthorized
+
+credentials_invalid
+
+### 500 Server error
+
+service_unavailable

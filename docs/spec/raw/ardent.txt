@@ -1,0 +1,1782 @@
+ Ardent Partners
+         RESEARCH WITH RESULTS
+
+
+
+
+The State of ePayables 2025:
+AP’s Unfinished Journey
+Andrew Bartolini | Founder & Chief Research Officer | Ardent Partners
+June 2025
+
+
+
+
+Underwritten by:
+                                                                                                      The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+
+R E P O R T SPONSORS HI P
+The views and opinions in this report represent those of Ardent Partners at the time of publication. Sponsoring companies have had
+no measurable influence on the content and research in this report. The contents of this research report are the exclusive property of
+Ardent Partners. Please direct any comments or questions regarding the content and/or our research sponsorship policy to Ardent’s Chief
+Research Officer, Andrew Bartolini, at abartolini@ardentpartners.com and/or 617.752.1620.
+
+Sponsor:
+
+
+
+
+Bottomline helps businesses transform the way they pay and get paid. A global leader in business payments and cash management,
+Bottomline’s secure, comprehensive solutions modernize payments for businesses and financial institutions globally. With over 35 years
+of experience, moving more than $10 trillion in payments annually, Bottomline is committed to driving impactful results for customers
+by reimagining business payments and delivering solutions that add to the bottom line. Bottomline is a portfolio company of Thoma
+Bravo, one of the largest software private equity firms in the world, with more than $160 billion in assets under management. For more
+information visit www.bottomline.com.  
+
+Bottomline, Paymode, and the Bottomline logo are trademarks or registered trademarks of Bottomline Technologies, Inc.
+
+About the Solution:
+Many companies still rely on manual, inefficient and costly invoice-to-pay processes that are prone to fraud. Paymode, Bottomline’s
+business payment network, fixes that by helping companies digitize and streamline payables and receivables in a single solution. Over
+600,000 Paymode businesses have transformed their processes to optimize working capital, improve days payable outstanding, and scale
+and transform financial operations. Paymode handles over $450 billion in payments every year. To streamline your payments process and
+unlock inefficiencies visit https://www.bottomline.com/us/paymode.  
+
+
+
+
+                                                                                                                            © Ardent Partners Ltd. 2025
+                                                                  2
+                                                                                                  The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+
+The State of e Pay a b l e s 2 0 2 5 :
+A P’s Un f inis he d J o u rn e y
+Accounts Payable has never been the story of overnight transformation. It is a story of persistence, of pushing forward through
+challenges, one supplier, one invoice, and one payment at a time. Like Sisyphus reimagined, not as a figure of futility but of
+defiant purpose, AP professionals have spent the past twenty years pushing against inertia, not for glory, but because the
+struggle itself matters. Every invoice approved, every payment scheduled, and every new insight gained and shared marks
+progress. It is a progress that is real, earned, and meaningful. In a world obsessed with disruption, AP offers the lesson that
+while value, from time to time, arises from revolution, more often than not, it is the result of a steady, consistent execution on
+a long-term plan This report opens in many ways like the inaugural report in 2006, with a recognition that AP’s journey is not
+behind it, but ahead. Onward, AP soldiers!
+
+This 20th-annual State of ePayables report is part of the ongoing dialogue that Ardent Partners’ analysts have had with AP,
+finance, and P2P leaders for two decades. The report examines the general competencies and capabilities of AP organizations
+today and highlights the management strategies and tactics that leading departments have utilized to drive their organizations
+forward over the past few years. This report also examines their core plans and top priorities for 2025 and beyond, including AI.
+
+While this report reflects on AP’s journey over the past two decades, it remains focused on the here and now, presenting a
+comprehensive, industry-wide view into the world of accounts payable by capturing the experience, performance, perspectives,
+and intentions of 204 AP professionals and their organizations. The report includes benchmark statistics, analysis, and
+recommendations that AP, finance, and P2P teams can use to better understand the state of AP today, gain insight into best
+practices, benchmark their performance against the Best-in-Class, and ultimately improve their operations and performance.
+
+
+
+
+                                                                                                                        © Ardent Partners Ltd. 2025
+                                                                3
+                                                                                                   The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+
+Table of Contents:
+1                                                                  3
+    The State of AP                                                    Best-in-Class Accounts Payable
+    5   Two Decades of AP Evolution and Elevation                      21 The Future of AP: Dependent on Automation, Agility, and
+                                                                          Intelligence
+    6   How AP Sees Itself and How to Make It A Reality
+                                                                       22 The 2025 Accounts Payable Benchmarks
+    7   AP’s Power Couple(s)
+                                                                       23 Best-in-Class AP Performance
+    7   Til Tariffs Do Us Part — AP’s New Role
+                                                                       24 The Best-in-Class AP Program, Part I: Cash Management
+    8   High Hurdles
+                                                                       26 The Best-in-Class AP Program, Part II: Supplier
+    9   Bye, Hurdles. Scaling Obstacles
+                                                                          Management
+    11 AP’s Achilles Heel
+                                                                       26 The Best-in-Class AP Program, Part III: The Technology
+
+
+
+
+2
+                                                                       28 The Best-in-Class AP Program, Part IV: Capabilities
+    The State of ePayables                                             29 Two New Metrics to Consider
+
+
+
+
+                                                                   4
+    12 Reality Check: Big Opportunities, Limited Involvement
+    14 From Function to Force                                          Strategies for Success
+    15 ePayables Adoption Rates in 2025
+                                                                       30 Ardent Partners’ New Call to Action for AP Leaders
+    17 Sub-Process Automation: Encouraging Signs with Gaps
+                                                                       32 Strategies for Success
+       to Close
+
+
+
+
+                                                                   5
+    18 AI Adoption: A Good Start with Room to Accelerate
+    18 AI is Here. That’s Clear. Start Using It!                       Appendix
+    18 What AP Hopes to Gain from AI                                   36 About the Author
+    20 An AI Primer                                                    37 About Ardent Partners
+                                                                       37 Research Methodology
+                                                                       37 Report Demographics
+
+
+
+
+                                                                                                                         © Ardent Partners Ltd. 2025
+                                                               4
+                                                                                                              The State of ePayables 2025: AP’s Unfinished Journey
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                           3 Best-in-Class
+                                                             Accounts Payable
+                                                                                        4 Strategies
+                                                                                          Success
+                                                                                                     for
+                                                                                                                   5 Appendix
+
+
+Chapter One: The State of AP
+     “There has never been a better time to work in accounts payable than right now. Tomorrow will be even better.”
+     ~ Said almost daily by Andrew Bartolini of Ardent Partners for the past decade.
+
+
+
+
+Two Decades of AP Evolution and Elevation                                   The 2010s brought a wave of digital transformation, and with it,
+Now in its 20th year, Ardent Partners’ annual State of ePayables            eventually, a focus on AP. ePayables solutions began to reduce the
+2025 report offers a unique vantage point into one of the most              burden of paper invoices and accelerate processing cycles. Ardent
+underappreciated, yet essential, areas of enterprise finance. What          Partners’ research during this period highlighted the significant
+was once viewed as a purely tactical function has steadily evolved          improvement in metrics, like straight-through processing, as AP
+into a hub of insight, control, and value creation for the broader          leaders embraced workflow automation and document digitization.
+organization.                                                               By the late-2010s, forward-looking AP teams were beginning to shift
+                                                                            from simply “processing transactions” to “managing information
+Over the past two decades, AP has undergone a significant                   and relationships.”
+transformation, shaped by macroeconomic events, technological
+advancements, and demand for agility, compliance, and efficiency.           The 2020s introduced a new set of challenges and opportunities,
+In the early 2000s, most AP departments were drowning in paper,             most notably the COVID-19 pandemic, which clearly revealed the
+with manual data entry, error-prone approvals, and late payments            problem with manual AP processes. Many AP teams were forced to
+serving as the norm. The early research done by Ardent Partners’            return to physical offices to process invoices during the lockdowns
+analysts showed that average invoice processing costs could easily          as a way to ensure business continuity. During that time, executives
+exceed $20 per invoice and cycle times regularly stretched more             saw the folly in ignoring AP, leading to a spike in ePayables
+than 20 days. Twenty years later, those numbers are less than half          solutions investments. As more AP teams became automated,
+of what they were.                                                          many simultaneously became more strategic, creating stronger
+                                                                            synergies with procurement and treasury.
+
+
+
+
+                                                                                                                                    © Ardent Partners Ltd. 2025
+                                                                                                                                                           2024
+                                                                        5
+                                                                                                                  The State of ePayables 2025: AP’s Unfinished Journey
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                          3 Best-in-Class
+                                                            Accounts Payable
+                                                                                          4 Strategies
+                                                                                            Success
+                                                                                                       for
+                                                                                                                         5 Appendix
+
+In 2025, these functional partners now turn to AP not just for               leaders. A regular NPS-style feedback mechanism can also help
+transaction support, but for insight on and assistance with their own        track perception over time.
+priorities. More recently, the rising cost of capital has added new
+importance to how and when suppliers are paid, and has drawn                 If AP’s perception does not match reality, it is time to develop and
+AP closer to the center of cash flow management and supplier                 launch an active marketing plan to communicate AP’s mission,
+relationship management. AP’s potential has started to emerge                value, and successes. Closing that perception gap will help win a
+and the introduction of AI should help accelerate it. But how AP             bigger slice of executive mindshare and the budgetary pie.
+sees itself, and how the rest of the business views AP also matters,
+as the next section explains.                                                Figure 1: Perception: How Valuable Is AP?
+
+How AP Sees Itself and How to Make It A Reality
+When asked to evaluate the perception of AP within their
+enterprises (see Figure 1), a majority (56%) of AP professionals
+responded that their department is seen as “very valuable” to the
+business, playing a strategic role in financial operations. A smaller
+and highly confident group (12%) goes even further, viewing their
+AP department as an “exceptionally valuable” function, operating
+as a hub of efficiency and insight that generates measurable
+enterprise value. While this is encouraging, roughly one-third of
+respondents still see AP as a tactical or back-office function. It can
+be difficult to change that narrative, but it can be done.
+
+Something worth considering: Is the rest of the organization aligned
+with this view? Perception without validation can be risky. Even for
+teams that believe they are highly valued, periodic confirmation
+can help maintain focus on top priorities while building internal
+credibility. One way to close the feedback loop is to launch an
+                                                                                                                                           © Ardent Partners - 2025
+internal “customer satisfaction” survey targeting key business
+stakeholders, functional peers, and procurement and finance
+
+
+                                                                                                                                        © Ardent Partners Ltd. 2025
+                                                                         6
+                                                                                                                The State of ePayables 2025: AP’s Unfinished Journey
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                         3 Best-in-Class
+                                                           Accounts Payable
+                                                                                          4 Strategies
+                                                                                            Success
+                                                                                                       for
+                                                                                                                     5 Appendix
+
+
+AP’s Power Couple(s)
+Two valuable allies in amplifying AP’s contributions are                                 29% of AP departments
+procurement and treasury. The AP and procurement relationship
+is an interdependent, evolving marriage of control and value. It’s                       report “heavy” or “moderate”
+akin to a strategic partnership, where AP (the guardian of financial                     involvement in managing cash
+integrity and efficiency) and Procurement (the driver of sourcing
+value and supplier relationships) must work in lockstep. Their                           and liquidity.
+alignment is crucial for everything from spend visibility and cost
+control to supplier satisfaction and fraud prevention. When this
+                                                                             AP can improve its position within finance and the corporate
+bond is strong, it’s a positive force on the supply chain. That is why
+                                                                             hierarchy by being a stronger partner and encouraging its partners
+37% of AP leaders have prioritized improving this relationship in
+                                                                             to vouch for it. When procurement and treasury bear witness to AP’s
+2025.
+                                                                             contributions and capabilities, its standing is elevated. Multiple
+                                                                             partners in a strategic business context is encouraged, and AP
+          37% of AP leaders are focused                                      leaders should say “I do” to both functions.
+
+          on improving the procurement                                       Til Tariffs Do Us Part — AP’s New Role
+                                                                             New U.S. trade policy has introduced complexity to global supply
+          relationship in 2025.                                              chains in the form of tariffs. While tariffs are not paid via a typical
+                                                                             supplier invoice, managing tariffs is a task that underscores why
+Meanwhile, the AP and Treasury relationship is far from a marriage           AP’s partnerships with procurement and treasury is increasingly
+of equals and more of a marriage of necessity focused on cash                important.
+management and control. Behind every great treasury department
+                                                                             Tariffs are paid during customs clearance, often by a customs
+stands an AP operation ... one that is tightly managing the execution
+                                                                             broker or freight forwarder acting on behalf of the importing
+of vendor payments and providing accurate and timely data on
+                                                                             company. Afterwards, the broker submits an invoice, usually to
+liabilities. A happy union here helps optimize cash flow and improve
+                                                                             AP, for reimbursement. This creates a unique challenge because
+financial stability. Unfortunately, only 29% of AP departments
+                                                                             tariffs are real costs and sometimes very significant, but they are
+report “heavy” or “moderate” involvement in managing cash and
+                                                                             frequently buried within broader shipping or logistics charges.
+liquidity.
+
+
+                                                                                                                                      © Ardent Partners Ltd. 2025
+                                                                         7
+                                                                                                               The State of ePayables 2025: AP’s Unfinished Journey
+
+
+1 The State of AP           2 The State of
+                              ePayables
+                                                         3 Best-in-Class
+                                                           Accounts Payable
+                                                                                         4 Strategies
+                                                                                           Success
+                                                                                                      for
+                                                                                                                    5 Appendix
+
+And given the inconsistent roll out of the tariffs, at present, their       High Hurdles
+actual cost may not be known when the order was placed. This                While tariffs, inflation, geopolitical tensions, and market volatility
+is where tight alignment with procurement is critical because that          have created a pervasive sense of uncertainty in business, the most
+group can help ensure paid tariffs were accurately calculated and           common challenges cited by AP professionals hit closer to home
+accounted for, leaving AP with a clear path to process the invoices         (see Figure 2). The top challenge for AP this year, called out by
+and payments. Treasury relies on AP to provide accurate visibility          49% of AP executives, is the length of time it takes to approve
+into these costs for better forecasting, as well as cash flow and           invoices and payments. This problem hits right at the core of the AP
+general risk management.                                                    function, often cascading into downstream issues like late supplier
+                                                                            payments and strained relationships.
+AP can step up by working with trade compliance teams to
+properly classify tariff-related invoices, assigning appropriate            Closely behind is the high percentage of invoice exceptions
+general ledger codes, and developing internal controls to flag and          (48%), which are problematic to any AP team but particularly those
+track these payments. The result is a smarter operation where AP            working in a manual or partially automated environment. Manually
+processes complex transactions while helping procurement and                resolving invoice exceptions is a significant drain on efficiency, as
+the business better understand and manage tariffs. As companies             it diverts valuable AP staff time from strategic tasks to painstaking,
+shift sourcing to regions with more favorable trade terms or lower          low-value reconciliation efforts. And when the process to resolve
+exposure to tariffs, the partnership between AP and procurement             them and perform root cause analysis is manual, the solution is
+becomes a lever for resilience, speed, and strategic cost control. AP       difficult to replicate and apply more effectively, which means the
+can support sourcing agility by streamlining supplier onboarding,           same exception problem will have to be solved again (and again).
+including bank and tax information validation, and being proactive
+managers of global eInvoicing compliance.
+
+
+
+
+                                                                                                                                     © Ardent Partners Ltd. 2025
+                                                                        8
+                                                                                                                        The State of ePayables 2025: AP’s Unfinished Journey
+
+
+1 The State of AP             2 The State of
+                                ePayables
+                                                                3 Best-in-Class
+                                                                  Accounts Payable
+                                                                                                  4 Strategies
+                                                                                                    Success
+                                                                                                               for
+                                                                                                                             5 Appendix
+
+Fraud risk, at 31%, ranks a distant third on the priority list. However,             Bye, Hurdles. Scaling Obstacles
+its impact can be far more destabilizing than its position suggests.                 AP leaders are prioritizing different strategies to overcome big
+Since the pandemic, AP teams are operating in an era of heightened                   hurdles in 2025 (see Figure 3, next page). Over the years, priorities
+cyber threats where a single breach can undermine confidence in                      have mirrored AP’s shift away from tactical operations to one with
+the entire enterprise, and expose its business and financial systems                 a sharper focus on larger, strategic, and more holistic initiatives.
+to material risk.                                                                    In 2025, AP’s top priority is, once again, deploying comprehensive
+                                                                                     ePayables solutions (“ePayables” is Ardent’s term for any
+Overall, AP’s main hurdles in 2025 are connected by a lack of                        technology that automates some or all of the AP process). This is
+strong processes and low levels of automation. AP’s journey may                      a key initiative for nearly half (46%) of all AP leaders today. Ardent
+be unfinished, but knowing what lies in the way is the first step in                 Partners maintains that AP’s ability to leverage its unique data
+clearing the path forward.                                                           to provide actionable information to key stakeholders is vital for
+                                                                                     enterprise operations and results, a capability that is fundamentally
+Figure 2: AP’s Top Challenges in 2025                                                reliant on robust ePayables tools.
+
+                                                                                     Another top priority is the drive to improve overall reporting and
+                                                                                     analytics, selected as a top priority by 44% of AP leaders. This
+  Approvals take too long                                             49%            signals AP’s commitment to becoming a “hub of intelligence” for
+                                                                                     procurement, treasury, and the lines of business. Visibility into and
+      High percentage of
+          exceptions                                                48%              an understanding of the opportunities and risks that reside within
+                                                                                     its data can be a transformational catalyst for any AP operation.
+                Fraud risk                      31%
+                                                                                     Meanwhile, enhancing collaboration and communication with
+                                                                                     procurement is a consistent top priority for AP teams, where 37%
+  Late supplier payments                  25%
+                                                                                     have prioritized it this year.
+    Lack of visibility into
+   invoice/payment data                  24%
+
+       Staffing shortages               22%           © Ardent Partners - 2025
+
+
+
+
+                                                                                                                                              © Ardent Partners Ltd. 2025
+                                                                                 9
+                                                                                                           The State of ePayables 2025: AP’s Unfinished Journey
+
+
+1 The State of AP                2 The State of
+                                   ePayables
+                                                            3 Best-in-Class
+                                                              Accounts Payable
+                                                                                        4 Strategies
+                                                                                          Success
+                                                                                                     for
+                                                                                                                5 Appendix
+
+Finally, enabling more suppliers to submit electronic invoices
+remains an essential focus for 35% of teams. Visibility is paramount
+to success, and self-knowledge is the primary ingredient for
+improvement. While ePayables systems uniquely rely on third-
+party (supplier) adoption for maximum returns, the rising tide of
+global e-invoicing mandates underscores the need for continued
+progress in supplier enablement.
+
+
+Figure 3: AP’s Top Priorities in 2025
+
+
+
+Deploy ePayables solutions                                      46%
+
+ Improve AP reporting and
+      data analytics                                         44%
+
+         Improve
+collaboration/communicat                           37%
+  ion with procurement
+
+  Enable more suppliers to
+      submit invoices                             35%
+       electronically
+
+
+   Reduce processing costs                        34%
+                                                        © Ardent Partners - 2025
+
+
+
+
+                                                                                                                                 © Ardent Partners Ltd. 2025
+                                                                                   10
+                                                                                                                          The State of ePayables 2025: AP’s Unfinished Journey
+
+
+1 The State of AP              2 The State of
+                                 ePayables
+                                                              3 Best-in-Class
+                                                                Accounts Payable
+                                                                                                 4 Strategies
+                                                                                                   Success
+                                                                                                              for
+                                                                                                                               5 Appendix
+
+
+AP’s Achilles Heel                                                                 On-time payments: eInvoicing can impact invoice processing and
+From the beginning, Ardent Partners has described supplier enablement              approval cycles on the buyer side, and when combined with ePayments,
+as the Achilles heel of ePayables technology deployments. After all,               suppliers often see an improvement in on-time payments.
+AP utilizes one of the few enterprise-level technologies that requires
+                                                                                   Improved ability to forecast: Having access to real-time data around
+third-party participation for success. Certainly, there are hurdles to
+                                                                                   submitted invoices, invoice status, payments, and more adds a level of
+suppliers becoming enabled — like integration challenges and the
+                                                                                   predictability and visibility to the supplier’s AR process and its ability to
+costs of managing customers across multiple platforms/technologies.
+                                                                                   forecast cash flow.
+Nonetheless, AP teams serious about digital transformation should do a
+better job explaining the supplier value proposition for participation and         Accelerated payment: If suppliers are able to receive payments quicker
+work to better understand the challenges that suppliers face.                      via a simple and effective tool that doesn’t require heavy investment of
+                                                                                   time and resources, significant value may be created.
+Enabled suppliers frequently report the following benefits:
+                                                                                   Global compliance: Mandates are exploding, causing perhaps the
+Reduced costs: Being able to electronically submit invoices to customers
+                                                                                   single-biggest driver to get more suppliers enabled. More and more
+can deliver significant savings (assuming there are no [or low] transaction
+                                                                                   countries, particularly in Europe and Latin America, are mandating
+fees for suppliers). Examples include a reduction in printing and mailing
+                                                                                   eInvoicing. Failure to comply can result in significant fines, penalties,
+costs, savings from not having to reprint invoices, fewer customer service
+                                                                                   and even operational disruptions. AP departments must ensure they can
+calls, etc.
+                                                                                   both send and receive compliant eInvoices.
+Fewer disputed invoices: Suppliers can flip POs into invoices or submit
+eInvoices straight-through from their AR system. eInvoicing eliminates
+the buyer’s need to manually create an invoice, reducing the potential for
+errors. As a result, invoices are less likely to be rejected and customers
+can start processing them without delay. In the event a dispute does
+occur, it can easily and quickly be resolved online as opposed to via the
+phone.
+
+
+
+
+                                                                                                                                                © Ardent Partners Ltd. 2025
+                                                                              11
+                                                                                                                       The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP             2 The State of
+                                ePayables
+                                                           3 Best-in-Class
+                                                             Accounts Payable
+                                                                                              4 Strategies
+                                                                                                Success
+                                                                                                           for
+                                                                                                                            5 Appendix
+
+
+Chapter Two: The State of ePayables
+     “There is still too much paper in AP. There is still too much potential too. These things are related.”
+     ~ Andrew Bartolini, Ardent Partners
+
+
+If the unfinished journey of Accounts Payable had a trail marker,               Figure 4: Invoices and Payments: Electronic vs. Manual
+it would be paper. Despite two decades of transformation, paper
+invoices and manual processes remain embedded in far too many                               Invoices                                        Payments
+AP environments. While progress has been made, particularly in
+the adoption of electronic payments, the persistence of paper                       51.4%                                         68.5%
+underscores how far the function still has to go.
+                                                                                                       48.6%
+
+Ardent Partners 2025 survey results (see Figure 4) show that, on
+average, slightly more than half (51.4%) of all invoices are submitted
+                                                                                                                                                             31.5%
+electronically. And though electronic payments have gained more
+traction (68%), they remain inconsistent across organizations and
+industries. Each paper invoice that must be scanned or manually
+entered represents time lost, risk incurred, and insight deferred. For
+                                                                                 Electronic            Manual                  Electronic                  Manual
+every manual check cut, there’s a missed opportunity to strengthen                                           © Ardent Partners - 2025
+controls, reduce costs, and improve execution.
+
+ePayables solutions, for all their promise, have not yet delivered a            Reality Check: Big Opportunities, Limited Involvement
+paperless process, let alone a digital future. This is not an indictment        In recent years, leading AP teams have expanded their duties
+of AP teams or solution providers, but rather a reflection of the               and have developed a richer understanding of how their actions
+complexity of driving change across a department and enterprise.                and decisions impact enterprise performance. In fact, new Ardent
+On the positive side, AP teams fully expect to become more digital              Partners research has found that many of today’s AP teams have
+this year: 83% of AP leaders expect the number of eInvoices to                  started to chart their own course by pursuing responsibilities in
+increase this year, while a similar 78% expect more ePayments.                  more areas. But after 20 years, these numbers should be higher.
+
+
+                                                                                                                                             © Ardent Partners Ltd. 2025
+                                                                           12
+                                                                                                                               The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP                    2 The State of
+                                       ePayables
+                                                                        3 Best-in-Class
+                                                                          Accounts Payable
+                                                                                                         4 Strategies
+                                                                                                           Success
+                                                                                                                      for
+                                                                                                                                    5 Appendix
+
+
+Figure 5: Areas with at Least Moderate AP Involvement                                      •   Driving financial visibility & business intelligence (45%):
+                                                                                               With AP’s access to real-time data on spend, payments, and
+                                                                                               cash flows, it is uniquely positioned to support finance in
+      79%                                                © Ardent Partners - 2025
+                                                                                               delivering insights to the business. However, less than half of
+                                                                                               all teams actively participate in this area of enterprise analytics.
+                                                                                               To expand its impact, AP leaders can advocate for better data
+                                                                                               tools, contribute to cross-functional reporting, and assign a
+                     45%                                                                       data lead within the department.
+                                  40%
+                                                33%          32%             30%           •   Paying contingent labor (40%): Managing non-traditional
+                                                                                               labor has become more common, yet many AP teams are not
+                                                                                               structured to support fast, compliant payments to gig workers.
+                                                                                               AP can work closely with HR and procurement to streamline
+      Fraud           Driving          Paying     Spend       Cash        Supplier
+    prevention       financial       contingent management management relationship             onboarding, track services, and ensure timely payments to
+                 visibility and to labor workers           and liquidity management            these workers.
+                  stakeholders
+
+                                                                                           •   Spend management (33%): Despite their line of sight into
+The potential for every AP team to expand its role in key areas                                spend, only one third of AP teams are part of the broader spend
+is significant, yet far too many remain on the outside looking in.                             management strategy. By aligning with procurement, AP can
+Figure 5 and the list below notes the percentage of AP teams with                              help their partner identify savings opportunities, curb maverick
+either heavy or moderate involvement in each area.                                             spend, and track contract compliance. A seat at the spend
+                                                                                               planning table ensures AP’s insight drives smarter decisions.
+•     Fraud prevention (79%): This is AP’s strongest showing, and
+      for good reason. As the team that approves, processes, and                           •   Cash management and liquidity (32%): Because AP executes
+      executes payments, AP is often the last line of defense against                          payments, it has a direct impact on cash flow. Still, few teams
+      fraud. Through rigorous controls, anomaly detection, and                                 are deeply involved in liquidity planning. AP should proactively
+      system access governance, AP can catch irregularities before                             collaborate with treasury (and/or the CFO), offer payment timing
+      they become financial losses. Maintaining tight partnerships                             models and schedules, and provide inputs to cash flow scenarios
+      with internal audit and IT teams can further solidify this role.                         that support the business’ cash needs more dynamically.
+
+
+
+                                                                                                                                                     © Ardent Partners Ltd. 2025
+                                                                                      13
+                                                                                                                   The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                          3 Best-in-Class
+                                                            Accounts Payable
+                                                                                             4 Strategies
+                                                                                               Success
+                                                                                                          for
+                                                                                                                        5 Appendix
+
+•   Supplier relationship management (30%): AP interacts with                  •   Supplier management: Smart businesses understand that
+    suppliers regularly but is not generally viewed as a relationship              suppliers should be viewed as a source of knowledge and
+    steward. Improving supplier communication, ensuring accurate                   expertise that can be leveraged for a competitive advantage
+    and timely payments, and contributing to supplier onboarding                   and mutual gain. If tariffs start to significantly change the design
+    can elevate AP’s role and reduce friction with supplier                        of existing supply chains, AP can play an important role by
+    transactions and the overall lifecycle.                                        facilitating fast onboarding, accurate and complaint payments,
+                                                                                   and smooth operational transitions. How AP and P2P teams
+Increasing involvement in these areas should not be considered a                   approach their supplier relationships, and the results derived
+stretch goal, for each is a logical extension of AP’s reach. It is time            from them, will continue to have a major impact on enterprise
+for AP leaders to step forward, assert their department’s value, and               operations and overall performance in the months and years
+seek bigger roles in these areas. The future belongs to the teams                  ahead.
+that claim it.
+                                                                               •   Business intelligence: Data-driven approaches founded on
+From Function to Force                                                             the principles of data science, and broadened via integrated
+To speed its journey, AP must expand its focus beyond its                          and collaborative intelligence, are prime means of accelerating
+traditional remit. Today, leading AP teams are not simply processing               AP performance and ultimately driving more value. As AI
+transactions, they are influencing strategic areas that impact                     capabilities begin to emerge within finance and procurement
+enterprise-wide value creation. This is seen most directly in three                operations, the data warehoused within AP presents a deep
+areas that are directly linked to AP processes:                                    well of untapped value that can be extracted and converted
+                                                                                   into intelligence.
+•   Cash management: AP’s command over cash disbursements
+    to suppliers makes it one of the most impactful functions on               AP has made meaningful strides, but its impact in cash management,
+    cash management, including working capital optimization,                   supplier management, and business intelligence remains uneven
+    liquidity, and cash forecasting. The timing of B2B payments                across the market. If AP leaders want to accelerate their journey
+    should be a strategic lever that is actively managed, given the            and expand their strategic impact, they need a clear, intentional
+    real cost of capital in 2025. In advanced organizations, treasury          plan to strengthen their role across these critical areas.
+    and AP are working in sync to optimize payment runs and align
+    disbursements with broader liquidity goals. Payment precision
+    can be a source of financial advantage.
+
+
+
+                                                                                                                                         © Ardent Partners Ltd. 2025
+                                                                          14
+                                                                                                                     The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP             2 The State of
+                                ePayables
+                                                                3 Best-in-Class
+                                                                  Accounts Payable
+                                                                                                4 Strategies
+                                                                                                  Success
+                                                                                                             for
+                                                                                                                          5 Appendix
+
+
+ePayables Adoption Rates in 2025                                                   Ardent Partners research also shows that ePayables solutions are
+For any modern business function to succeed, there is typically a set              well-equipped to combat high costs, contributing to processing
+of solutions and services that can support everyday objectives. For                cost reductions that can be as much as 60-80% when compared to
+the AP unit, in particular, many of these ePayables solutions solve                manual- and paper-based methods. While the adoption numbers
+day-to-day challenges while building long-term value. Over the                     continue to move in the right direction, one-third of the market
+past 20 years, the largest takeaway from the ePayables adoption                    remains unautomated. Over the arc of this research series, the
+figures (see Figure 6) is that a fully-automated AP operation is less              technology adoption trendline has been one marked by an
+commonplace than it should be.                                                     occasional spike, followed by a long plateau. For example, finance
+                                                                                   leaders post-pandemic saw the folly of a fully manual AP operation
+Figure 6: ePayables Adoption Rates in 2025                                         and invested significantly. There are good early indications that AI,
+                                                                                   and the fear of missing out on it, will accelerate market adoption
+                                                                                   over the next three years. Time will tell.
+Automated routing and
+  approval workflow                                                    70%
+                                                                                   Figure 6 denotes the percentage of AP departments that have
+                                                                                   ePayables solutions in use today.
+    eInvoicing solution                                              67%
+                                                                                   •   Automated routing and approval workflow solutions (70%)
+   ePayments solution                                               67%                have risen in popularity in recent years because the ability to
+                                                                                       route invoices for approval is critical for improving efficiency
+        Document
+     imaging/scanning                                           62%                    within the AP process. Routing and approval workflow solutions
+                                                                                       allow organizations to establish business rules to manage the
+     Automated data                                                                    approval process for both PO and non-PO-based invoices.
+    capture/extraction…                                        60%
+                                                                                       PO-based invoices that are validated and match all of the pre-
+    Full Procure-to-Pay                                                                configured business rules can be processed “straight-through”
+          solution                                  48%
+                                                                                       without any human intervention and scheduled for payment. If
+  Business or payment                                                                  there are exceptions that need to be managed, they are routed
+        network                              37%                                       to the appropriate users for resolution.
+                                                   © Ardent Partners - 2025
+
+
+
+
+                                                                                                                                           © Ardent Partners Ltd. 2025
+                                                                              15
+                                                                                                                   The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                           3 Best-in-Class
+                                                             Accounts Payable
+                                                                                             4 Strategies
+                                                                                               Success
+                                                                                                          for
+                                                                                                                        5 Appendix
+
+
+
+
+•   eInvoicing (67%) removes paper from the AP process by                          tailor payments specific to certain suppliers utilizing a variety of
+    enabling suppliers to create and submit invoices electronically.               electronic means, including ACH, commercial/ payment cards,
+    The system maintains that format through the validation,                       virtual cards, wire transfer, etc.) are vital to completing the full
+    matching, and approval processes. eInvoicing drives process                    cycle of P2P.
+    efficiencies by eliminating data capture and manual data entry.
+    eInvoicing solutions offer tremendous simplification on the                •   Automated data capture and extraction solutions (60%) are
+    process side, as well as cost savings in terms of price per invoice            traditionally one of the first solutions typically deployed by an
+    processed. This is most directly seen with solutions enabling                  AP department. While this technology delivers value in the form
+    “straight-through processing.” To gain the best returns on                     of increased efficiencies, it is simply a starting point in a larger
+    eInvoicing, supplier participation is needed.                                  AP transformation and why it is no longer the most adopted
+                                                                                   technology.
+•   ePayments (67%) have also seen a sharp rise in adoption over
+    the past few years due, in part, to a more holistic (and expanded)         •   Payment/business networks (37%) can function as the nexus
+    focus on the role of AP that now includes both invoice and                     for payment, purchasing, supplier management, invoicing, and
+    payment processing. The availability of new ePayment solutions                 communication/collaboration activity between an enterprise
+    has also triggered greater interest in the area. While many AP                 and its supplier base. As AP teams push for higher levels of
+    departments remain focused on the front end of the process,                    supplier enablement, network platforms become a valuable
+    more groups are realizing that ePayment solutions (which can                   way to scale these efforts and develop tighter relationships.
+
+
+
+                                                                                                                                         © Ardent Partners Ltd. 2025
+                                                                          16
+                                                                                                                                   The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP                    2 The State of
+                                       ePayables
+                                                                          3 Best-in-Class
+                                                                            Accounts Payable
+                                                                                                             4 Strategies
+                                                                                                               Success
+                                                                                                                          for
+                                                                                                                                        5 Appendix
+
+
+Sub-Process Automation: Encouraging Signs with                                            The most automated activities today include travel and expense
+Gaps to Close                                                                             management, payment scheduling, invoice approvals, payment
+Industry-wide adoption of ePayables technology continues to                               execution, and invoice processing. These areas lend themselves to
+rise, but perhaps the more significant development is how much                            rule-based automation and benefit from well-established solutions
+better these solutions are being used. Teams that have deployed                           that can streamline approvals, manage policy compliance, and
+automation are processing higher volumes of invoices and                                  initiate payments with light staff involvement. However, there is
+payments, which signals real progress and should provide a sense                          room for improvement. It is important to remember that an AP
+of optimism to AP professionals still evaluating or expanding their                       digital transformation in not complete until automation extends
+technology strategies. Figure 7 shows the percentage of AP teams                          across the full invoice-to-pay process.
+that have fully, partially, or not automated key subprocess areas.
+
+Figure 7: Levels of Automation Across Core AP Activities
+                                                                                        Fully    Partially    None
+
+              Travel and expense management                                44%                                               39%                                  17%
+                           Payment scheduling                              44%                                               40%                                  16%
+                              Invoice approvals                           41%                                           39%                                    20%
+                            Payment execution                       33%                                                53%                                          15%
+  Invoice processing (validation/reconciliation)              22%                                               62%                                               16%
+                      Invoice receipt processes           18%                                                62%                                               20%
+   Data management and reporting (analytics)            11%                                     59%                                                     30%
+                           Supplier onboarding      7%                                          65%                                                      28%
+                             Cash management       6%                               51%                                                       43%
+                       Exception management        4%                             53%                                                        44%
+                                                                                                                                                            © Ardent Partners - 2025
+
+
+
+
+                                                                                                                                                         © Ardent Partners Ltd. 2025
+                                                                                     17
+                                                                                                                   The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP             2 The State of
+                                ePayables
+                                                               3 Best-in-Class
+                                                                 Accounts Payable
+                                                                                            4 Strategies
+                                                                                              Success
+                                                                                                         for
+                                                                                                                        5 Appendix
+
+
+AI Adoption: A Good Start with Room to Accelerate                              Despite this projected growth, a notable segment of AP teams
+AI adoption within AP remains in the early stages (see Figure 8), with         (22%) report having no immediate plans to adopt AI. These teams
+fewer than half of AP teams (44%) currently using AI technologies              may be constrained by budget limitations, integration challenges,
+in any capacity. This includes machine learning, natural language              or uncertainty around where to start. As AI tools become more
+processing, and other AI-driven tools aimed at improving efficiency,           accessible and embedded into core platforms, broader adoption
+accuracy, and decision-making. However, the landscape is shifting              will likely follow at a steady, but not universal, pace. AP is entering a
+quickly. Within the next 12 months, the number of teams using AI               transformative period where artificial intelligence will permeate its
+is expected to rise to more than 75 percent, suggesting that many              processes and solutions. For the 22% of respondents with no plans
+organizations are actively preparing to incorporate AI into their              to use AI within the next year, it is still recommended to commit
+operations.                                                                    some time and effort to tracking it in the ePayables market.
+Figure 8: AI Adoption Rates by AP Teams
+                                                                               AI is Here. That’s Clear. Start Using It!
+                                                                               While AI adoption use within AP is in the early stages, there is a
+                                               © Ardent Partners - 2025
+                                                                               strong view that it will have a major impact on operations over the
+                                                                               next few years. A solid majority of AP leaders expect AI to deliver
+          44%                                                                  either a significant (42%) or transformational (23%) impact over
+                                                                               the next two or three years (see Figure 9). This level of enthusiasm
+                                 34%                                           should continue to drive greater investment in ePayables solutions
+                                                                               in the near term, particularly as the types of use cases for AI become
+                                                                               more tangible and as more groups start using them.
+                                                          22%
+                                                                               What AP Hopes to Gain from AI
+                                                                               While AP leaders are optimistic about the potential of AI, their
+                                                                               expectations remain grounded in practical goals (see Figure 10).
+                                                                               The top objective, cited by a significant margin (65%), is to increase
+                                                                               automation across AP processes. This reflects an ongoing desire
+        Using AI         Plan to use within No plans currently                 to streamline the entire operation. Beyond automation, interest
+                            12 months
+
+
+
+                                                                                                                                         © Ardent Partners Ltd. 2025
+                                                                          18
+                                                                                                                        The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP              2 The State of
+                                 ePayables
+                                                                 3 Best-in-Class
+                                                                   Accounts Payable
+                                                                                               4 Strategies
+                                                                                                 Success
+                                                                                                            for
+                                                                                                                             5 Appendix
+
+
+Figure 9: What Is AI’s Expected Impact Over the Next 2-3 Years?                  Ardent Partners 2025 research on AI within procurement identified
+                                                                                 several obstacles to AI usage and optimization, which include a
+                                                         Transformational        lack of budget to invest in more resources, data quality and access,
+   2%                                                                            and employees lacking skills to use AI properly. These are likely
+               11%                                                               shared by their AP counterparts today and indicate that while
+                                                         Significant             AI is a promising technology, organizational readiness must be
+                             23%                                                 addressed to fully realize its potential.
+
+                                                         Moderate
+     22%
+                                                                                 Figure 10: What Are AP’s Primary Objectives in Using AI?
+                                                         Insignificant
+
+                                                                                   Increase Automation                                                          65%
+                          42%
+                                                         No opinion
+                                                                                          Better
+                                    © Ardent Partners - 2025                      forecasting/predictive…                            39%
+
+                                                                                         Reduce budget                          35%
+fragments across several areas. A cluster of secondary priorities
+                                                                                    Improve stakeholder
+includes improving forecasting and predictive capabilities (39%),
+                                                                                        satisfaction                        30%
+reducing departmental budgets (35%), enhancing stakeholder
+satisfaction (30%), and strengthening cash management (26%).                               Improve cash
+Each of these reflects a broader ambition to apply AI to key points of                     management                   26%
+leverage, yet none of these goals commands widespread support.
+Surprisingly, better decision-making ranks lowest on the list of AI              Better decision-making           17%                        © Ardent Partners - 2025
+objectives. This suggests that many AP teams still see AI primarily
+as an operational efficiency tool rather than a strategic enabler and
+stands in contrast to the current view of AI’s overall impact.
+
+
+
+                                                                                                                                              © Ardent Partners Ltd. 2025
+                                                                            19
+                                                                                                                            The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP               2 The State of
+                                  ePayables
+                                                                 3 Best-in-Class
+                                                                   Accounts Payable
+                                                                                                     4 Strategies
+                                                                                                       Success
+                                                                                                                  for
+                                                                                                                                 5 Appendix
+
+An AI Primer                                                                           The newer AI innovations, such as generative AI (GenAI) and Agentic AI,
+Artificial intelligence (“AI”) adoption within AP operations is still in its           build on these technologies.
+early stages, with most organizations applying it in targeted, tactical                Generative AI
+ways rather than as a fully integrated capability. The path of AI within AP            Generative AI is a type of artificial intelligence that creates new content
+over the next few years will not be linear, but the direction is clear. AI will        like text, images, or data based on patterns it has learned from large
+become a core part of procurement operations, so it is important to start              datasets. In procurement, it can help create written summaries for
+investigating it, and using it with controls.                                          exceptions, invoice reviews, and general reports as well as drafting
+The ABC’s of AI                                                                        internal communications and process documentation. A common form
+AI is a complex technology that can be looked at from different                        of generative AI is the Large Language Model (LLM), which focuses on
+perspectives and classifications, such as general, narrow, or application              language tasks, such as summarizing documents, answering questions, or
+AI (e.g., computer vision, speech recognition, robotics, expert systems,               generating text. These tools respond to written prompts, so knowing how
+etc.). Another way of classifying AI, which has more relevance to this                 to give clear instructions is key to getting useful results. However, GenAI
+report, is by AI technique. Within procurement technology, machine                     can sometimes produce information that sounds right but is inaccurate
+learning, deep learning, and natural language processing (NLP) are                     because the system lacks relevant training data or misinterprets the
+perhaps the most important today.                                                      prompt. For AP teams, this means results should be reviewed carefully,
+                                                                                       especially when accuracy matters.
+•   Machine Learning is a type of AI that learns from data to make
+    predictions or decisions without being explicitly programmed.                      Agentic AI
+    In AP, it can be used for invoice coding and data extraction, exception            Agentic AI refers to a more advanced type of artificial intelligence that
+    detection, and payment timing optimization.                                        can take action and make decisions on its own to achieve a goal. Unlike
+•   Deep Learning is a more advanced form of machine learning that                     traditional tools that wait for instructions, these AI “agents” can plan,
+    finds complex patterns in large datasets using layered algorithms.                 adjust, and use other systems to get tasks done with minimal human
+    It is often used behind the scenes in tools that handle tasks like                 input. In an AP context, Agentic AI could eventually deliver autonomous
+    OCR enhancement on poor quality documents, enhanced anomaly                        correspondence to suppliers and stakeholders, self-service invoice help
+    detection, or generating insights from unstructured data.                          agents, and multi-system process coordination. It combines several
+                                                                                       advanced technologies, including generative AI, to operate more
+•   Natural Language Processing (NLP) helps computers understand
+                                                                                       independently.
+    and work with human language in both written and spoken formats.
+    In AP, NLP can be used to support automated vendor query response,
+    PO text matching, and voice-enabled, mobile AP dashboards.
+
+
+                                                                                                                                                  © Ardent Partners Ltd. 2025
+                                                                                  20
+                                                                                                                The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP           2 The State of
+                              ePayables
+                                                         3 Best-in-Class
+                                                           Accounts Payable
+                                                                                          4 Strategies
+                                                                                            Success
+                                                                                                       for
+                                                                                                                     5 Appendix
+
+
+Chapter Three: Best-in-Class Accounts Payable
+     “The challenge for all AP leaders is to push higher. But that push must incorporate a view of the
+     stakeholders and suppliers working within and beyond the enterprise.”
+     ~ The State of ePayables 2015: Higher Ground written by Andrew Bartolini
+
+
+
+This chapter is designed to enable the reader to do the following:           ability to drive process standardization and general efficiencies
+                                                                             across the entire operation has been a defining characteristic of
+•   Benchmark their performance to industry averages and                     Best-in-Class performance for much of the past two decades.
+    understand how they perform relative to the average AP
+    program in the marketplace.                                              In 2025, the objectives of today’s AP departments continue to grow
+                                                                             and expand in scope and impact. For most AP groups, however, the
+•   Understand what operational and performance metrics                      drive to become a strategic and impactful function is clear and the
+    define Best-in-Class performance levels for accounts payable             distance to that goal remains significant. For most, improvement
+    programs today.                                                          hinges on the breadth and depth of the transformation activities
+                                                                             that each AP team can scale. There are many next-level attributes
+•   Understand the wide range of capabilities that Best-in-Class AP          that contribute to a broad-based AP transformation and ultimately
+    departments use to outperform the market.                                enable future success. Ardent Partners research indicates that
+                                                                             there are several key factors that are essential for today’s AP
+The Future of AP: Dependent on Automation, Agility,                          executives and professionals on their ongoing journey (see Figure
+and Intelligence                                                             11). These are the organizational attributes and elements that AP
+AP teams must work vigilantly to get their houses in order; but              leaders believe will propel their organizations to the next level of
+process efficiency and compliance, while still bedrock AP principles,        performance:
+are fast-becoming table stakes in a poker game with no limit. The
+keys to the castle will ultimately be given to the AP teams who can          •   “Smarter” enterprise systems: Seventy-two percent (72%) of
+anticipate and adapt to dynamic change within their organizations                AP leaders see smarter systems as essential for removing friction
+and within their supply chains. Nonetheless, an AP department’s                  from daily workflows. These technologies can automatically
+
+
+
+                                                                                                                                      © Ardent Partners Ltd. 2025
+                                                                        21
+                                                                                                                   The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                         3 Best-in-Class
+                                                           Accounts Payable
+                                                                                           4 Strategies
+                                                                                             Success
+                                                                                                        for
+                                                                                                                        5 Appendix
+
+    route invoices, flag anomalies, and adapt to changing business           Figure 11: The Drivers of Future Success
+    rules without heavy manual oversight. By reducing the time
+    and effort spent on routine processes, smarter systems allow                                                                      © Ardent Partners - 2025
+    AP teams to focus more on value-generating activities. Next-                  72%
+    generation technology has been identified as the number one
+    catalyst for future success.
+
+•   Deeper, more agile analytics: Forty percent (40%) of AP leaders
+    believe that better analytics will propel their teams to the next                            40%            39%
+    level by enabling them to get more actionable intelligence out                                                                 37%
+                                                                                                                                                        32%
+    of their data. The AP organizations that truly put their weight
+    behind efforts to become more agile in nature will benefit down
+    the line.
+
+•   Eradication of tactical tasks: For the first time, this element
+                                                                               "Smarter"    Deeper, more Eradication of More suppliers Better AI usage
+    was identified as a top driver of future success, with 39% of             systems that agile analytics tactical tasks receiving and proficiency
+    all AP leaders admitting that their overall potential is stunted           drive more and reporting                   electronic
+    by the sheer volume of manual, low-value work. Eliminating                 efficiencies                               payments
+    these tasks frees time and talent for higher-order projects and
+    proactive collaboration with key stakeholders.
+                                                                             Smart AP, P2P, and finance leaders also know that the best way to
+The 2025 Accounts Payable Benchmarks
+                                                                             understand and communicate the impact that an AP transformation
+For 20 years, the author of this report has delivered detailed
+                                                                             has on business operations and results is to begin measuring and
+performance metrics for finance executives and AP leaders to
+                                                                             tracking their department’s performance. Ardent Partners ultimately
+benchmark the performance of their AP operations against the
+                                                                             recommends that every AP leader reading this report develop and
+market. When viewed year by year, the progress of the profession,
+                                                                             use a series of “AP Metrics that Matter” for exactly that purpose.
+while positive, appears painfully slow. But over longer timeframes
+                                                                             Readers can reference the values in Table 1 as important markers
+like five, 10 and 20 years, the improvements are inspiring. The 2025
+                                                                             on their overall AP journey.
+metrics are no different.
+
+
+
+                                                                                                                                         © Ardent Partners Ltd. 2025
+                                                                        22
+                                                                                                                         The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                         3 Best-in-Class
+                                                           Accounts Payable
+                                                                                             4 Strategies
+                                                                                               Success
+                                                                                                          for
+                                                                                                                              5 Appendix
+
+•   Less time and lower costs, together, are formidable. For                 Table 1: The 2025 AP Benchmarks
+    many working in AP, it takes too long to process a single invoice
+    while costing it too much money to do so. Applying a $9.84               Metrics                                                         Average            Trend
+    average invoice processing cost to the thousands or tens of              Cost to process a single invoice (all-inclusive cost)              $9.84         Declining
+    thousands (or more) of invoices processed each month by AP
+                                                                             Time to process a single invoice                                    8.2         Improving
+    should approximate an average AP department’s budget. While
+                                                                             Invoice exception rate                                            18.4%          Declining
+    average invoice processing times (8.2 days) have dropped
+    nicely, it should be noted that there has been wage inflation            Invoices processed “straight-through”                             35.4%         Improving
+    over the past five years.                                                Suppliers that submit invoices electronically                     57.4%         Improving
+
+                                                                             Percentage of invoices linked to a purchase order (PO)            65.4%         Improving
+•   Accentuate the positive. Supplier enablement figures continue
+                                                                             Staff time spent managing supplier inquiries                      21.9%              Flat
+    to improve. One by-product of the pandemic (as it relates to
+    business) was a sharp decrease in in-person meetings. As more                                                                                © Ardent Partners - 2025
+
+    businesses conduct the majority of their business with suppliers
+                                                                             Best-in-Class AP Performance
+    through digital means (i.e., online meeting and negotiations),
+                                                                             Twenty years ago, Ardent Partners analysts developed a unique
+    it makes sense that a majority of suppliers (57%) can now send
+                                                                             framework to highlight the performance of top-tier organizations
+    invoices electronically. This metric helps improve the touchless
+                                                                             (referred to as the “Best-in-Class”) by analyzing a specific set of
+    or straight-through processing average, which is also trending
+                                                                             performance benchmarks. In the decades that followed, Ardent
+    up.
+                                                                             Partners has defined Best-in-Class performance as the 20% of
+                                                                             enterprises with the lowest average invoice processing costs
+•   Eliminate the negative. AP groups have a long way to go to
+                                                                             and shortest average invoice process cycle times. These top-
+    solve their invoice exception problem. The invoice exception
+                                                                             performing groups have taken their AP operations to the next level
+    rate for AP departments is, on average, 18.4%. Exceptions are
+                                                                             by leveraging technology to streamline the AP process, making
+    typically the biggest single reason why the benchmarks in Table
+                                                                             it more efficient and enabling more strategic activities. Best-in-
+    1 are not lower. Additionally, the amount of staff time dealing
+                                                                             Class enterprises have demonstrated their ability to drive superior
+    with suppliers overall (21.9%) is in no small part caused by
+                                                                             performance across the AP metrics that matter and their annual
+    exceptions. They continue to be the bane of AP’s existence.
+                                                                             results are proof that AP can finish its journey and generate a lasting
+                                                                             impact on financial operations and the enterprise’s bottom line.
+
+
+
+                                                                                                                                               © Ardent Partners Ltd. 2025
+                                                                        23
+                                                                                                                         The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP           2 The State of
+                              ePayables
+                                                         3 Best-in-Class
+                                                           Accounts Payable
+                                                                                             4 Strategies
+                                                                                               Success
+                                                                                                          for
+                                                                                                                              5 Appendix
+
+The metrics outlined in Table 2 represent the culmination of                 Table 2: The 2025 AP Maturity Framework
+the Best-in-Class AP teams’ skills and efforts and stand in sharp
+contrast with those of the “All Others” maturity class. Achieving            Metrics                                                               Best-in-        All
+                                                                                                                                                    Class         Others
+greatness in AP is possible, and it is the AP leaders and teams who
+develop the ability to consistently combine innovative strategies            Cost to process a single invoice (all-inclusive cost)                  $2.65         $12.42
+
+with underlying technologies and an ability to execute who will              Time to process a single invoice                                        2.9           13.5
+continue to reap a competitive advantage and challenge the                   Invoice exception rate                                                11.1%          20.9%
+conventional wisdom of what is possible for AP.                              Invoices processed “straight-through”                                 51.0%          29.0%
+                                                                             Suppliers that submit invoices electronically                         67.2%          47.3%
+Best-in-Class AP teams achieve per-invoice processing costs that
+                                                                             Percentage of invoices linked to a purchase order (PO)                84.0%          47.3%
+are 79% lower than their peers, and invoice processing times that
+                                                                             Staff time spent managing supplier inquiries                          12.8%          24.0%
+are 79% faster than all other groups. Their invoice exception rates
+are 47% lower than the rest of the marketplace. Notably, Best- in-                                                                                © Ardent Partners - 2025
+Class enterprises have 1.4 times more of their suppliers enabled to
+submit electronic invoices and, as a result, process more than 1.8
+times as many of their invoices in a straight-through manner than            approaches, supplier management principles, and intelligence-led
+their peers, which greatly contributes to their strong performance           strategies. The rest of this chapter will highlight advantages that
+across all metrics. Best-in-Class staffers spend roughly half as much        enable Best-in-Class AP teams to excel.
+time on supplier inquiries.
+                                                                             The Best-in-Class AP Program, Part I: Cash
+AP executives and professionals can gain a rewarding and strategic           Management
+outcome if they understand the inherent value in AP transformation,          AP’s ability to complete its journey hinges on its capacity to not
+push the envelope in regards to innovation, and serve as a point of          only transform itself into a more strategic unit, but also to serve
+convergence in the months ahead. To complete these objectives,               as a strong partner for larger enterprise initiatives. One of those,
+today’s AP departments must follow the course developed by Best-             cash management, should be an area of support for even the most
+in-Class organizations and the AP programs they have cultivated, by          immature AP units. Best-in-Class AP departments are strategically
+building on core competencies and capabilities, cash management              involved in the key principles of cash management.
+
+
+
+
+                                                                                                                                               © Ardent Partners Ltd. 2025
+                                                                        24
+                                                                                                                  The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                          3 Best-in-Class
+                                                            Accounts Payable
+                                                                                           4 Strategies
+                                                                                             Success
+                                                                                                        for
+                                                                                                                       5 Appendix
+
+AP sits in an ideal position today to support the treasury department.        Figure 12 : AP’s Strategic Involvement in Cash Management
+By building basic capabilities, it can augment cash management
+strategies and processes, to become an active partner in managing
+enterprise liquidity. The five main competencies listed in the
+infographic in Figure 12 show the areas where Best-in-Class AP
+functions have direct involvement, helping to:
+
+•   Establish a dotted-line reporting structure to treasury so
+    the lines of communication are formalized, and alignment is
+    established.
+
+•   Drive visibility into early payment discounts across all invoices,
+    helping to develop and execute a strategy to identify, consider,
+    and (where desired) capture discounts.
+
+•   Develop disbursement procedures that optimize how funds
+    leave the organization and the method used while maintaining
+    overall visibility.
+
+•   Balance both cash and accrual reports to enable better planning.
+
+•   Generate payment intelligence reports that capture transactions
+    and status and provide access to the decision-makers who meet
+    regularly to review.
+
+
+
+
+                                                                                                                                        © Ardent Partners Ltd. 2025
+                                                                         25
+                                                                                                                 The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                          3 Best-in-Class
+                                                            Accounts Payable
+                                                                                           4 Strategies
+                                                                                             Success
+                                                                                                        for
+                                                                                                                      5 Appendix
+
+
+The Best-in-Class AP Program, Part II: Supplier                               The Best-in-Class AP Program, Part III: The Technology
+Management                                                                    Technology continues to be a defining factor in business .
+While procurement rightly owns the supplier relationship, it                  Organizations that delay digital transformation risk falling behind,
+benefits greatly from a strong AP partnership. Suppliers benefit              while those investing now build proficiency faster and expand and
+as well. Here are a few areas where Best-in-Class AP teams are                accelerate their impact. It also lays the groundwork for long-term
+creating value with better procurement collaboration:                         success, particularly as transformational AI capabilities become
+                                                                              more prevalent over the next few years. Core efficiencies still matter,
+•   Slightly more than 80% of Best-in-Class AP teams hold direct              but innovation will drive AP forward.
+    responsibility for managing real-time supplier inquiries and
+    requests. While fairly tactical in nature, this remains a critical        Core ePayables for Best-in-Class AP Teams
+    piece of the overall supplier relationship. AP’s success goes a           Adoption of technology is one area where the Best-in-Class
+    long way towards establishing lasting supplier partnerships.              differentiates itself from its competitors. They not only adopt
+                                                                              solutions at a much higher rate, but they also use them more
+•   Sixty-seven percent (67%) of Best-in-Class AP teams hold some             aggressively. The differences in technology adoption manifest
+    responsibility for managing the vendor master.                            themselves in the large metrics gaps shown in Table 2 above. As
+                                                                              Figure 13 shows, Best-in-Class AP teams are more likely to leverage
+•   Thirty-two percent (32%) of Best-in-Class AP teams report that            a robust foundation of solutions to get their work done.
+    they are part of the strategic sourcing process and support
+    those projects by providing reports and information by request.
+
+
+
+
+                                                                                                                                       © Ardent Partners Ltd. 2025
+                                                                         26
+                                                                                                                              The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP               2 The State of
+                                  ePayables
+                                                                3 Best-in-Class
+                                                                  Accounts Payable
+                                                                                                     4 Strategies
+                                                                                                       Success
+                                                                                                                  for
+                                                                                                                                   5 Appendix
+
+
+Figure 13: ePayables Adoption, Best-in-Class vs. All Others
+
+
+                                                                     Best-in-Class      All Others
+
+
+
+
+      80%                   79%                   77%                    75%                         74%
+               67%
+                                                                                     59%                                   61%
+                                      53%                     51%                                           54%                                        52%
+
+                                                                                                                                     37%
+                                                                                                                                                                   27%
+
+
+  Automated routing and   Electronic invoicing     Electronic B2B         Document               Automated data         Complete Procure-to-        Business or payment
+    approval workflow           solution         payments solution     imaging/scanning         capture/extraction         Pay solution                   network
+                                                                                                    (e.g., OCR)
+                                                                                                                                                     © Ardent Partners - 2025
+
+
+
+
+Best-in-Class companies leverage core ePayables solutions, such                      Best-in-Class AP teams also prioritize ePayments for improved
+as automated routing/approval (80%), eInvoicing (79%), and                           money management (given persistently high rates), recognizing
+ePayments (77%). Automating routing and approval workflow                            that both are crucial for optimizing B2B financial operations.
+capabilities eliminate the long paper trail of manual-based invoice                  Additionally, Best-in-Class operations are nearly twice as likely as
+approval processes, shortening approval periods and getting                          all other organizations to leverage and utilize a payment network
+invoices paid much faster than leveraging simple manual tactics.                     as part of its accounts payable program; their use of systems that
+Leading organizations long ago realized the disadvantages of                         close the P2P loop is also more extensive.
+paper invoices and largely eliminated them through eInvoicing.
+
+
+                                                                                                                                                    © Ardent Partners Ltd. 2025
+                                                                               27
+                                                                                                                            The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP                  2 The State of
+                                     ePayables
+                                                                3 Best-in-Class
+                                                                  Accounts Payable
+                                                                                                   4 Strategies
+                                                                                                     Success
+                                                                                                                for
+                                                                                                                                  5 Appendix
+
+
+The Best-in-Class AP Program, Part IV: Capabilities                                at the enterprise level, ensuring consistency and scalability. These
+While automation tools comprise a key part of a Best-in-Class                      leaders also excel in processing invoices straight-through without
+AP operation, the skills, experience, and ideas of the team are                    human intervention, minimizing errors and freeing up staff for
+essential elements that enable consistently strong execution. For                  more strategic tasks. Two- or three-way matching capabilities add
+the Best-in-Class AP department, key competencies serve as both                    a critical layer of control and fraud prevention, aligning AP more
+the foundation for top performance and an enabler of continuous                    closely with procurement and finance goals. While many teams
+improvement.                                                                       still struggle to offer rich remittance data or deliver advanced
+                                                                                   reporting, top performers are building these capabilities into their
+Best-in-Class AP teams consistently differentiate themselves                       operations. The presence of these functions not only boosts day-
+by investing in and institutionalizing key capabilities that drive                 to-day AP performance but also builds the foundation for broader
+efficiency, accuracy, and value (see Figure 14). Among the most                    business impact. They are hallmarks of maturity and readiness for
+impactful are the ability to make ePayments, which improves speed                  more advanced technologies and roles.
+and reduces costs, and the establishment of standardized processes
+
+Figure 14: AP Capabilities, Best-in-Class vs. All Others
+                                                                   Best-in-Class     All Others
+
+                                                                                                                                                               84%
+                                 Ability to make ePayments
+                                                                                                                                              74%
+                                                                                                                                               75%
+                  Standardized processes (enterprise-level)
+                                                                                                                      57%
+                                                                                                                                           72%
+                 Ability to process invoices straight-through
+                                                                                     29%
+                                                                                                                                         71%
+                    Two or three-way matching capabilities
+                                                                                                                            61%
+                                                                                                                            62%
+  Ability to provide rich remittance information to suppliers
+                                                                                                  38%
+                                                                                                                      56%
+                   Ability to measure/report key AP metrics
+                                                                                                  38%
+                                                                                                                                    © Ardent Partners - 2025
+
+
+
+                                                                                                                                                  © Ardent Partners Ltd. 2025
+                                                                             28
+                                                                                                                         The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP              2 The State of
+                                 ePayables
+                                                              3 Best-in-Class
+                                                                Accounts Payable
+                                                                                                 4 Strategies
+                                                                                                   Success
+                                                                                                              for
+                                                                                                                              5 Appendix
+
+                                                                                               Average Invoice Processing Time (in days)
+Two New Metrics to Consider
+As AP continues its transformative journey in 2025, traditional metrics                (1 + (Average Cost Per Invoice Benchmark / Your Average
+alone no longer suffice to capture the full scope of its strategic impact.                                Cost Per Invoice)).
+To truly measure both efficiency and value contribution, Ardent Partners           As a point of reference, based upon the data captured in this study, the
+is introducing two innovative benchmarks: the Cost-Adjusted Invoice                following CAITS can be calculated.
+Cycle (CAIT) and the Strategic Payment Optimization Ratio (SPOR).
+                                                                                   •    Best-in-Class = 0.62 CAIT
+These forward-thinking metrics empower AP leaders to gain deeper
+insights, drive continuous improvement, and articulate the department’s            •    Industry average = 4.1 CAIT
+profound influence on overall enterprise performance.                              •    All Others = 7.5 CAIT
+
+Cost-Adjusted Invoice Cycle Time (CAIT)                                            Strategic Payment Optimization Ratio (SPOR)
+The Cost-Adjusted Invoice Cycle Time (CAIT) is a powerful new metric               The Strategic Payment Optimization Ratio (SPOR) is another new
+developed by Ardent Partners that is designed to encapsulate the                   metric developed by Ardent Partners that moves beyond payment
+efficiency of invoice processing from receipt to payment scheduling. It            timeliness to gauge AP’s direct contribution to an organization’s financial
+directly blends the speed of an AP operation with its cost-effectiveness,          strategy and supplier relationships. This metric quantifies the percentage
+offering a holistic view of process health. CAIT is calculated by dividing         of payments made that actively deliver strategic value, such as those
+the Average Invoice Processing Time (in days) by a factor that reflects            capturing early payment discounts, adhering to critical contract terms, or
+cost efficiency, typically using an industry benchmark: (1 + (Average              processed via preferred, cost-effective methods (e.g., virtual cards over
+Cost Per Invoice Benchmark / Your Average Cost Per Invoice)).                      checks). SPOR is calculated by dividing the Number of Strategically
+                                                                                   Optimized Payments by the Total Number of Payments Made.
+A lower CAIT indicates a more efficient and effective AP function.
+Tracking CAIT is useful because it highlights the interplay between speed          A higher SPOR signifies AP’s active role in optimizing cash flow, enhancing
+and cost; a fast process that is overly expensive will yield a higher CAIT,        supplier relationships, and ensuring compliance, moving beyond a simple
+prompting a focus on cost reduction. Conversely, a slow, cheap process             transactional role. Tracking SPOR provides insight into AP’s tangible
+also signals inefficiency. Improving CAIT means optimizing workflows,              financial impact and its effectiveness as a strategic partner. Improving
+leveraging automation to reduce manual touches, and strategically                  SPOR involves proactive discount capture, optimizing payment methods,
+managing resources to lower the per-invoice cost, ultimately leading to            enhancing communication with suppliers, and leveraging technology to
+faster processing and improved working capital management.                         identify and execute value-adding payment opportunities.
+
+                                                                                   Ardent Partners will continue the discussion of these new metrics on
+                                                                                   Payables Place and in future research.
+
+                                                                                                                                               © Ardent Partners Ltd. 2025
+                                                                              29
+                                                                                                                   The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP             2 The State of
+                                ePayables
+                                                           3 Best-in-Class
+                                                             Accounts Payable
+                                                                                             4 Strategies
+                                                                                               Success
+                                                                                                          for
+                                                                                                                        5 Appendix
+
+
+Chapter Four: Strategies for Success
+     “AP’s journey may be unfinished, but it is undeniably underway, and the next steps have never been more
+     promising.” ~ Andrew Bartolini, Ardent Partners
+
+Ardent Partners’ New Call to Action for AP Leaders                              AP managers and directors have to understand that these things are
+The last two decades have proven that AP is capable of growth,                  not luxuries. These are the hallmarks of a professional operation.
+adaptation, and transformation. From paper checks and late                      IT, marketing, procurement, and HR all build strategic plans. They
+payments to eInvoicing and supplier portals, AP has made                        tie objectives to broader business goals. They report on outcomes,
+undeniable progress. But progress is not the same as arrival.                   adjust priorities, and seek investment based on their ability to
+Despite all the advances, AP’s journey remains unfinished (see                  articulate their purpose and their impact. Why should AP be held
+Figure 15). If the goal is to be viewed as a strategic contributor and          to a different standard?
+an indispensable player on the finance (and P2P) team, then AP
+must act accordingly.                                                           The answer, of course, is that it should not. If AP wants to be funded
+                                                                                like a critical function, it must act like one. A larger budget comes
+Let’s be clear: This is not an indictment, but rather, a call to action.        from a stronger operation. Influence follows clarity of purpose.
+The next five years will define whether AP finally claims its seat at           Respect grows from performance and transparency. That begins
+the strategic table or remains a reactive function just outside the             with a plan.
+room. Some teams have already crossed that threshold. For the
+rest, the path forward is both clear and achievable.                            Not just any plan, but one that maps AP’s capabilities to the broader
+                                                                                business need — whether that is improved working capital, stronger
+Start with the fundamentals. Today, fewer than half of AP                       supplier relationships, higher efficiency, tighter compliance, or
+organizations set performance targets at the beginning of each                  better spend intelligence. That plan should include performance
+year. Fewer still have strategic plans approved by finance leadership           targets, approved by finance leaders, and communicated to every
+or aligned with enterprise goals. Even fewer take the critical step             member of the team. It should evolve each year and stretch out
+of reviewing those plans with staff. And the number that have                   over multiple years. The plan should track what is being measured,
+built multi-year roadmaps for where AP is going and how it will                 define what success looks like, and identify where help is needed.
+contribute to long-term value? Quite small.
+
+
+                                                                                                                                         © Ardent Partners Ltd. 2025
+                                                                                                                                                                2024
+                                                                           30
+                                                                                                                      The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP             2 The State of
+                                ePayables
+                                                            3 Best-in-Class
+                                                              Accounts Payable
+                                                                                               4 Strategies
+                                                                                                 Success
+                                                                                                            for
+                                                                                                                           5 Appendix
+
+But it should not stop there. Other business functions collect                   work contributes to the larger mission. This is not some abstract
+feedback and measure internal satisfaction. Consider implementing                vision. This is how Best-in-Class departments operate today.
+a supplier Net Promoter Score (NPS), or surveying internal
+stakeholders to assess AP’s responsiveness, accuracy, and value.                 The other AP teams now have the opportunity to show what they
+These things improve perception, but they also build the credibility             can do and adopt the practices and approaches of their market-
+required to finish the journey.                                                  leading peers and finish what they started.
+
+Imagine an AP department that begins each year with a clear                      AP’s unfinished journey is not a weakness; it is a strength. It is a
+set of priorities tied to financial goals and endorsed by the CFO.               signal that there is more value to unlock and more progress to
+Imagine that department tracking performance metrics not just                    make. AP leaders must build the function that the future of finance
+for internal review, but to guide operational decisions and justify              requires. The unfinished journey starts with one small step. Take it
+investments. Imagine team members who understand how their                       today!
+
+Figure 15: AP Management and Planning
+
+
+                                                                                                                                © Ardent Partners - 2025
+           45%
+                                    39%                     39%
+                                                                                         34%                      33%                              32%
+
+
+
+
+  Performance targets set AP's plan is well-linked    The CFO (or finance        AP operates with an        The plan has been     AP operates with a
+      at start of year     to overall objectives     leader) approve AP's        annual strategic plan   reviewed and discussed multi-year strategic plan
+                                                             plan                                            with the AP staff
+
+
+
+                                                                                                                                            © Ardent Partners Ltd. 2025
+                                                                            31
+                                                                                                                   The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                          3 Best-in-Class
+                                                            Accounts Payable
+                                                                                            4 Strategies
+                                                                                              Success
+                                                                                                         for
+                                                                                                                        5 Appendix
+
+
+Strategies for Success                                                            reactive disbursement. This collaboration ensures payment
+The results from Best-in-Class organizations show that an investment              strategies align with debt, investment, and operational cash
+in AP can pay large dividends. Today’s high levels of uncertainty                 requirements. It’s another example of AP’s evolving role from
+and market volatility demand that every business function operate                 executor to orchestrator.
+at an optimal level. The emergence of AI has raised the stakes
+on automation and will propel AP ahead on its journey. Beyond                 •   Tier suppliers by criticality and payment terms. Align cash
+following Ardent Partners’ “New Call to Action for AP Leaders” and                usage with strategic priorities while minimizing supply risk. Not all
+modeling the Best-in-Class attributes, capabilities, and approaches               suppliers require the same payment treatment; strategic tiering
+(discussed in the preceding chapter), Ardent recommends the                       enables AP to optimize spend without creating friction. This
+following actions and strategies for AP departments seeking to                    practice supports business continuity and supplier satisfaction
+accelerate their journey forward in three general categories.                     while preserving cash where possible. It also connects to the
+                                                                                  report’s discussion of AP’s influence on supplier stability.
+1. Cash Management (Elevate AP as a Strategic
+   Financial Lever)                                                           •   Automate payment scheduling based on real-time data.
+•   Integrate cash forecasting with AP data flows. Provide                        Work to optimize working capital without jeopardizing supplier
+    Treasury with up-to-date visibility into outstanding liabilities              trust. ePayment solutions can adjust payments based on due
+    and expected disbursements. By feeding real-time invoice and                  dates, cash position, and supplier relationships. Use rules
+    payment status data into Treasury’s forecasting models, AP                    established by treasury to reduce manual decision-making and
+    can provide more accurate projections of outgoing cash. This                  unlock efficiency while preserving goodwill. This is an example
+    alignment reduces reliance on estimates and enables smarter                   of how smarter systems can get AP to the next level.
+    liquidity decisions. It also reinforces the idea that AP should be
+    a better financial partner.                                               2. Supplier Management (Position AP as a Frontline
+                                                                                 Partner with SRM)
+•   Formalize cash collaboration routines with Finance and                    •   Actively support the supplier onboarding and validation
+    Treasury. Ensure AP payment timing supports broader liquidity                 process. Joint ownership of supplier information helps to
+    objectives. Regular coordination through dashboards, joint                    ensure that supplier data is validated early and often, reducing
+    planning, and shared metrics will help AP move beyond                         downstream issues and potential fraud. This collaboration
+
+
+
+
+                                                                                                                                         © Ardent Partners Ltd. 2025
+                                                                         32
+                                                                                                                    The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP             2 The State of
+                                ePayables
+                                                           3 Best-in-Class
+                                                             Accounts Payable
+                                                                                             4 Strategies
+                                                                                               Success
+                                                                                                          for
+                                                                                                                         5 Appendix
+
+    reflects best practices among top AP teams that emphasize                   •   Develop a standard feedback loop with suppliers. Coach
+    control and speed while also shoring up defenses against fraud.                 suppliers on improving invoice quality as a way to minimize
+    It also mirrors broader efforts toward standardization and cross-               disputes and delays. Open communication and structured
+    functional cohesion.                                                            feedback processes will help suppliers submit more accurate
+                                                                                    invoices. This should help reduce exceptions and accelerate
+•   Set an internal goal to improve supplier service, reduce                        processing. It also fosters mutual accountability in the invoice
+    inquiries, and enhance transparency. Start by standardizing                     process.
+    and, where possible, digitizing supplier communications. A
+    consistent digital interface via portals, automated emails, or              3. Establish AI Readiness in 2025
+    chatbots will lower friction and build trust. When suppliers know           •   Invest in establishing a baseline of data quality before
+    where to go and what to expect, the time spent with them will                   scaling AI. Invoice and payment data, as well as supplier data,
+    be greatly reduced.                                                             can be incomplete, inconsistent, and/or stored in different
+                                                                                    systems. For AI to generate meaningful insights or automate
+•   Provide suppliers with rich remittance information and                          decision-making, it needs organized, accurate, and normalized
+    payment status. AP should work consistently to reduce                           input. That means dedicating time and resources to cleanse
+    supplier friction and strengthen relationships. Incomplete or                   and classify the data, harmonize records, and resolve conflicting
+    vague remittance data can undermine the payment process.                        entries. Be pragmatic, but remember, a data-driven operation
+    By ensuring clarity in every transaction, AP also improves                      needs good data.
+    reconciliation and reinforces reliability with its trading partners.
+    Once this is established, communicate this to procurement                   •   Start with clear use cases that address real pain points. The
+    and the business, as this is an underappreciated area where AP                  number of potential use cases for AI in AP is already quite large.
+    directly affects the supplier relationship.                                     This has the potential to overwhelm AP departments. And while
+                                                                                    most of the initial uses for AI in AP this year will be smaller and
+•   Analyze payment trends and exception patterns. Recurring                        tactical in nature, make sure to pick the low-hanging AI fruit
+    late payments, disputes, and/or mismatched invoices can reveal                  first. Rather than chasing hype, focus on AI applications that
+    serious process or technology issues and/or misaligned supplier                 solve specific, known challenges — such as invoice coding,
+    expectations. Finding and addressing these issues proactively                   fraud detection, or streamlining workflows. Quick wins help
+    is a major benefit to suppliers, the business, and AP itself.                   build internal confidence and demonstrate early ROI.
+
+
+
+
+                                                                                                                                          © Ardent Partners Ltd. 2025
+                                                                           33
+                                                                                                                    The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP             2 The State of
+                                ePayables
+                                                           3 Best-in-Class
+                                                             Accounts Payable
+                                                                                             4 Strategies
+                                                                                               Success
+                                                                                                          for
+                                                                                                                         5 Appendix
+
+•   Establish AI 101 training for AP staff. The most discussed and              •   Join (or form) a cross-functional AI review council. Join (or
+    overhyped technology in decades has a ton of baggage in the                     form) an AI governance group that includes stakeholders from
+    form of misconceptions and myths that should be addressed.                      finance, IT, legal, data governance, and other functions like HR.
+    Introduce basic AI literacy into your AP team’s training. The team              This council should review AI use cases, evaluate new tools
+    does not need to become data scientists, but rather possessing                  or pilots, and monitor ongoing AI performance for fairness,
+    an understanding of what AI can (and cannot) do will help them                  accuracy, and transparency. Involving IT ensures alignment with
+    identify opportunities, interpret results, and trust the outputs ...            enterprise data policies and strategies, while keeping AP at
+    and also know how to verify them.                                               the table to help ensure the AI tools it deploys are practical,
+                                                                                    relevant, and impactful.
+•   Establish an AI governance framework. At the enterprise
+    level, most IT departments should already be working on an                  4. Business Intelligence Hub (Become a Resource for
+    AI governance framework that outlines acceptable use, data                     the Enterprise)
+    access protocols, system integration standards, and audit                   •   Track and report the AP metrics that matter regularly.
+    requirements (in the mid-market, AP leaders and controllers                     Metrics tell a story not only about AP’s efficiency but also about
+    should be prepared to establish their own policies). IT can                     cash flow, supplier health, and controls. Regular reporting
+    and should serve as a resource for AP departments wanting                       builds credibility and can offer finance and procurement early
+    to establish robust protocols and standards on how AI will be                   indicators for strategic shifts.
+    used, by whom, and to what extent within the AP operation.
+    The guidelines and frameworks emerging from these exercises                 •   Build dashboards that serve stakeholders. Cross-functional
+    should be adaptable in their design with the goal of empowering                 visibility allows other teams to act faster, make better decisions,
+    teams to harness the full potential of AI technologies.                         and plan more effectively. When AP data is delivered in usable
+                                                                                    formats, the entire enterprise benefits. Shared visibility should
+•   Establish outcome-focused metrics that track AI’s impact                        be central to AP’s transformation efforts.
+    across AP operations. Start by aligning AI initiatives with
+    tangible business goals, like faster process cycle times or                 •   Invest in analytics tools and AI. Build tools that convert
+    increased sourcing throughput, and building KPIs that directly                  operational data into insights on trends, risks, and opportunities.
+    reflect those outcomes. Measure both efficiency (e.g., time                     Develop proficiency at tracking “what happened” so the team
+    saved, touchless transactions) and effectiveness (e.g., quality of              is ready when new systems start predicting “what will happen
+    insights, stakeholder satisfaction). Regularly review performance               next.”
+    with internal teams, and refine metrics as AI use matures.
+
+                                                                                                                                          © Ardent Partners Ltd. 2025
+                                                                           34
+                                                                                                The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP           2 The State of
+                              ePayables
+                                                        3 Best-in-Class
+                                                          Accounts Payable
+                                                                             4 Strategies
+                                                                               Success
+                                                                                          for
+                                                                                                     5 Appendix
+
+•   Strengthen internal capabilities and insight generation.
+    To realize its intelligence potential, AP should work to
+    develop organizational fluency in reading, interpreting, and
+    communicating data. This empowers team members to move
+    from task executors to insightful partners.
+
+In 2025, AP continues its long journey forward, driving a necessary,
+but often overlooked part of the modern supply chain. AP’s road
+ahead is paved with opportunities … to execute with greater
+efficiency, inform smarter decisions, support liquidity management,
+strengthen supplier partnerships, and transform the operation with
+AI-driven technology. The best way to predict your future is to
+own your present. So when these opportunities start knocking, AP
+leaders, managers, and staff must be ready to answer and act. The
+journey may be unfinished, but it is undeniably underway, and the
+next steps have never been more promising.
+
+
+
+
+                                                                                                                      © Ardent Partners Ltd. 2025
+                                                                       35
+                                                                                                                The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP            2 The State of
+                               ePayables
+                                                         3 Best-in-Class
+                                                           Accounts Payable
+                                                                                          4 Strategies
+                                                                                            Success
+                                                                                                       for
+                                                                                                                     5 Appendix
+
+
+Appendix
+About the Author                                                             been part of the Supply Chain Management curriculum at several
+                                                                             U.S. universities. He actively covers the technology marketplace as
+                    Andrew Bartolini, Founder & Chief Research               well as trends in sourcing, procurement, supply management, and
+                    Officer, Ardent Partners                                 accounts payable, and has been published or quoted in leading
+                                                                             business publications including The Wall Street Journal, Business
+                   With 26 years in the industry and 16 years leading        Week, Investor’s Business Daily, Forbes, and Fortune, as well as the
+                   the charge at Ardent Partners, Andrew Bartolini           major trade publications focused on accounts payable and supply
+                   is a globally recognized expert in accounts               management.
+                   payable, sourcing, procurement, and supply
+management. As the Chief Research Officer at Ardent Partners,                Prior to becoming an industry analyst, Andrew developed,
+Andrew oversees all research and client programs, including the              packaged, deployed, and used supply management solutions on
+annual State of the Market and Metrics that Matter eBook Series’,            behalf of enterprises in the Global 2000 while working for several
+Technology Advisor Reports, Ardent’s monthly webinar series, as              prominent spend management solution providers. Additionally,
+well as its in-person and virtual CPO Rising Summits. Andrew is              his experience in strategic sourcing (where he managed sourcing
+also the publisher of CPO Rising (www.cporising.com) and Payables            projects totaling more than $500 million in aggregate client spend),
+Place (www.payablesplace.com) two popular industry sites.                    business process transformation, and software implementation
+                                                                             provides a “real-world” context for his research and writing. Andrew’s
+Advisor to corporate executives and leading solution providers               post-MBA work started in management consulting and investment
+alike, Andrew is a sought-after presenter, having lectured and               banking where he structured, managed, and advised on large
+presented more than 650 times in ten different countries. Over               capital market transactions. Andrew began his professional career
+the past decade, Andrew has benchmarked thousands of                         running a homeless family shelter in Los Angeles. He welcomes
+enterprises across all facets of their sourcing, procurement, supply         your comments at abartolini@ardentpartners.com. Follow him on
+management, and accounts payable operations and his research has             LinkedIn.
+
+
+
+
+                                                                                                                                      © Ardent Partners Ltd. 2025
+                                                                        36
+                                                                                                            The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+1 The State of AP           2 The State of
+                              ePayables
+                                                       3 Best-in-Class
+                                                         Accounts Payable
+                                                                                       4 Strategies
+                                                                                         Success
+                                                                                                    for
+                                                                                                                 5 Appendix
+
+About Ardent Partners                                                      Report Demographics
+Ardent Partners is a next-generation analyst firm that leverages           This report is drawn from 204 respondents representing the
+its data-driven research to help business executives make smarter          following demographics:
+decisions and achieve better results. Ardent’s clients (and global
+community) understand and appreciate that when we publish                  Job Function: 47% AP; 16% Finance/Accounting; 15% P2P; 20%
+research and guide our clients, we do so based upon literally              Procurement; 2% Treasury
+thousands of data points collected and analyzed over the past two
+decades. Our unique primary research methodology, high-impact              Job Role: 34% VP-level or higher; 27% director-level; 29% manager-
+research publications, and deep domain focus set Ardent apart              level; 10% staff-level
+from its competition. Our community is expansive, our influence
+is extensive, and our research is unrivaled. Register for exclusive        Company Revenue: 54% Large (revenue > $1 billion); 26% Mid-
+access to Ardent Partners research at https://ardentpartners.com/          market (revenue $250 million - $1 billion); 20% Small (revenue <
+subscribe/.                                                                $250 million)
+
+                                                                           Region: 58% North America; 31% EMEA; 11% APAC
+Research Methodology
+Ardent Partners follows a rigorous research process developed over         Industry: More than 24 distinct industries, no industry represents
+years spent researching the accounts payable market. The research          more than 12% of the overall survey respondents
+in this report represents the web-based survey responses of 204 AP
+and finance leaders captured between March and May 2025, and
+includes direct interviews with several survey respondents. These
+204 participants shared their strategies and intentions, as well as
+their operational and performance results to help us define Best-
+in-Class AP performance and understand what levers the leading
+groups pull to obtain their advantage. This primary research effort
+was also informed by the experience and analysis of the report
+author and the entire Ardent Partners research team. Complete
+respondent demographics are included to the right.
+
+
+
+
+                                                                                                                                  © Ardent Partners Ltd. 2025
+                                                                      37
+                                                                                                      The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+
+                                                   RESEARCH WITH RESULTS
+                           NETWORKING & BEST PRACTICES
+
+
+
+
+                                                              RESEARCH
+
+
+
+
+                                                                                               RESEARCH WITH RESULTS
+              SELECT THE BEST TECHNOLOGY
+
+
+
+
+                                                              ADVISORY
+
+
+
+                                                                                   MAKE SMARTER DECISIONS
+                             BENCHMARK PERFORMANCE
+
+ Ardent Partners is a next-generation analyst firm that leverages its data-driven research to help business executives make smarter
+    decisions and achieve better results. Ardent’s clients (and global community) understand and appreciate that when we publish
+   research and guide our clients, we do so based upon literally thousands of data points collected and analyzed over the past two
+decades. Our unique primary research methodology, high-impact research publications, and deep domain focus set Ardent apart from
+              its competition. Our community is expansive, our influence is extensive, and our research is unrivaled.
+
+                                              To access our research library visit here.
+
+                              For more information visit www.ardentpartners.com or call 617.752.1728.
+
+
+
+                                                                                                                            © Ardent Partners Ltd. 2025
+                                                                 38
+                                                                                                               The State of ePayables 2025: AP’s Unfinished Journey
+
+
+
+
+Industry Standard “Fine Print:” The information contained                     © 2025 Ardent Partners, Ltd. All rights reserved. Reproduction and
+herein has been obtained from sources believed to be reliable.                distribution of this publication in any form without prior written
+Ardent Partners, Ltd. disclaims all warranties as to the accuracy,            permission is forbidden. Solution providers and consultancies
+completeness, or adequacy of such information. Ardent Partners,               should take special note that Ardent Partners reserves the right
+Ltd. shall have no liability for errors, omissions, or inadequacies in        to seek legal remedies including injunctions, impoundment,
+the information contained herein or for interpretations thereof. The          destruction, damages, and fees for any copyright infringement
+contents expressed herein represent Ardent Partners’ best analysis            (which includes but is not limited to usage of any Ardent Partners
+at the time and are subject to change without notice.                         content in company collateral, presentations, and websites) in
+                                                                              accordance with the laws of the Commonwealth of Massachusetts
+                                                                              and the United States.
+
+
+
+                                                                                                                                     © Ardent Partners Ltd. 2025
+                                                                         39
+www.ardentpartners.com
+

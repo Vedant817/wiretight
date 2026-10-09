@@ -1,0 +1,36 @@
+# Wiretight — line endings.
+#
+# The Makefile runs under a POSIX shell (`SHELL := /bin/sh`, §6.5). A CRLF in a
+# recipe line becomes a stray `\r` in the command, which sh treats as part of the
+# argument. On a Windows checkout that turns `make help` into a confusing error.
+# Force LF for everything, and keep text files as text in the repository.
+
+* text=auto eol=lf
+
+# Explicitly LF: build and shell tooling that breaks on CRLF.
+Makefile       text eol=lf
+*.mk           text eol=lf
+*.sh           text eol=lf
+*.py           text eol=lf
+*.pyi          text eol=lf
+*.toml         text eol=lf
+*.yaml         text eol=lf
+*.yml          text eol=lf
+*.sql          text eol=lf
+*.html         text eol=lf
+*.css          text eol=lf
+*.js           text eol=lf
+
+# Windows-native file, keep CRLF.
+*.bat          text eol=crlf
+*.cmd          text eol=crlf
+*.ps1          text eol=crlf
+
+# Binary, never touched.
+*.png          binary
+*.jpg          binary
+*.jpeg         binary
+*.gif          binary
+*.zip          binary
+*.pdf          binary
+*.woff2        binary

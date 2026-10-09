@@ -1,0 +1,1013 @@
+The Update an Existing Beneficiary API allows editing a beneficiary stored on the Airwallex platform via a POST request, requiring authentication and detailed request body fields.
+
+# Update an Existing Beneficiary
+
+Edit an existing beneficiary stored on the Airwallex platform.
+
+## Endpoint
+
+`POST /api/v1/beneficiaries/{id}/update`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Path Parameters
+
+- `id` (string, format: uuid, required)
+  id of the beneficiary contact to update.
+
+### Request Body
+
+- `beneficiary` (object, required)
+  Details of the beneficiary.
+  - `additional_info` (object, optional)
+    Additional information about the beneficiary.
+    - `business_area` (string, optional)
+      Category of business activity.
+    - `business_phone_number` (string, optional)
+      Business phone number.
+    - `business_registration_number` (string, optional)
+      Business registration number.
+    - `external_identifier` (string, optional)
+      The identifier that you use to identify a beneficiary, usually a unique identifier. This field can be used to link transfers or beneficiaries to other records such as tax form details for filing purposes.
+    - `legal_rep_bank_account_number` (string, optional)
+      Legal representative's personal bank account number used for declaration purposes. No funds will be sent to this account number.
+    - `legal_rep_first_name_in_chinese` (string, optional)
+      Legal representative first name in chinese.
+    - `legal_rep_id_number` (string, optional)
+      Legal representative id number.
+    - `legal_rep_last_name_in_chinese` (string, optional)
+      Legal representative last name in chinese.
+    - `legal_rep_mobile_number` (string, optional)
+      Legal representative’s mobile number associated with their bank account.
+    - `personal_email` (string, optional)
+      Personal email.
+    - `personal_first_name_in_chinese` (string, optional)
+      Beneficiary's first name in Chinese.
+    - `personal_id_number` (string, optional)
+      Personal unique identifier number.
+    - `personal_id_type` (string, optional)
+      Personal unique identifier type.
+    - `personal_last_name_in_chinese` (string, optional)
+      Beneficiary's last name in Chinese.
+    - `personal_mobile_number` (string, optional)
+      Personal mobile number.
+    - `recipient_account_id` (string, optional)
+      Account unique identifier of the recipient account used for payout processing. The account must be active and have `customer_agreements.terms_and_conditions.service_agreement_type` set to `RECIPIENT` (verify via [Retrieve account details API](https://www.airwallex.com/docs/api/scale/accounts/detail.md)).
+    - `security_question` (string, optional)
+      Security question. Required when the email address is not registered with Interac e-Transfer autodeposit.
+    - `security_question_answer` (string, optional)
+      Security question answer. Required when the email address is not registered with Interac e-Transfer autodeposit.
+  - `address` (object, optional)
+    Beneficiary's address details.
+    - `city` (string, optional)
+      Beneficiary's city.
+    - `country_code` (string, optional)
+      Beneficiary's country code (2-letter ISO 3166-2 country code).
+    - `postcode` (string, optional)
+      Beneficiary's post code.
+    - `state` (string, optional)
+      Beneficiary's state.
+    - `street_address` (string, optional)
+      Beneficiary's street address.
+  - `bank_details` (object, optional)
+    Beneficiary's bank account details where the payment will be credited.
+    - `account_currency` (string, required)
+      Account Currency.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s bank account.
+    - `bank_country_code` (string, required)
+      Bank country code (2-letter ISO 3166-2 country code).
+    - `account_name_alias` (string, optional)
+      The beneficiary’s account name known in the payment system. This is only supported in some regions and transfer methods. See detailed definitions in the [Payouts Product Docs](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md).
+    - `account_number` (string, optional)
+      Account number, mostly for non-european countries, either account_number or iban should be filled.
+    - `account_routing_type1` (string, optional)
+      Routing code type.
+    - `account_routing_type2` (string, optional)
+      Routing code sub type.
+    - `account_routing_value1` (string, optional)
+      Routing code value.
+    - `account_routing_value2` (string, optional)
+      Routing code sub type value.
+    - `bank_account_category` (string, optional)
+      bank account type.
+    - `bank_branch` (string, optional)
+      Specific branch of bank account.
+    - `bank_name` (string, optional)
+      Bank name of the beneficiary's bank account.
+    - `bank_state` (string, optional)
+      Bank State.
+    - `bank_street_address` (string, optional)
+      Bank street address.
+    - `binding_mobile_number` (string, optional)
+      The mobile number tied to the Beneficiary's bank account.
+    - `fingerprint` (string, optional)
+      Fingerprint of current beneficiary's bank account.
+    - `iban` (string, optional)
+      International bank account number, mostly for european countries.
+    - `intermediary_bank_name` (string, optional)
+      Bank name of the beneficiary's intermediary bank.
+    - `intermediary_bank_swift_code` (string, optional)
+      Intermediary bank SWIFT code / BIC,Should contain alphanumeric characters only, Should be a valid and supported SWIFT code / BIC.
+    - `local_clearing_system` (string, optional)
+      Which clearing system should be used for this local bank transfer.
+
+      Please refer to our [payout guide](https://airwallex.com/guides/payout) for details about each option.
+
+      We suggest explicitly specifying this value, however if it's not provided we will select a default (using the specified account routing type and/or what's most often the best option).
+    - `swift_code` (string, optional)
+      Bank swift code.
+  - `card` (object, optional)
+    Beneficiary's card details where the payment will be credited.
+    - `cardholder_name` (string, required)
+      Cardholder name.
+    - `token` (string, required)
+      Tokenised card number, which can be retrieved from Airwallex beneficiary component.
+    - `brand` (string, optional)
+      Card brand.
+    - `currency` (string, optional)
+      Card currency.
+    - `expiry_month` (string, optional)
+      Expiry month.
+    - `expiry_year` (string, optional)
+      Expiry year.
+    - `number` (string, optional)
+      Card number.
+  - `company_name` (string, optional)
+    Company name of the beneficiary.
+  - `date_of_birth` (string, optional)
+    beneficiary date of birth.
+  - `digital_wallet` (object, optional)
+    Beneficiary's digital wallet details where the payment will be credited.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s digital wallet.
+    - `id_type` (string, required)
+      Account identifier type of the beneficiary’s digital wallet.
+    - `id_value` (string, required)
+      Account identifier value of the beneficiary’s digital wallet.
+    - `provider` (string, required)
+      Service provider of the beneficiary's digital wallet.
+    - `country_code` (string, optional)
+      Digital wallet country code (2-letter ISO 3166-2 country code).
+  - `entity_type` (string, optional)
+    Entity type of the beneficiary.
+  - `first_name` (string, optional)
+    First name of the beneficiary.
+  - `last_name` (string, optional)
+    Last name of the beneficiary.
+  - `stablecoin_wallet` (object, optional)
+    - `address` (string, required)
+      Blockchain wallet address of the beneficiary. Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds. Always verify the recipient wallet address and network before initiating a transfer.
+    - `asset` (string, required)
+      Stablecoin asset type, e.g., `USDC`.
+    - `network` (string, required)
+      Blockchain network, e.g., `ETHEREUM`.
+  - `type` (string, optional)
+    Type of the beneficiary, indicating the type of account or method through which the beneficiary receives funds. Possible values: `BANK_ACCOUNT`, `DIGITAL_WALLET`, `CARD`, `STABLECOIN_WALLET`.
+- `transfer_methods` (array[string], required)
+  Transfer method needs to be specified to ensure that accurate banking details are captured and validated for the specified transfer method. This is required for timely and accurate delivery of funds to the beneficiary account. Should be one of the following: `SWIFT`, `LOCAL`.
+- `nickname` (string, optional)
+  Nickname of the beneficiary.
+- `payer_entity_type` (string, optional)
+  The payer entity type that will be used for transfers being made to this beneficiary.  This is required to accurately capture and validate appropriate data for compliance reasons.  Defaults to `COMPANY`.
+- `sca_exemptible` (boolean, optional)
+  Whether the beneficiary can be exempted from SCA when applicable.
+- `transfer_reason` (string, optional)
+  Reason for the transfer instruction being made to this beneficiary.
+
+Beneficiaries can be updated or deleted after creation using the Airwallex Payouts API. This covers the update and delete operations, including supported fields and example requests.
+
+# Manage beneficiaries
+
+You can perform the following operations on beneficiaries after you have created them.
+
+## Update a beneficiary
+
+After a beneficiary is created, you can call [Update existing beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/update.md) to update the saved beneficiary information. Specify the `beneficiary_id` in the endpoint URL and parameters you wish to update in your request body. The same schema validation and response body as in [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) will apply.
+
+The list of parameters that can be updated:
+
+- `transfer_methods`
+- `nickname`
+- `beneficiary.date_of_birth`
+- `beneficiary.address`
+- `beneficiary.bank_details`
+- some fields inside `beneficiary.additional_info`
+  - `business_phone_number`
+  - `business_registration_number`
+  - `legal_rep_first_name_in_chinese`
+  - `legal_rep_last_name_in_chinese`
+  - `legal_rep_id_number`
+  - `legal_rep_mobile_number`
+  - `legal_rep_bank_account_number`
+  - `personal_email`
+  - `personal_id_number`
+  - `personal_id_type`
+  - `personal_mobile_number`
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/beneficiaries/{{BENEFICIARY_ID}}/update \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "address": {
+      "city": "Seattle",
+      "country_code": "US",
+      "postcode": "98104",
+      "state": "Washington",
+      "street_address": "412 5th Avenue"
+    }
+  }'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+## Delete a beneficiary
+
+Call [Delete existing beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/delete.md) to delete a beneficiary. Specify the `beneficiary_id` in the endpoint URL. A successful deletion returns `true` in the response.
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/beneficiaries/delete/{{BENEFICIARY_ID}} \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+The Beneficiaries API provides endpoints to create and manage beneficiary resources required before making payouts. A beneficiary captures the individual or organisation being paid, their bank details, and payment method, and generates a unique identifier used when creating payments.
+
+# Beneficiaries
+
+A beneficiary resource needs to be created before a payment can be made, the beneficiary notes the individual or organisation being paid along with the bank details and payment method. A beneficiary unique identifier is generated upon the creation can be used for creating payment using a payment resource.
+
+## Endpoints
+
+- [Create a Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) — `POST /api/v1/beneficiaries/create`
+- [Retrieve a Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/retrieve.md) — `GET /api/v1/beneficiaries/{id}`
+- [List all Beneficiaries](https://www.airwallex.com/docs/api/payouts/beneficiaries/list.md) — `GET /api/v1/beneficiaries`
+- [Update an Existing Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/update.md) — `POST /api/v1/beneficiaries/{id}/update`
+- [Validate a Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/validate.md) — `POST /api/v1/beneficiaries/validate`
+- [Verify a Beneficiary Account](https://www.airwallex.com/docs/api/payouts/beneficiaries/verify_account.md) — `POST /api/v1/beneficiaries/verify_account`
+- [Delete an Existing Beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/delete.md) — `POST /api/v1/beneficiaries/{id}/delete`
+- [Retrieve the API Schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) — `POST /api/v1/beneficiary_api_schemas/generate`
+- [Retrieve the Form Schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_form_schemas.md) — `POST /api/v1/beneficiary_form_schemas/generate`
+- [List all Supported Financial Institutions](https://www.airwallex.com/docs/api/payouts/beneficiaries/supported_financial_institutions.md) — `GET /api/v1/beneficiary_form_schemas/supported_financial_institutions`
+
+The following cURL example demonstrates a complete request to the Update Beneficiary endpoint, including all major body fields such as bank details, card details, digital wallet, and additional info.
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/beneficiaries/beneficiarie_id/update' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "beneficiary": {
+    "additional_info": {
+      "business_area": "Travel",
+      "business_phone_number": "689342234",
+      "business_registration_number": "IT593003",
+      "external_identifier": "<string>",
+      "legal_rep_bank_account_number": "44250100003700000000",
+      "legal_rep_first_name_in_chinese": "小芳",
+      "legal_rep_id_number": "110108199304203520",
+      "legal_rep_last_name_in_chinese": "刘",
+      "legal_rep_mobile_number": "13651362890",
+      "personal_email": "john.walker@gmail.com",
+      "personal_first_name_in_chinese": "大明",
+      "personal_id_number": "1234567890",
+      "personal_id_type": "NATIONAL_ID",
+      "personal_last_name_in_chinese": "李",
+      "personal_mobile_number": "13651362890",
+      "recipient_account_id": "<string>",
+      "security_question": "What is the name of my second puppy?",
+      "security_question_answer": "Scooby Doo"
+    },
+    "address": {
+      "city": "Melbourne",
+      "country_code": "AU",
+      "postcode": "3000",
+      "state": "VIC",
+      "street_address": "15 William Street"
+    },
+    "bank_details": {
+      "account_currency": "AUD",
+      "account_name": "Lee Da Ming",
+      "account_name_alias": "Lee D M",
+      "account_number": "12750852",
+      "account_routing_type1": "bsb",
+      "account_routing_type2": "sort_code",
+      "account_routing_value1": "083064",
+      "account_routing_value2": "123456",
+      "bank_account_category": "Checking,Savings,Vista,Maestra",
+      "bank_branch": "Melbourne",
+      "bank_country_code": "AU",
+      "bank_name": "National Australia Bank",
+      "bank_state": "<string>",
+      "bank_street_address": "500 Bourke Street, Melbourne 3000, Australia",
+      "binding_mobile_number": "654897612345",
+      "fingerprint": "2e99758548972a8e8822ad47fa1017ff72f06f3ff6a016851f45c398732bc50c",
+      "iban": "ES8023100001180000012345",
+      "intermediary_bank_name": "National Australia Bank",
+      "intermediary_bank_swift_code": "CTBAAU2S",
+      "local_clearing_system": "ACH",
+      "swift_code": "CTBAAU2S"
+    },
+    "card": {
+      "brand": "VISA",
+      "cardholder_name": "John Walker",
+      "currency": "USD",
+      "expiry_month": "10",
+      "expiry_year": "2033",
+      "number": "************1111",
+      "token": "AKvN4TqxI04SNFZ+oYRXaECtDA=="
+    },
+    "company_name": "Complete Concrete Pty Ltd",
+    "date_of_birth": "1976-08-26",
+    "digital_wallet": {
+      "account_name": "John Walker Corporation",
+      "country_code": "US",
+      "id_type": "account_number",
+      "id_value": "1033106816639334",
+      "provider": "AIRWALLEX"
+    },
+    "entity_type": "COMPANY",
+    "first_name": "John",
+    "last_name": "Walker",
+    "type": "<string>"
+  },
+  "nickname": "Complete Concrete Pty Ltd",
+  "payer_entity_type": "COMPANY",
+  "sca_exemptible": false,
+  "transfer_methods": [
+    "SWIFT"
+  ],
+  "transfer_reason": "travel"
+}'
+```
+
+The List all Beneficiaries API endpoint retrieves a paginated list of beneficiaries with optional filters. This covers the endpoint URL, authentication header, query parameters, and a cURL example.
+
+# List all Beneficiaries
+
+Get list of beneficiaries with optional filters on from date/time, to date/time, names and entity type. Results are paginated, with default list limit of 50 results.
+
+## Endpoint
+
+`GET /api/v1/beneficiaries`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Query Parameters
+
+- `bank_account_number` (string, optional)
+  Filter on bank account number of beneficiary.
+- `company_name` (string, optional)
+  Filter on company name of beneficiary.
+- `entity_type` (string, optional)
+  Filter on entity type of COMPANY or PERSONAL.
+- `from_date` (string, format: date-time, optional)
+  The start date of `created_at` in ISO8601 format (inclusive).
+- `name` (string, optional)
+  Filter on name of beneficiary.
+- `nick_name` (string, optional)
+  Filter on nickname of beneficiary.
+- `page_num` (integer, format: int32, optional)
+  Page number, starts from 0.
+- `page_size` (integer, format: int32, optional)
+  Number of results per page. Default value is 100.
+- `sca_exemptible` (boolean, optional)
+  Filter on SCA exemptible beneficiaries.
+- `to_date` (string, format: date-time, optional)
+  The end date of `created_at` in ISO8601 format (inclusive).
+- `type` (array[string], optional)
+  Type of the beneficiary, indicating the type of account or method through which the beneficiary receives funds, i.e., BANK_ACCOUNT, DIGITAL_WALLET, CARD, STABLECOIN_WALLET.
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/api/v1/beneficiaries' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+A successful 200 OK response returns the updated beneficiary object, including its unique ID, transfer methods, and all nested beneficiary details.
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "beneficiary": {
+    "additional_info": {
+      "business_area": "Travel",
+      "business_phone_number": "689342234",
+      "business_registration_number": "IT593003",
+      "external_identifier": "<string>",
+      "legal_rep_bank_account_number": "44250100003700000000",
+      "legal_rep_first_name_in_chinese": "小芳",
+      "legal_rep_id_number": "110108199304203520",
+      "legal_rep_last_name_in_chinese": "刘",
+      "legal_rep_mobile_number": "13651362890",
+      "personal_email": "john.walker@gmail.com",
+      "personal_first_name_in_chinese": "大明",
+      "personal_id_number": "1234567890",
+      "personal_id_type": "NATIONAL_ID",
+      "personal_last_name_in_chinese": "李",
+      "personal_mobile_number": "13651362890",
+      "recipient_account_id": "<string>",
+      "security_question": "What is the name of my second puppy?",
+      "security_question_answer": "Scooby Doo"
+    },
+    "address": {
+      "city": "Melbourne",
+      "country_code": "AU",
+      "postcode": "3000",
+      "state": "VIC",
+      "street_address": "15 William Street"
+    },
+    "bank_details": {
+      "account_currency": "AUD",
+      "account_name": "Lee Da Ming",
+      "account_name_alias": "Lee D M",
+      "account_number": "12750852",
+      "account_routing_type1": "bsb",
+      "account_routing_type2": "sort_code",
+      "account_routing_value1": "083064",
+      "account_routing_value2": "123456",
+      "bank_account_category": "Checking,Savings,Vista,Maestra",
+      "bank_branch": "Melbourne",
+      "bank_country_code": "AU",
+      "bank_name": "National Australia Bank",
+      "bank_state": "<string>",
+      "bank_street_address": "500 Bourke Street, Melbourne 3000, Australia",
+      "binding_mobile_number": "654897612345",
+      "fingerprint": "2e99758548972a8e8822ad47fa1017ff72f06f3ff6a016851f45c398732bc50c",
+      "iban": "ES8023100001180000012345",
+      "intermediary_bank_name": "National Australia Bank",
+      "intermediary_bank_swift_code": "CTBAAU2S",
+      "local_clearing_system": "ACH",
+      "swift_code": "CTBAAU2S"
+    },
+    "card": {
+      "brand": "VISA",
+      "cardholder_name": "John Walker",
+      "currency": "USD",
+      "expiry_month": "10",
+      "expiry_year": "2033",
+      "number": "************1111",
+      "token": "AKvN4TqxI04SNFZ+oYRXaECtDA=="
+    },
+    "company_name": "Complete Concrete Pty Ltd",
+    "date_of_birth": "1976-08-26",
+    "digital_wallet": {
+      "account_name": "John Walker Corporation",
+      "country_code": "US",
+      "id_type": "account_number",
+      "id_value": "1033106816639334",
+      "provider": "AIRWALLEX"
+    },
+    "entity_type": "COMPANY",
+    "first_name": "John",
+    "last_name": "Walker",
+    "type": "<string>"
+  },
+  "id": "8365ea88-2946-4877-abe1-e02a1015288d",
+  "nickname": "Complete Concrete Pty Ltd",
+  "payer_entity_type": "COMPANY",
+  "sca_exemptible": false,
+  "transfer_methods": [
+    "SWIFT"
+  ]
+}
+```
+
+- `beneficiary` (object, required)
+  Details of the beneficiary.
+  - `additional_info` (object, optional)
+    Additional information about the beneficiary.
+    - `business_area` (string, optional)
+      Category of business activity.
+    - `business_phone_number` (string, optional)
+      Business phone number.
+    - `business_registration_number` (string, optional)
+      Business registration number.
+    - `external_identifier` (string, optional)
+      The identifier that you use to identify a beneficiary, usually a unique identifier. This field can be used to link transfers or beneficiaries to other records such as tax form details for filing purposes.
+    - `legal_rep_bank_account_number` (string, optional)
+      Legal representative's personal bank account number used for declaration purposes. No funds will be sent to this account number.
+    - `legal_rep_first_name_in_chinese` (string, optional)
+      Legal representative first name in chinese.
+    - `legal_rep_id_number` (string, optional)
+      Legal representative id number.
+    - `legal_rep_last_name_in_chinese` (string, optional)
+      Legal representative last name in chinese.
+    - `legal_rep_mobile_number` (string, optional)
+      Legal representative’s mobile number associated with their bank account.
+    - `personal_email` (string, optional)
+      Personal email.
+    - `personal_first_name_in_chinese` (string, optional)
+      Beneficiary's first name in Chinese.
+    - `personal_id_number` (string, optional)
+      Personal unique identifier number.
+    - `personal_id_type` (string, optional)
+      Personal unique identifier type.
+    - `personal_last_name_in_chinese` (string, optional)
+      Beneficiary's last name in Chinese.
+    - `personal_mobile_number` (string, optional)
+      Personal mobile number.
+    - `recipient_account_id` (string, optional)
+      Account unique identifier of the recipient account used for payout processing. The account must be active and have `customer_agreements.terms_and_conditions.service_agreement_type` set to `RECIPIENT` (verify via [Retrieve account details API](https://www.airwallex.com/docs/api/scale/accounts/detail.md)).
+    - `security_question` (string, optional)
+      Security question. Required when the email address is not registered with Interac e-Transfer autodeposit.
+    - `security_question_answer` (string, optional)
+      Security question answer. Required when the email address is not registered with Interac e-Transfer autodeposit.
+  - `address` (object, optional)
+    Beneficiary's address details.
+    - `city` (string, optional)
+      Beneficiary's city.
+    - `country_code` (string, optional)
+      Beneficiary's country code (2-letter ISO 3166-2 country code).
+    - `postcode` (string, optional)
+      Beneficiary's post code.
+    - `state` (string, optional)
+      Beneficiary's state.
+    - `street_address` (string, optional)
+      Beneficiary's street address.
+  - `bank_details` (object, optional)
+    Beneficiary's bank account details where the payment will be credited.
+    - `account_currency` (string, required)
+      Account Currency.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s bank account.
+    - `bank_country_code` (string, required)
+      Bank country code (2-letter ISO 3166-2 country code).
+    - `account_name_alias` (string, optional)
+      The beneficiary’s account name known in the payment system. This is only supported in some regions and transfer methods. See detailed definitions in the [Payouts Product Docs](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md).
+    - `account_number` (string, optional)
+      Account number, mostly for non-european countries, either account_number or iban should be filled.
+    - `account_routing_type1` (string, optional)
+      Routing code type.
+    - `account_routing_type2` (string, optional)
+      Routing code sub type.
+    - `account_routing_value1` (string, optional)
+      Routing code value.
+    - `account_routing_value2` (string, optional)
+      Routing code sub type value.
+    - `bank_account_category` (string, optional)
+      bank account type.
+    - `bank_branch` (string, optional)
+      Specific branch of bank account.
+    - `bank_name` (string, optional)
+      Bank name of the beneficiary's bank account.
+    - `bank_state` (string, optional)
+      Bank State.
+    - `bank_street_address` (string, optional)
+      Bank street address.
+    - `binding_mobile_number` (string, optional)
+      The mobile number tied to the Beneficiary's bank account.
+    - `fingerprint` (string, optional)
+      Fingerprint of current beneficiary's bank account.
+    - `iban` (string, optional)
+      International bank account number, mostly for european countries.
+    - `intermediary_bank_name` (string, optional)
+      Bank name of the beneficiary's intermediary bank.
+    - `intermediary_bank_swift_code` (string, optional)
+      Intermediary bank SWIFT code / BIC,Should contain alphanumeric characters only, Should be a valid and supported SWIFT code / BIC.
+    - `local_clearing_system` (string, optional)
+      Which clearing system should be used for this local bank transfer.
+
+      Please refer to our [payout guide](https://airwallex.com/guides/payout) for details about each option.
+
+      We suggest explicitly specifying this value, however if it's not provided we will select a default (using the specified account routing type and/or what's most often the best option).
+    - `swift_code` (string, optional)
+      Bank swift code.
+  - `card` (object, optional)
+    Beneficiary's card details where the payment will be credited.
+    - `cardholder_name` (string, required)
+      Cardholder name.
+    - `token` (string, required)
+      Tokenised card number, which can be retrieved from Airwallex beneficiary component.
+    - `brand` (string, optional)
+      Card brand.
+    - `currency` (string, optional)
+      Card currency.
+    - `expiry_month` (string, optional)
+      Expiry month.
+    - `expiry_year` (string, optional)
+      Expiry year.
+    - `number` (string, optional)
+      Card number.
+  - `company_name` (string, optional)
+    Company name of the beneficiary.
+  - `date_of_birth` (string, optional)
+    beneficiary date of birth.
+  - `digital_wallet` (object, optional)
+    Beneficiary's digital wallet details where the payment will be credited.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s digital wallet.
+    - `id_type` (string, required)
+      Account identifier type of the beneficiary’s digital wallet.
+    - `id_value` (string, required)
+      Account identifier value of the beneficiary’s digital wallet.
+    - `provider` (string, required)
+      Service provider of the beneficiary's digital wallet.
+    - `country_code` (string, optional)
+      Digital wallet country code (2-letter ISO 3166-2 country code).
+  - `entity_type` (string, optional)
+    Entity type of the beneficiary.
+  - `first_name` (string, optional)
+    First name of the beneficiary.
+  - `last_name` (string, optional)
+    Last name of the beneficiary.
+  - `stablecoin_wallet` (object, optional)
+    Beneficiary's stablecoin wallet details where the payment will be credited.
+    - `address` (string, required)
+      Blockchain wallet address of the beneficiary.
+    - `asset` (string, required)
+      Stablecoin asset type, e.g., `USDC`.
+    - `network` (string, required)
+      Blockchain network, e.g., `ETHEREUM`.
+  - `type` (string, optional)
+    Type of the beneficiary, indicating the type of account or method through which the beneficiary receives funds.
+- `id` (string, format: uuid, required)
+  id used to uniquely identify this beneficiary contact on the Airwallex platform.
+- `transfer_methods` (array[string], required)
+  Transfer method needs to be specified to ensure that accurate banking details are captured and validated for the specified transfer method. This is required for timely and accurate delivery of funds to the beneficiary account. Should be one of the following: `SWIFT`, `LOCAL`.
+- `nickname` (string, optional)
+  Nickname of the beneficiary.
+- `payer_entity_type` (string, optional)
+  The payer entity type that will be used for transfers being made to this beneficiary.  This is required to accurately capture and validate appropriate data for compliance reasons.  Defaults to `COMPANY`.
+- `sca_exemptible` (boolean, optional)
+  Whether the beneficiary can be exempted from SCA when applicable.
+
+After completing the integration steps, the following sections describe next steps such as saving or creating beneficiaries, initiating transfers, testing in sandbox, troubleshooting, example integrations, and FAQ.
+
+## Next steps
+
+### Save a beneficiary
+
+You can choose to save beneficiary information in Airwallex's system or on your side (your own database) without creating beneficiaries with Airwallex. In this case you can use our Embedded Beneficiary component to generate beneficiary payloads, save them on your server in the manner you prefer, and directly use them to create payouts along with payout information when needed.
+
+### Create  or update a beneficiary
+
+Once the beneficiary payload is retrieved, you can [create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) in Airwallex.
+
+You can also use the beneficiary payload to [update a beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/update.md) that you have already saved with Airwallex. To do this, you must:
+
+1. Retrieve current details of the beneficiary by calling either [Get list of beneficiaries](https://www.airwallex.com/docs/api/payouts/beneficiaries/list.md) or [Get a beneficiary by ID](https://www.airwallex.com/docs/api/payouts/beneficiaries/retrieve.md).
+2. Pre-fill the retrieved beneficiary details as default values in the Embedded Beneficiary component. This allows users to see the current information and make necessary updates.
+3. After the user updates the information using the Embedded Beneficiary component, call the `submit()` method to retrieve the updated details.
+4. Send the updated beneficiary information back to your server and call [Update a beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/update.md) to update the beneficiary in Airwallex's system.
+
+### Create a new transfer
+
+With the beneficiary created, you can call the [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md) endpoint with the `beneficiary_id` to create a payout. You can also create a new payout without creating a beneficiaries by directly using the beneficiary payload retrieved from the beneficiary form in your request. See [Create a transfer](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md) to learn more about this endpoint.
+
+**Please note that these API calls should only happen on the server side, a trusted environment.**
+
+### Render payout experience for a beneficiary
+
+If you also want to render an experience where you allow the user to specify amount, date etc. and view currency conversion rates and fees, you can consider using the [Embedded payout components](https://www.airwallex.com/docs/payouts/transfers/embedded-transfer-component.md).
+
+### Test your integration
+
+Build and test your integration in the [sandbox environment](https://www.airwallex.com/docs/developer-tools/sandbox-environment.md) first before going to production. Make sure to account for various success and error scenarios.
+
+## Troubleshooting
+
+For troubleshooting tips, see [Airwallex.js error codes](https://www.airwallex.com/docs/developer-tools/sdks/airwallex.js/error-codes.md).
+
+## Example integrations
+
+We have a few examples of rendered components with different customizations. Check them out on the [Embedded Components demo site](https://www.sandbox.airwallex.com/widgets/embedded-components/beneficiary-form/general).
+
+## FAQ
+
+The 2023-04-15 version updates beneficiary and payment schemas with relaxed requirements (bank_name, swift_code for IBAN countries, routing fields for MAD/MXN/ARS/PEN/JPY/CAD), adds new error codes 082-089, and adds a failure_details object to the Deposit resource. The 2022-12-13 version updates success and error response structures, adds a close Global Account endpoint, a cancel direct debit endpoint, mandate management endpoints for Global Accounts, and new Linked Account mandate fields.
+
+## 2023-04-15
+
+* Updated request and response for creating, updating and validating a beneficiary:
+
+  * **POST `/api/v1/beneficiaries/create`**
+  * **POST `/api/v1/beneficiaries/update/{beneficiary_id}`**
+  * **POST `/api/v1/beneficiaries/validate`**
+  
+* Updated request, response, and error codes for creating, validating and retrying a payment:
+
+  * **POST `/api/v1/payments/create`**
+  * **POST `/api/v1/payments/validate`**
+  * **POST `/api/v1/payments/retry/{payment_id}`**
+  
+* Updated response and error codes when requesting an existing beneficiary or payment:
+
+  * **GET `/api/v1/beneficiaries`**
+  * **GET `/api/v1/beneficiaries/{beneficiary_id}`**
+  * **GET `/api/v1/payments`**
+  * **GET `/api/v1/payments/{payment_id}`**
+
+* Updated form schemas for CA, HK, IN, JP, MA, MX, NZ, AR, PE and all countries which require the iban field:
+
+  * **POST `/api/v1/beneficiary_api_schemas/generate`**
+  * **POST `/api/v1/beneficiary_form_schemas/generate`**
+  
+* Removed update a payment:
+
+  * **POST `/api/v1/payments/update/{payment_id}`**
+  
+Changes:
+
+  * `bank_name` is no longer required unless `payment_methods` is LOCAL and `bank_country_code` is CN.
+  * `bank_name` will still be returned in the response, based on a mapping of your submitted bank details.
+  * `swift_code` is no longer required when creating a beneficiary or a new payment, in all scenarios where iban is required. This includes if `bank_country_code` is one of AD, AE, AL, AT, AZ, BA, BE, BG, BH, BL, BY, CH, CY, CZ, DE, DK, DO, EE, ES, FI, FR, FO, GB, GE, GF, GG, GI, GL, GR, GT, HR, HU, IC, IE, IL, IM, IN, IS, IT, JE, JO, KW, KZ, LB, LC, LI, LT, LU, LV, MC, MD, MF, MK, MQ, MR, MT, MU, NC, NL, NO, PK, PL, PM, PS, PT, QA, RE, RO, RS, SA, SC, SE, SI, SK, SM, TL, TN, TR, VG, XK, TF, WF, YT; and when `payment_methods` is LOCAL, and `account_currency` is EGP.
+  * `account_routing_type1` and `account_routing_value1` are no longer required when creating a beneficiary or a new payment where `payment_methods` is LOCAL, and `account_currency` is MAD, MXN, ARS, or PEN.
+  * Where `payment_methods` is LOCAL and `account_currency` is JPY:
+    * `account_routing_type1` is now defined as `bank_code`
+    * `account_routing_type2` is now defined as `branch_code`
+    * `account_routing_value2` is now required
+    * `bank_account_category` is now required
+  * Where `payment_methods` is LOCAL and `account_currency` is CAD:
+    * `account_routing_type1` is now defined as `institution_number`
+    * `account_routing_type2` is now defined as `transit_number`
+    * `account_routing_value2` is now required
+  * Added error codes 082-089. Refer to the [Payouts Product Docs](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/error-codes.md#field-validation-errors-with-example-response) for all potential error codes and descriptions
+
+Beneficiaries created using POST `/api/v1/beneficiaries/create` on a previous API version will be compatible with this version without updating to the new schema. However, to update an existing beneficiary by calling POST `/api/v1/beneficiaries/update/{beneficiary_id}`, you will need to follow the new schema.
+
+* A new object failure_details has been added to the Deposit resource. Affected endpoints:
+
+  * **GET `/api/v1/deposits`**, response only
+  * **GET `/api/v1/deposits/{id}`**, response only
+
+  Changes:
+
+    * Refer to the [Product Docs](https://www.airwallex.com/docs/global-treasury/receive-funds/add-funds-via-direct-debits-from-linked-accounts/direct-debit-deposit-error-codes.md) for all potential error codes and descriptions.
+
+## 2022-12-13
+
+* Updated success response from an empty body to `OK` for the following endpoints:
+
+  * **POST `/api/v1/beneficiaries/validate`**, response only
+  * **POST `/api/v1/payers/validate`**, response only
+  * **POST `/api/v1/payments/validate`**, response only
+  * **POST `/api/v1/payments/cancel`**, response only
+
+* Updated the error response structure to be parsable for the following endpoints:
+
+  * **POST `/api/v1/beneficiaries/validate`**, response only
+  * **POST `/api/v1/beneficiaries/create`**, response only
+  * **POST `/api/v1/beneficiaries/update/{beneficiary_id}`**, response only
+  * **POST `/api/v1/payers/validate`**, response only
+  * **POST `/api/v1/payers/create`**, response only
+  * **POST `/api/v1/payers/update/{payer_id}`**, response only
+  * **POST `/api/v1/payments/validate`**, response only
+  * **POST `/api/v1/payments/create`**, response only
+  * **POST `/api/v1/payments/update/{payment_id}`**, response only
+  * **POST `/api/v1/payments/cancel`**, response only
+  * **POST `/api/v1/payments/retry`**, response only
+
+  Changes:
+
+    * Refreshed the error codes, which includes renaming, splitting, merging and retiring previous error codes
+    * Removed `message` and `description` from the response. Refer to the [Payouts Product Docs](https://www.airwallex.com/docs/payouts/older-api-versions/transfers/error-codes.md#field-validation-errors-with-example-response) for all potential error codes and descriptions
+    * Added `params` object with parsable information where applicable, e.g. payment amount limit, amount limit currency
+    * Replaced `source` in the error response of previous API version with `errors` in this version. The `errors` object contains `source` and `code` fields, as well as the `params` object (if applicable) that returns parsable details based on the specific error
+    * For a field validation error where code is `validation_failed`, the response contains an `errors` object that can return a list of `source`, `code` and `params` fields/objects corresponding to all the schema validation errors identified in the request:
+    * `source`: Specific field within the request that has failed schema validation
+    * `code`: Unique numeric identifier of the specific validation error encountered
+    * `params`: Additional parsable information related to the specific validation error where applicable, e.g. minimum and maximum character length
+* For a general error where code is not `validation_failed`, the `errors` object will be empty
+
+* A new endpoint can be used to close a Global Account:
+
+  * **POST `/api/v1/global_accounts/{id}/close`** 
+
+* A new field `close_reason` has been added to the Global Account resource. Affected endpoints:
+
+  * **GET `/api/v1/global_accounts`**, response only
+  * **POST `/api/v1/global_accounts/update/{id}`**, response only
+  * **GET `/api/v1/global_accounts/{id}`**, response only
+
+* A new endpoint can be used to cancel a direct debit payout under the Direct Debit resource:
+
+  * **POST `/api/v1/direct_debits/{transaction_id}/cancel`**
+  
+* A new field `mandate_id` has been added to the Direct Debit resource. Affected endpoints:
+
+  * **GET `/api/v1/direct_debits`**, response only
+  * **GET `/api/v1/direct_debits/{transaction_id}`**, response only
+
+* New endpoints that can be used to manage direct debit payout mandates under the Global Account resource:
+
+  * **GET `/api/v1/global_accounts/{global_account_id}/mandates/{id}`**
+  * **GET `/api/v1/global_accounts/{global_account_id}/mandates`**
+  * **POST `/api/v1/global_accounts/{global_account_id}/mandates/{id}/cancel`**
+  
+* A new field `mandate.direct_debit_deposit` has been added to the Linked Account resource. Affected endpoints:
+
+  * **GET `/api/v1/linked_accounts`**, response only
+  * **GET `/api/v1/linked_accounts/{id}`**, response only
+  * **POST `/api/v1/linked_accounts/create`**, response only
+  * **POST `/api/v1/linked_accounts/{id}/verify_microdeposits`**, response only
+
+* A new field `preferred_reference` has been added to the request parameter `mandate` under the Linked Account resource. Affected endpoints:
+
+  * **POST `/api/v1/linked_accounts/create`**, request only
+  * **POST `/api/v1/linked_accounts/{id}/mandate`**, request only
+
+* Fields of Direct Debit mandate resource have been updated, under the Linked Account resource. Affected endpoints:
+
+  * **GET `/api/v1/linked_accounts/{id}/mandate`**, response only
+  * **POST `/api/v1/linked_accounts/{id}/mandate`**, response only
+
+  Changes:
+
+    * The values of field `status` should be: ACTIVE, INACTIVE, PROCESSING
+    * A new field `reference` has been added
+    * A new object field `address` has been added, including `address.country_code`, `address.state`, `address.suburb`, `address.postcode`, `address.address_line1`, `address.address_line2`
+
+* A new optional field `deposit_conversion_currency` has been added to the Global Account resource. Affected endpoints:
+
+  * **POST `/api/v1/global_accounts/update/{id}`**
+  * **POST `/api/v1/global_accounts/create`**
+  * **GET `/api/v1/global_accounts`**, response only
+  * **GET `/api/v1/global_accounts/{id}`**, response only
+  * **POST `/api/v1/global_accounts/{id}/close`** , response only
+
+
+The Airwallex Payouts API provides endpoints to retrieve saved beneficiary information, either as a paginated list or by individual ID.
+
+# Retrieve beneficiaries
+
+## Retrieve a list of beneficiaries
+
+Call [Get list of beneficiaries](https://www.airwallex.com/docs/api/payouts/beneficiaries/list.md) to retrieve saved beneficiary information. You can specify the time period when the beneficiary was created (`from_date`, `to_date`) and the pagination parameters (`page_num`, `page_size`) to refine the results. You can also use other filters such as `bank_account_number`, `company_name`, `entity_type`, and `nick_name`. The response will return a list of beneficiaries, each in the same manner as in the response body of [Create a beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md).
+
+**Example request**
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/beneficiaries \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --data-urlencode 'bank_account_number=string' \
+  --data-urlencode 'entity_type=COMPANY' \
+  --data-urlencode 'from_date=2017-04-01' \
+  --data-urlencode 'name=Adam' \
+  --data-urlencode 'nick_name=string' \
+  --data-urlencode 'page_num=0' \
+  --data-urlencode 'page_size=100' \
+  --data-urlencode 'to_date=2030-01-01T00:00:00+0000'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+**Example response**
+
+```json
+{
+  "has_more": false,
+  "items": [
+    {
+      "beneficiary": {
+        "address": {
+          "city": "Melbourne",
+          "country_code": "AU",
+          "postcode": "3000",
+          "state": "VIC",
+          "street_address": "15 William Street"
+        },
+        "bank_details": {
+          "account_currency": "AUD",
+          "account_name": "Lee Da Ming",
+          "account_number": "12750852",
+          "account_routing_type1": "bsb",
+          "account_routing_value1": "083064",
+          "bank_account_category": "Checking",
+          "bank_branch": "Melbourne",
+          "bank_country_code": "AU",
+          "bank_name": "National Australia Bank",
+          "bank_street_address": "500 Bourke Street, Melbourne 3000, Australia",
+          "fingerprint": "2e99758548972a8e8822ad47fa1017ff72f06f3ff6a016851f45c398732bc50c",
+          "local_clearing_system": "BANK_TRANSFER",
+          "transaction_reference": "4140110135"
+        },
+        "entity_type": "COMPANY",
+        "type": "BANK_ACCOUNT"
+      },
+      "id": "8365ea88-2946-4877-abe1-e02a1015288d",
+      "nickname": "Complete Concrete Pty Ltd",
+      "payer_entity_type": "COMPANY",
+      "transfer_methods": [
+        "LOCAL"
+      ]
+    }
+  ]
+}
+```
+
+Step 2 covers creating or updating beneficiaries with an `external_identifier` field to link beneficiary records to the tax information collected via the Embedded Tax Form component. Both create and update API flows are shown with example requests.
+
+## Step 2: Create or update beneficiaries
+
+While transfers can be created without beneficiaries, it is strongly recommended to create a beneficiary with the `external_identifier` included beforehand, which will establish the linkage to the tax information collected via the Embedded Tax Form component. All subsequent transfers using this beneficiary will be automatically associated with the recipient.
+
+Call [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md) to save and manage beneficiaries that you can use for creating payouts using `beneficiary_id`, as well as linking to the tax information collected.
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/beneficiaries/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "beneficiary": {
+      "additional_info": {
+        "external_identifier": "089cc0ec-0a6f-4150-90351232"
+      },
+      "address": {
+        "city": "Seattle",
+        "country_code": "US",
+        "postcode": "98104",
+        "state": "Washington",
+        "street_address": "412 5th Avenue"
+      },
+      "bank_details": {
+        "account_currency": "USD",
+        "account_name": "John Walker",
+        "account_number": "50001121",
+        "account_routing_type1": "aba",
+        "account_routing_value1": "021000021",
+        "bank_country_code": "US",
+        "local_clearing_system": "ACH"
+      },
+      "company_name": "Complete Concrete Pty Ltd",
+      "entity_type": "COMPANY"
+    },
+    "nickname": "Complete Concrete Pty Ltd",
+    "transfer_methods": [
+      "LOCAL"
+    ]
+  }'
+```
+
+For existing beneficiaries, you can call [Update existing beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/update.md) to add/edit the `external_identifier` field. The same schema validation and response body as in Create a new beneficiary will apply.
+
+### Example request
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/beneficiaries/8365ea88-2946-4877-abe1-e02a1015288d/update \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "beneficiary": {
+      "additional_info": {
+        "external_identifier": "089cc0ec-0a6f-4150-90351232"
+      },
+      "address": {
+        "city": "Seattle",
+        "country_code": "US",
+        "postcode": "98104",
+        "state": "Washington",
+        "street_address": "412 5th Avenue"
+      },
+      "bank_details": {
+        "account_currency": "USD",
+        "account_name": "John Walker",
+        "account_number": "50001121",
+        "account_routing_type1": "aba",
+        "account_routing_value1": "021000021",
+        "bank_country_code": "US",
+        "local_clearing_system": "ACH"
+      },
+      "company_name": "Complete Concrete Pty Ltd",
+      "entity_type": "COMPANY"
+    },
+    "nickname": "Complete Concrete Pty Ltd",
+    "transfer_methods": [
+      "LOCAL"
+    ]
+  }'
+```
+
+Note that only future transfers will be automatically associated with the corresponding recipient when `external_identifier` is added/updated for an existing beneficiary. In other words, historical transfers will remain to be either unlinked or linked to the previous recipient. Additionally, in the event that you delete the beneficiary, historical transfers will remain to be linked to the recipient.
+
+As part of initial setup, Airwallex will be able to support one-off backfilling/update of historical transfers to support your first year of tax filing. Please contact your Account Manager for more details.

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>airwallex developer lab</title>
+    <meta
+      name="description"
+      content="Sandbox APIs, MCP, product ideas, and reference builds for Airwallex agentic global business accounts. No production account needed."
+    />
+    <meta property="og:title" content="airwallex developer lab" />
+    <meta
+      property="og:description"
+      content="Sandbox APIs, MCP, product ideas, and reference builds. No production account needed."
+    />
+    <meta property="og:url" content="https://airwallexdev.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://airwallexdev.com/media/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="airwallex developer lab" />
+    <meta
+      name="twitter:description"
+      content="Sandbox APIs, MCP, product ideas, and reference builds. No production account needed."
+    />
+    <meta name="twitter:image" content="https://airwallexdev.com/media/og.png" />
+    <link rel="canonical" href="https://airwallexdev.com/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Michroma&family=Outfit:wght@200;300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body class="flow">
+    <canvas class="code-spark" aria-hidden="true"></canvas>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <div class="header-lockup">
+          <svg class="header-mark" viewBox="0 0 120.1 79.8" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M115.5,31.4c-4.3-4.2-10.3-5.4-15.8-3.1L74.9,38.4l-27-32.3C44,1.4,38-0.8,32,0.2c-6,1.1-10.9,5.1-13,10.9
+			L0.9,59.9c-2.4,6.4-0.1,13.7,5.7,17.5c4.1,2.7,9.3,3,13.8,1.2l24.5-10c4.1-1.7,6.4-6.3,5-10.5c-1.5-4.6-6.6-7-11-5.2l-18.6,7.7
+			c-0.8,0.3-1.7-0.5-1.4-1.3L34.2,18c0.3-0.7,1.3-0.9,1.8-0.3l47,56.2c3.2,3.8,7.8,5.9,12.6,5.9c1.1,0,2.1-0.1,3.2-0.3
+			c5.8-1.1,10.5-5.4,12.5-11l7.8-21.3C121.2,41.6,119.8,35.5,115.5,31.4z M101.2,47.6l-5.1,13.8c-0.3,0.8-1.3,0.9-1.8,0.3l-8.2-9.8
+			l13.7-5.6C100.7,45.9,101.6,46.7,101.2,47.6z"
+            />
+          </svg>
+          <div class="header-lockup-text">
+            <h1 class="brand"><a href="/">airwallex developer lab</a></h1>
+            <p class="site-tag">Agentic global business accounts</p>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="is-on" href="/">Connect</a>
+          <a href="/builds">Build</a>
+          <a href="/guide">Hackathon Guide</a>
+          <a href="https://www.airwallex.com/docs/api/introduction" target="_blank" rel="noopener noreferrer">Docs</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="step-kicker">
+        <div class="step-badge">1</div>
+        <h2 class="page-kicker">Create sandbox</h2>
+      </div>
+      <p class="page-sub">Instant. No production account. No real money.</p>
+      <article class="step-card" id="sandbox">
+        <ol class="steps">
+          <li>
+            Sign up at
+            <a href="https://www.sandbox.airwallex.com/global/signup" target="_blank" rel="noopener noreferrer">sandbox.airwallex.com</a>
+            with work email, name, country, and password.
+          </li>
+          <li>
+            Log in to the
+            <a href="https://www.sandbox.airwallex.com/app/" target="_blank" rel="noopener noreferrer">sandbox web app</a>.
+          </li>
+          <li>Account &gt; Developer &gt; API keys. You get a Client ID and an API key. Treat them like passwords. Scope the key to what the agent needs.</li>
+        </ol>
+        <p class="warn">
+          <strong>Keys</strong>
+          Treat them like passwords. Scope the key to what the agent needs. Never commit them.
+        </p>
+        <p class="step-note">
+          If you add another business in the web app, the entity name must be
+          New Business Sandbox or Sandbox Business. Any other name stays In review.
+        </p>
+        <div class="link-row">
+          <a href="https://www.airwallex.com/docs/developer-tools/sandbox-environment" target="_blank" rel="noopener noreferrer">Sandbox docs</a>
+        </div>
+      </article>
+
+      <div class="step-kicker">
+        <div class="step-badge">2</div>
+        <h2 class="page-kicker">Connect your tools</h2>
+      </div>
+      <p class="page-sub">Docs MCP first. No account. Then developer MCP to call the APIs.</p>
+      <article class="step-card" id="tools" data-tabs>
+        <div class="tabs">
+          <button type="button" class="is-on" data-tab="mcp">MCPs</button>
+          <button type="button" data-tab="rest">REST APIs</button>
+          <button type="button" data-tab="webhooks">Webhooks</button>
+        </div>
+        <div data-panel="mcp">
+          <table class="mcp-table">
+            <thead>
+              <tr>
+                <th>MCP</th>
+                <th>Auth</th>
+                <th>Use</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Docs MCP</td>
+                <td>None</td>
+                <td>Docs. No account.</td>
+              </tr>
+              <tr>
+                <td>Developer MCP</td>
+                <td>Sandbox login</td>
+                <td>API calls.</td>
+              </tr>
+              <tr>
+                <td>AgentOS</td>
+                <td>Sandbox or production</td>
+                <td>Skills plus MCP.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="tool-group">Coding tools</p>
+          <details class="tool" open>
+            <summary>
+              <span>
+                <span class="tool-title">Claude</span>
+                <span class="tool-note">claude mcp add-json, plus AgentOS plugin</span>
+              </span>
+              <span class="tool-mark" aria-hidden="true"></span>
+            </summary>
+            <div class="tool-body">
+              <p class="prompt-label">Docs MCP</p>
+              <div class="prompt prompt-short">
+                <pre data-prompt>claude mcp add-json airwallex-docs '{ "type": "http", "url": "https://mcp.sandbox.airwallex.com/docs" }'</pre>
+                <button class="copy-btn" type="button" data-copy>Copy</button>
+              </div>
+              <p class="prompt-label">Developer MCP</p>
+              <div class="prompt prompt-short">
+                <pre data-prompt>claude mcp add-json airwallex-dev '{ "type": "http", "url": "https://mcp.sandbox.airwallex.com/developer" }'</pre>
+                <button class="copy-btn" type="button" data-copy>Copy</button>
+              </div>
+              <p class="prompt-label">
+                <a href="https://www.airwallex.com/docs/developer-tools/ai/agentos" target="_blank" rel="noopener noreferrer">AgentOS</a>
+              </p>
+              <div class="prompt prompt-short">
+                <pre data-prompt>claude plugin install airwallex-agentos@claude-plugins-official</pre>
+                <button class="copy-btn" type="button" data-copy>Copy</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="tool tool-compact">
+            <summary>
+              <span>
+                <span class="tool-title">Cursor</span>
+                <span class="tool-note">~/.cursor/mcp.json</span>
+              </span>
+              <span class="tool-mark" aria-hidden="true"></span>
+            </summary>
+            <div class="tool-body">
+              <div class="prompt">
+                <pre data-prompt>{
+  "mcpServers": {
+    "airwallex-docs": {
+      "type": "http",
+      "url": "https://mcp.sandbox.airwallex.com/docs"
+    },
+    "airwallex-dev": {
+      "type": "http",
+      "url": "https://mcp.sandbox.airwallex.com/developer"
+    }
+  }
+}</pre>
+                <button class="copy-btn" type="button" data-copy>Copy</button>
+                <p class="prompt-note">AgentOS: Settings &gt; Plugins &gt; Marketplace, search airwallex.</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="tool tool-compact">
+            <summary>
+              <span>
+                <span class="tool-title">Codex</span>
+                <span class="tool-note">~/.codex/config.toml</span>
+              </span>
+              <span class="tool-mark" aria-hidden="true"></span>
+            </summary>
+            <div class="tool-body">
+              <div class="prompt">
+                <pre data-prompt>experimental_use_rmcp_client = true
+
+[mcp_servers.airwallex_docs]
+url = "https://mcp.sandbox.airwallex.com/docs"
+
+[mcp_servers.airwallex_dev]
+url = "https://mcp.sandbox.airwallex.com/developer"</pre>
+                <button class="copy-btn" type="button" data-copy>Copy</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="tool tool-compact">
+            <summary>
+              <span>
+                <span class="tool-title">Gemini CLI</span>
+                <span class="tool-note">~/.gemini/settings.json</span>
+              </span>
+              <span class="tool-mark" aria-hidden="true"></span>
+            </summary>
+            <div class="tool-body">
+              <div class="prompt">
+                <pre data-prompt>{
+  "mcpServers": {
+    "airwallex-docs": {
+      "httpUrl": "https://mcp.sandbox.airwallex.com/docs"
+    },
+    "airwallex-dev": {
+      "httpUrl": "https://mcp.sandbox.airwallex.com/developer"
+    }
+  }
+}</pre>
+                <button class="copy-btn" type="button" data-copy>Copy</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="tool tool-compact">
+            <summary>
+              <span>
+                <span class="tool-title">Windsurf</span>
+                <span class="tool-note">mcp_config.json</span>
+              </span>
+              <span class="tool-mark" aria-hidden="true"></span>
+            </summary>
+            <div class="tool-body">
+              <div class="prompt">
+                <pre data-prompt>{
+  "mcpServers": {
+    "airwallex-docs": {
+      "serverUrl": "https://mcp.sandbox.airwallex.com/docs"
+    },
+    "airwallex-dev": {
+      "serverUrl": "https://mcp.sandbox.airwallex.com/developer"
+    }
+  }
+}</pre>
+                <button class="copy-btn" type="button" data-copy>Copy</button>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div data-panel="rest" hidden>
+          <p class="prompt-label">REST auth</p>
+          <p class="step-note">For agents not using developer MCP.</p>
+          <div class="prompt prompt-short">
+            <pre data-prompt>Sandbox: https://api.sandbox.airwallex.com
+POST /api/v1/authentication/login
+Headers: x-client-id, x-api-key. No body.
+Then: Authorization: Bearer &lt;token&gt;
+Token lasts 30 minutes. Re-login when it expires.
+Amounts are major units. 100 is one hundred dollars.
+Connected accounts (briefs 05-08): x-on-behalf-of: &lt;account_id&gt;</pre>
+            <button class="copy-btn" type="button" data-copy>Copy</button>
+          </div>
+          <p class="prompt-label">Simulation</p>
+          <p class="step-note">Fake deposits, card charges, and transfer outcomes.</p>
+          <div class="prompt">
+            <pre data-prompt>POST /api/v1/simulation/deposit/create
+POST /api/v1/simulation/issuing/create
+POST /api/v1/simulation/issuing/{id}/capture
+POST /api/v1/simulation/transfers/{id}/transition
+
+Transfers: FAILED auto-cancels in seconds, so a slow poll can miss it and lose failure_reason. Branch on FAILED and CANCELLED.
+Cards: don't wait for APPROVED on demo timescales. AUTHORIZATION plus PENDING means funds reserved. CLEARING plus APPROVED means funds debited. CLEARING plus FAILED means declined.</pre>
+            <button class="copy-btn" type="button" data-copy>Copy</button>
+            <p class="prompt-note">
+              Rest in
+              <a href="https://www.airwallex.com/docs/developer-tools/sandbox-environment" target="_blank" rel="noopener noreferrer">sandbox docs</a>.
+            </p>
+          </div>
+          <div class="link-row">
+            <a href="https://www.airwallex.com/docs/api/introduction" target="_blank" rel="noopener noreferrer">API reference</a>
+            <a href="https://www.airwallex.com/docs/developer-tools/sandbox-environment" target="_blank" rel="noopener noreferrer">Sandbox</a>
+            <a href="https://www.airwallex.com/docs/developer-tools/api/quickstart-with-postman" target="_blank" rel="noopener noreferrer">Postman</a>
+          </div>
+        </div>
+
+        <div data-panel="webhooks" hidden>
+          <p class="prompt-label">Webhooks</p>
+          <p class="step-note">Web app, not the API. Tunnel localhost for local dev.</p>
+          <div class="prompt">
+            <pre data-prompt>Settings > Developer > Webhooks in the sandbox web app, not the API.
+Copy the Webhook Secret shown when you create the subscription.
+Delivery: x-timestamp and x-signature.
+HMAC-SHA256 of x-timestamp plus the raw body, secret as key.
+Events can arrive twice and out of order.
+Dedupe on event id, sort by created_at, return 200 or Airwallex retries for about three days.</pre>
+            <button class="copy-btn" type="button" data-copy>Copy</button>
+            <p class="prompt-note">
+              <a href="https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events" target="_blank" rel="noopener noreferrer">Webhook docs</a>.
+            </p>
+          </div>
+          <p class="step-note">
+            Expected events: <code>payout.transfer.paid</code>, <code>payout.transfer.failed</code>, <code>payout.transfer.cancelled</code>.
+            <code>issuing.transaction.succeeded</code>, <code>issuing.transaction.failed</code>.
+          </p>
+
+        </div>
+      </article>
+
+      <div class="step-kicker">
+        <div class="step-badge">3</div>
+        <h2 class="page-kicker">Verify connection</h2>
+      </div>
+      <p class="page-sub">Ask the agent to list global accounts. An empty list means you're connected.</p>
+      <article class="step-card" id="verify">
+        <p class="prompt-label">List global accounts</p>
+        <div class="prompt prompt-short">
+          <pre data-prompt>List global accounts.</pre>
+          <button class="copy-btn" type="button" data-copy>Copy</button>
+        </div>
+        <p class="expect">
+          <strong>Expected</strong>
+          The agent calls Developer MCP. An empty list is a connection. If it fails, say what's missing: docs MCP, developer MCP, or sandbox login.
+        </p>
+        <p class="prompt-label">REST login</p>
+        <div class="prompt prompt-short">
+          <pre data-prompt>POST /api/v1/authentication/login
+Headers: x-client-id, x-api-key. No body.
+Then: Authorization: Bearer &lt;token&gt;
+Token lasts 30 minutes. Re-login when it expires.</pre>
+          <button class="copy-btn" type="button" data-copy>Copy</button>
+        </div>
+        <p class="expect">
+          <strong>Expected</strong>
+          200 with a Bearer token. Valid 30 minutes. No token means credentials or scoping.
+        </p>
+        <p class="prompt-label">First prompt</p>
+        <div class="prompt">
+          <pre data-prompt>You're building with Airwallex sandbox APIs.
+
+Airwallex offers agentic global business accounts: payments, remittances, treasury, spend, cards, FX, and multi-currency wallets.
+
+Sandbox only. No production. No real money.
+
+Use these MCP servers if they're connected:
+Docs (no login): https://mcp.sandbox.airwallex.com/docs
+Developer (sandbox login): https://mcp.sandbox.airwallex.com/developer
+
+If developer MCP asks you to sign in, use the user's sandbox account.
+
+Mutating calls need a stable request_id. Reuse it when you retry. Generate a new one when you mean a new payment.
+
+Amounts are major units, not cents. 100 is one hundred dollars.
+
+First task: list global accounts. If none, create one, then simulate a deposit. Then list sandbox wallet balances. If you can't, say what's missing: docs MCP, developer MCP, sandbox login, or a global account.</pre>
+          <button class="copy-btn" type="button" data-copy>Copy</button>
+        </div>
+      </article>
+
+      <div class="step-kicker">
+        <div class="step-badge">4</div>
+        <h2 class="page-kicker">Prepare the sandbox</h2>
+      </div>
+      <p class="page-sub">If the list from Verify is empty, create. Then simulate a deposit.</p>
+      <article class="step-card" id="prepare">
+        <p class="step-note">If Verify returned accounts, skip to deposit. If the list was empty, create one. Developer MCP cannot create a Global Account.</p>
+        <p class="prompt-label">1. Create if empty</p>
+        <p class="step-note">country_code is the account country, not the currency. NL, DE, or FR for EUR. BE is rejected. required_features is objects, not strings.</p>
+        <div class="prompt">
+          <pre data-prompt>POST /api/v1/global_accounts/create
+{
+  "request_id": "&lt;unique&gt;",
+  "country_code": "US",
+  "required_features": [{ "currency": "USD", "transfer_method": "LOCAL" }]
+}</pre>
+          <button class="copy-btn" type="button" data-copy>Copy</button>
+        </div>
+        <p class="prompt-label">2. Simulate deposit</p>
+        <p class="step-note">Amounts are major units. 25000 is twenty-five thousand dollars. The balance is available immediately even if the response says PENDING.</p>
+        <div class="prompt">
+          <pre data-prompt>POST /api/v1/simulation/deposit/create
+{
+  "global_account_id": "&lt;id&gt;",
+  "amount": 25000,
+  "payer_name": "Seed funding"
+}</pre>
+          <button class="copy-btn" type="button" data-copy>Copy</button>
+        </div>
+        <p class="prompt-label">3. Simulate transaction</p>
+        <p class="step-note">
+          Test card <code>4035501000000008</code>, any future expiry, any CVC. Micro-deposits <code>0.01</code> and <code>0.02</code>.
+        </p>
+        <p class="warn">
+          <strong>If create or deposit fails</strong>
+          Stop. Don't paste a brief yet. If the business is In review, the name must be New Business Sandbox or Sandbox Business. Then open Connect your tools, choose REST APIs, and confirm login returns a token.
+        </p>
+      </article>
+
+      <div class="step-kicker">
+        <div class="step-badge">5</div>
+        <h2 class="page-kicker">Choose a build recipe</h2>
+      </div>
+      <p class="page-sub">Paste a brief into your coding agent.</p>
+      <article class="step-card" id="recipes">
+        <div class="recipe-grid" id="recipe-teaser"></div>
+        <a class="more" href="/builds">See all recipes and reference builds</a>
+        <a class="more" href="/guide">Read the builder guide</a>
+      </article>
+      <p class="site-footer">
+        Sandbox only. No real money. Not official Airwallex documentation. APIs and MCP can change. Refer to
+        <a href="https://www.airwallex.com/docs/api/introduction" target="_blank" rel="noopener noreferrer">Airwallex's official docs</a>.
+        You are solely responsible for what you build and for how you use keys, agents, and these examples. Airwallex is a trademark of Airwallex US, LLC.
+        For help, email
+        <a href="mailto:devhelp@airwallex.com">devhelp@airwallex.com</a>.
+      </p>
+    </main>
+
+    <script src="/js/site.js" type="module"></script>
+  <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4757659083a1571',t:'MTc5MTQ2NTgyOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

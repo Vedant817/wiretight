@@ -1,0 +1,170 @@
+{
+  "items": [
+    {
+      "n": "01",
+      "title": "Treasury agent",
+      "promise": "Rank which bills to pay when cash isn't enough for all of them.",
+      "body": "Fund, convert, defer, or escalate. After a later deposit, only reopen decisions the new cash actually changes.",
+      "brief": "You're building a treasury agent. Airwallex sandbox only (https://mcp.sandbox.airwallex.com/developer).\n\nCash isn't enough for every near-term obligation. Rank what to fund, convert, defer, or escalate. Keep amounts, reserves, and approvals in code. After a simulated deposit, only reopen decisions the new cash actually changes.\n\nOn every create, send a request_id. Reuse it when you retry. Generate a new one when you mean a new payment.",
+      "steps": [
+        "GET /api/v1/balances/current",
+        "GET /api/v1/global_accounts — create if empty",
+        "POST /api/v1/simulation/deposit/create",
+        "GET /api/v1/fx/rates/current then POST /api/v1/fx/quotes/create",
+        "POST /api/v1/fx/conversions/create (REST only)",
+        "POST /api/v1/beneficiaries/create then POST /api/v1/transfers/create",
+        "POST /api/v1/simulation/transfers/{id}/transition — SENT then PAID"
+      ],
+      "watch": [
+        "Add the SWIFT fee (EUR 12.85 in these examples) into the conversion. LOCAL payouts have no fee.",
+        "Leave x-api-version off FX calls.",
+        "Treat a quote as single-use in your code. Airwallex will accept the same quote_id again with a new request_id.",
+        "Book the conversion over REST. No MCP tool for it."
+      ]
+    },
+    {
+      "n": "02",
+      "title": "Purchase agent",
+      "promise": "Compare two quotes against cash, then issue a card with matching spending limits.",
+      "body": "Calculate the cash effect in code. Set the card limit so over-limit authorizations decline.",
+      "brief": "You're building a purchase agent. Airwallex sandbox only (https://mcp.sandbox.airwallex.com/developer).\n\nCompare two quotes against cash and policy. Issue a virtual card with spending limits that match that decision. Simulate one authorization that should decline and one that should clear.\n\nOn every create, send a request_id. Reuse it when you retry. Generate a new one when you mean a new payment.",
+      "steps": [
+        "Create cardholder (MCP: cardholder_type, REST: type)",
+        "POST /api/v1/issuing/cards/create with authorization_controls",
+        "POST /api/v1/simulation/issuing/create — over limit (FAILED)",
+        "POST /api/v1/simulation/issuing/create — under limit (CLEARING)",
+        "GET /api/v1/issuing/cards/{id}/limits"
+      ],
+      "watch": [
+        "Don't wait for APPROVED. CLEARING means accepted. failure_reason means declined.",
+        "Per-transaction limits are inclusive. Equal to the limit clears.",
+        "Card declines end FAILED. Failed transfers end CANCELLED. Separate state machines.",
+        "Cardholder field is cardholder_type on MCP and type on REST."
+      ]
+    },
+    {
+      "n": "03",
+      "title": "Payment recovery agent",
+      "promise": "When a supplier says a payout didn't arrive, wait, replace, or escalate — without paying twice.",
+      "body": "Leave the failed transfer cancelled. Send the replacement as a new transfer with a new request_id.",
+      "brief": "You're building a payment recovery agent. Airwallex sandbox only (https://mcp.sandbox.airwallex.com/developer).\n\nA supplier says a transfer didn't arrive. Wait while it's in flight. After a terminal failure, send one replacement. Don't pay the same obligation twice.\n\nOn every create, send a request_id. Reuse it when you retry. Generate a new one when you mean a new payment.",
+      "steps": [
+        "POST /api/v1/beneficiaries/create",
+        "POST /api/v1/transfers/create — original",
+        "POST /api/v1/simulation/transfers/{id}/transition — SENT then FAILED",
+        "POST /api/v1/transfers/create — replacement, new request_id",
+        "Transition replacement SENT then PAID"
+      ],
+      "watch": [
+        "SENT before PAID. FAILED with a failure_type also needs SENT first.",
+        "Prefer FAILED plus failure_type over a bare cancel. Bare cancel only gives failure_reason simulation.",
+        "Original and replacement need different request_id values.",
+        "Two SWIFT payouts means two fees. Don't close the incident only because the replacement is PAID."
+      ]
+    },
+    {
+      "n": "04",
+      "title": "Chargeback agent",
+      "promise": "Accept, challenge, or escalate a dispute based on value and fees.",
+      "body": "If the issuer rejects the evidence, don't send the same file again.",
+      "brief": "You're building a chargeback agent. Airwallex sandbox only (https://mcp.sandbox.airwallex.com/developer).\n\nThree chargebacks, different economics: accept, challenge, or hand to a person. If the issuer rejects the evidence, challenge again only with new evidence, or accept.\n\nOn every create, send a request_id. Reuse it when you retry. Generate a new one when you mean a new payment.",
+      "steps": [
+        "POST /api/v1/pa/payment_intents/create then confirm (test card)",
+        "POST /api/v1/simulation/pa/payment_disputes/create at RFI",
+        "Accept the low-value case",
+        "Upload evidence to files.sandbox.airwallex.com",
+        "POST /api/v1/pa/payment_disputes/{id}/challenge (REST)",
+        "Simulate escalate, then challenge again with new evidence or accept"
+      ],
+      "watch": [
+        "Challenge and accept over REST.",
+        "Sandbox does not deduct the dispute fee. Put it in your own economics.",
+        "Create disputes at RFI or CHARGEBACK. PRE_CHARGEBACK auto-accepts in the same second.",
+        "Evidence is JPG or PDF. PNG is rejected. Test card 4035501000000008."
+      ]
+    },
+    {
+      "n": "05",
+      "title": "Corporate card platform",
+      "promise": "Issue spend cards to customers, fund each wallet, and set limits per card.",
+      "body": "You can't fund every customer. Fund one, defer another, and show why a charge declined.",
+      "brief": "You're building a corporate card platform. Airwallex sandbox only (https://mcp.sandbox.airwallex.com/developer).\n\nNeeds a connected account per customer. Create, submit, and activate before anything else. Connected accounts and platform payments are not self-serve. Email devhelp@airwallex.com with your sandbox email and Client ID if they aren't already on.\n\nEach customer has their own wallet. Issue a card per customer. You can't fund everyone: fund one wallet, defer another, and show declines for funds, limit, and currency.\n\nOn every create, send a request_id. Reuse it when you retry. Generate a new one when you mean a new payment.",
+      "steps": [
+        "Create and activate a connected account per customer",
+        "POST /api/v1/connected_account_transfers/create — fund each wallet",
+        "Create cardholder + card with x-on-behalf-of",
+        "POST /api/v1/simulation/issuing/create — build spend",
+        "Run the allocator, fund one, defer another",
+        "POST /api/v1/charges/create — collect the fee"
+      ],
+      "watch": [
+        "Fund the customer wallet enough to hit the card-limit check, or you only see insufficient funds.",
+        "Send x-on-behalf-of on the card simulation. Without it Airwallex reports failure and still creates the transaction.",
+        "Customer cards over REST. MCP cannot send x-on-behalf-of."
+      ]
+    },
+    {
+      "n": "06",
+      "title": "Contractor payroll platform",
+      "promise": "Run payroll for many companies and pay contractors in local currencies.",
+      "body": "Include transfer fees before you convert. A deposit in one company's wallet must not pay another company.",
+      "brief": "You're building a contractor payroll platform. Airwallex sandbox only (https://mcp.sandbox.airwallex.com/developer).\n\nNeeds a connected account per customer. Create, submit, and activate before anything else. Connected accounts and platform payments are not self-serve. Email devhelp@airwallex.com with your sandbox email and Client ID if they aren't already on.\n\nEach company has its own wallet. Price each payroll including transfer fees before converting. Pay contractors from that company's wallet only. A deposit into one wallet must not fund another company.\n\nOn every create, send a request_id. Reuse it when you retry. Generate a new one when you mean a new payment.",
+      "steps": [
+        "Create and activate a connected account per employer. Fund two.",
+        "GET /api/v1/balances/current with x-on-behalf-of",
+        "POST /api/v1/beneficiaries/validate then create with the header",
+        "FX quote and conversion with the header if needed",
+        "POST /api/v1/transfers/create with the header",
+        "POST /api/v1/charges/create — collect the fee"
+      ],
+      "watch": [
+        "Price SWIFT fees before converting or the last contractor won't fit.",
+        "Set transfer_method on each contractor. Don't infer it from a missing fee.",
+        "x-on-behalf-of on every employer FX call. Without it Airwallex converts the platform wallet and still returns 201.",
+        "Customer transfers stay PROCESSING until you simulate them to a terminal status."
+      ]
+    },
+    {
+      "n": "07",
+      "title": "Revenue-based lending platform",
+      "promise": "Advance cash to borrowers and collect a contracted share of revenue.",
+      "body": "Collect from actual revenue, not the forecast. Size the next advance so the reserve floor still holds.",
+      "brief": "You're building a revenue-based lending platform. Airwallex sandbox only (https://mcp.sandbox.airwallex.com/developer).\n\nNeeds a connected account per customer. Create, submit, and activate before anything else. Connected accounts and platform payments are not self-serve. Email devhelp@airwallex.com with your sandbox email and Client ID if they aren't already on.\n\nEach borrower has their own wallet. Collect the contracted share of actual revenue, apply a reserve floor, and size a new advance underneath that ceiling.\n\nOn every create, send a request_id. Reuse it when you retry. Generate a new one when you mean a new payment.",
+      "steps": [
+        "Create and activate a connected account per borrower",
+        "POST /api/v1/simulation/deposit/create with x-on-behalf-of — stage revenue",
+        "GET /api/v1/balances/current with the header",
+        "POST /api/v1/charges/create — collect the contracted share",
+        "POST /api/v1/connected_account_transfers/create — disburse the advance",
+        "POST /api/v1/platform_reports/create"
+      ],
+      "watch": [
+        "Set the reserve floor high enough that the next advance is constrained.",
+        "Read the borrower balance before collecting. If it can't cover, carry a receivable instead of a failed charge.",
+        "platform_reports: type BALANCE_REPORT, no date filters. Download within 60 seconds of the link."
+      ]
+    },
+    {
+      "n": "08",
+      "title": "Marketplace payments platform",
+      "promise": "Collect buyer money, settle sellers, hold a reserve for refunds.",
+      "body": "If risk changes for one seller, don't recalculate the others.",
+      "brief": "You're building a marketplace payments platform. Airwallex sandbox only (https://mcp.sandbox.airwallex.com/developer).\n\nNeeds a connected account per customer. Create, submit, and activate before anything else. Connected accounts and platform payments are not self-serve. Email devhelp@airwallex.com with your sandbox email and Client ID if they aren't already on.\n\nEach seller has their own wallet. Pay sellers their net, hold a reserve against refunds, and when new risk hits one seller, leave the other reserves alone.\n\nOn every create, send a request_id. Reuse it when you retry. Generate a new one when you mean a new payment.",
+      "steps": [
+        "Create and activate a connected account per seller",
+        "POST /api/v1/simulation/deposit/create — stage the platform pool (no header)",
+        "POST /api/v1/connected_account_transfers/create — pay each seller its net",
+        "Recalculate one seller's reserve. Leave the others alone.",
+        "GET /api/v1/balances/current with the header",
+        "POST /api/v1/charges/create to recover a shortfall, or transfer to release reserve",
+        "POST /api/v1/platform_reports/create"
+      ],
+      "watch": [
+        "Track reserves in your own ledger. Airwallex has no escrow object for this flow.",
+        "Reconcile each cycle: payouts, refunds, and unreleased reserve.",
+        "Check the seller wallet before recovering a shortfall.",
+        "Recalculate only the seller the new evidence hits."
+      ]
+    }
+  ]
+}

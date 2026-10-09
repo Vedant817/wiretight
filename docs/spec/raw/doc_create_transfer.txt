@@ -1,0 +1,1163 @@
+The request body for creating a transfer includes required fields for routing and identification, along with extensive optional parameters covering beneficiary details, payer details, application fees, and transfer configuration.
+
+## Request Parameters
+
+### Request Body
+
+- `reason` (string, required)
+  Reason for the transfer instruction.
+- `reference` (string, required)
+  A user specified reference that will be displayed to the beneficiary on the transfer transaction with their bank.
+- `request_id` (string, required)
+  A unique request ID specified by the client.  Payout creation requests with a `request_id` that has been used in the past 7 days are treated as duplicated payout and cannot be processed. When you are not sure about the outcome of a payout creation request, e.g. when there are network issues or system failures such as timeout, you can try to get a payout with this `request_id` to find out.
+  Note: Can be non-UUID as long as it is unique among the requests within the past 7 days.
+- `transfer_currency` (string, required)
+  Transfer currency, i.e. the currency that the beneficiary receives (3-letter ISO-4217 code).
+- `application_fee_options` (array[object], optional)
+  The application fee options applied to the transfer.
+  - `amount` (string, optional)
+    A positive integer specifying the amount of the fee expressed in the smallest unit of the currency. e.g. cents for USD. This field is required only when type is FIXED.
+  - `currency` (string, optional)
+    Specify the currency of the application fee in ISO 4217 currency code format, e.g., USD, AUD. This field is required when the type is FIXED.
+    When the type is PERCENTAGE and source_type is CONVERSION, the currency for the conversion if specified must be from the currency pair. If the currency is unspecified, the contra currency of the quote will be used.
+  - `metadata` (object, optional)
+    The metadata of the application fee. The value should be set in key:value format. (e.g., id:1).
+  - `percentage` (string, optional)
+    Required if the type is PERCENTAGE, and the value to be provided depends on the transaction context.
+    FX Conversions: The value acts as a markup on the FX rate, increasing the conversion cost by the specified percentage.
+    Others: The value represents a direct fee calculated as a percentage of the transaction amount.
+  - `source_type` (string, optional)
+    Specify type of the source transaction.
+    Possible values:
+    - `CONVERSION`
+    - `TRANSFER`
+  - `type` (string, optional)
+    Define the type of fee calculation. If the `source_type` is `CONVERSION`, then the type must be `PERCENTAGE`.
+    Possible values:
+    - `FIXED`
+    - `PERCENTAGE`
+- `beneficiary` (object, optional)
+  Details for the beneficiary in the transfer request. If beneficiary_id provided in the transfer request then beneficiary should be empty.
+  - `additional_info` (object, optional)
+    Additional information about the beneficiary.
+    - `business_area` (string, optional)
+      Category of business activity.
+    - `business_phone_number` (string, optional)
+      Business phone number.
+    - `business_registration_number` (string, optional)
+      Business registration number.
+    - `external_identifier` (string, optional)
+      The identifier that you use to identify a beneficiary, usually a unique identifier. This field can be used to link transfers or beneficiaries to other records such as tax form details for filing purposes.
+    - `legal_rep_bank_account_number` (string, optional)
+      Legal representative's personal bank account number used for declaration purposes. No funds will be sent to this account number.
+    - `legal_rep_first_name_in_chinese` (string, optional)
+      Legal representative first name in chinese.
+    - `legal_rep_id_number` (string, optional)
+      Legal representative id number.
+    - `legal_rep_last_name_in_chinese` (string, optional)
+      Legal representative last name in chinese.
+    - `legal_rep_mobile_number` (string, optional)
+      Legal representative’s mobile number associated with their bank account.
+    - `personal_email` (string, optional)
+      Personal email.
+    - `personal_first_name_in_chinese` (string, optional)
+      Beneficiary's first name in Chinese.
+    - `personal_id_number` (string, optional)
+      Personal unique identifier number.
+    - `personal_id_type` (string, optional)
+      Personal unique identifier type.
+    - `personal_last_name_in_chinese` (string, optional)
+      Beneficiary's last name in Chinese.
+    - `personal_mobile_number` (string, optional)
+      Personal mobile number.
+    - `recipient_account_id` (string, optional)
+      Account unique identifier of the recipient account used for payout processing. The account must be active and have `customer_agreements.terms_and_conditions.service_agreement_type` set to `RECIPIENT` (verify via [Retrieve account details API](https://www.airwallex.com/docs/api/scale/accounts/detail.md)).
+    - `security_question` (string, optional)
+      Security question. Required when the email address is not registered with Interac e-Transfer autodeposit.
+    - `security_question_answer` (string, optional)
+      Security question answer. Required when the email address is not registered with Interac e-Transfer autodeposit.
+  - `address` (object, optional)
+    Beneficiary's address details.
+    - `city` (string, optional)
+      Beneficiary's city.
+    - `country_code` (string, optional)
+      Beneficiary's country code (2-letter ISO 3166-2 country code).
+    - `postcode` (string, optional)
+      Beneficiary's post code.
+    - `state` (string, optional)
+      Beneficiary's state.
+    - `street_address` (string, optional)
+      Beneficiary's street address.
+  - `bank_details` (object, optional)
+    Beneficiary's bank account details where the payment will be credited.
+    - `account_currency` (string, required)
+      Account Currency.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s bank account.
+    - `bank_country_code` (string, required)
+      Bank country code (2-letter ISO 3166-2 country code).
+    - `account_name_alias` (string, optional)
+      The beneficiary’s account name known in the payment system. This is only supported in some regions and transfer methods. See detailed definitions in the [Payouts Product Docs](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md).
+    - `account_number` (string, optional)
+      Account number, mostly for non-european countries, either account_number or iban should be filled.
+    - `account_routing_type1` (string, optional)
+      Routing code type.
+    - `account_routing_type2` (string, optional)
+      Routing code sub type.
+    - `account_routing_value1` (string, optional)
+      Routing code value.
+    - `account_routing_value2` (string, optional)
+      Routing code sub type value.
+    - `bank_account_category` (string, optional)
+      bank account type.
+    - `bank_branch` (string, optional)
+      Specific branch of bank account.
+    - `bank_name` (string, optional)
+      Bank name of the beneficiary's bank account.
+    - `bank_state` (string, optional)
+      Bank State.
+    - `bank_street_address` (string, optional)
+      Bank street address.
+    - `binding_mobile_number` (string, optional)
+      The mobile number tied to the Beneficiary's bank account.
+    - `fingerprint` (string, optional)
+      Fingerprint of current beneficiary's bank account.
+    - `iban` (string, optional)
+      International bank account number, mostly for european countries.
+    - `intermediary_bank_name` (string, optional)
+      Bank name of the beneficiary's intermediary bank.
+    - `intermediary_bank_swift_code` (string, optional)
+      Intermediary bank SWIFT code / BIC,Should contain alphanumeric characters only, Should be a valid and supported SWIFT code / BIC.
+    - `local_clearing_system` (string, optional)
+      Which clearing system should be used for this local bank transfer.
+
+      Please refer to our [payout guide](https://airwallex.com/guides/payout) for details about each option.
+
+      We suggest explicitly specifying this value, however if it's not provided we will select a default (using the specified account routing type and/or what's most often the best option).
+    - `swift_code` (string, optional)
+      Bank swift code.
+  - `card` (object, optional)
+    Beneficiary's card details where the payment will be credited.
+    - `cardholder_name` (string, required)
+      Cardholder name.
+    - `token` (string, required)
+      Tokenised card number, which can be retrieved from Airwallex beneficiary component.
+    - `brand` (string, optional)
+      Card brand.
+    - `currency` (string, optional)
+      Card currency.
+    - `expiry_month` (string, optional)
+      Expiry month.
+    - `expiry_year` (string, optional)
+      Expiry year.
+    - `number` (string, optional)
+      Card number.
+  - `company_name` (string, optional)
+    Company name of the beneficiary.
+  - `date_of_birth` (string, optional)
+    beneficiary date of birth.
+  - `digital_wallet` (object, optional)
+    Beneficiary's digital wallet details where the payment will be credited.
+    - `account_name` (string, required)
+      Account holder name of the beneficiary’s digital wallet.
+    - `id_type` (string, required)
+      Account identifier type of the beneficiary’s digital wallet.
+    - `id_value` (string, required)
+      Account identifier value of the beneficiary’s digital wallet.
+    - `provider` (string, required)
+      Service provider of the beneficiary's digital wallet.
+    - `country_code` (string, optional)
+      Digital wallet country code (2-letter ISO 3166-2 country code).
+  - `entity_type` (string, optional)
+    Entity type of the beneficiary.
+  - `first_name` (string, optional)
+    First name of the beneficiary.
+  - `last_name` (string, optional)
+    Last name of the beneficiary.
+  - `stablecoin_wallet` (object, optional)
+    - `address` (string, required)
+      Blockchain wallet address of the beneficiary. Sending stablecoins to an incorrect wallet address or unsupported network will result in the irreversible loss of funds. Always verify the recipient wallet address and network before initiating a transfer.
+    - `asset` (string, required)
+      Stablecoin asset type, e.g., `USDC`.
+    - `network` (string, required)
+      Blockchain network, e.g., `ETHEREUM`.
+  - `type` (string, optional)
+    Type of the beneficiary, indicating the type of account or method through which the beneficiary receives funds. Possible values: `BANK_ACCOUNT`, `DIGITAL_WALLET`, `CARD`, `STABLECOIN_WALLET`.
+- `beneficiary_id` (string, optional)
+  An Airwallex `beneficiary_id` previously generated by utilizing the Airwallex Contact API.  This may be provided in place of the `beneficiary` object and should be empty if the beneficiary fields are provided.
+- `client_data` (string, optional)
+  Free text field available to you; can be populated with any additional identifiers that may be required for the transfer.
+- `fee_paid_by` (string, optional)
+  Denotes whether `PAYER`/`BENEFICIARY` will be liable for the transfer fees, and it affects the actual amount the beneficiary receives.
+- `lock_rate_on_create` (boolean, optional)
+  Customers could choose whether to use confirmed rates for scheduled transfer with conversion. This field should only be specified when a conversion is involved.If customers do not specify this field, the default value is true. This field can either be specified to be TRUE when creating a transfer with currency conversions at a confirmed rate or FALSE if an unconfirmed rate is wanted.
+- `metadata` (object, optional)
+  A set of key-value pairs for storing your own data together with the transfer.
+- `payer` (object, optional)
+  Details for the payer in the transfer request. If payer_id provided in the transfer request then payer should be empty.
+  - `address` (object, required)
+    Payer's address details.
+    - `country_code` (string, required)
+      Payer's country code (2-letter ISO 3166-2 country code).
+    - `city` (string, optional)
+      Payer's city.
+    - `postcode` (string, optional)
+      Payer's post code.
+    - `state` (string, optional)
+      Payer's state.
+    - `street_address` (string, optional)
+      Payer's street address.
+  - `entity_type` (string, required)
+    Entity type of the payer.
+  - `additional_info` (object, optional)
+    Additional information about the payer.
+    - `business_registration_number` (string, optional)
+      Business registration number.
+    - `business_registration_type` (string, optional)
+      Type of business as registered with the local government authority.
+    - `external_id` (string, optional)
+      Unique identifier of the person in your company.
+    - `personal_email` (string, optional)
+      Personal email.
+    - `personal_id_number` (string, optional)
+      Personal unique identifier number.
+  - `company_name` (string, optional)
+    Company name of the payer.
+  - `date_of_birth` (string, optional)
+    Payer's date of birth.
+  - `first_name` (string, optional)
+    First name of the payer.
+  - `last_name` (string, optional)
+    Last name of the payer.
+- `payer_id` (string, optional)
+  An Airwallex payer_id previously generated by utilising the Airwallex Contact API.  This may be provided in place of the payer section and should be empty if the payer fields are provided.
+- `quote_id` (string, optional)
+  quote id from a previously created lockfx quote.
+- `remarks` (string, optional)
+  Additional information about this transfer, which will not be passed to the beneficiary.
+- `source_amount` (string, optional)
+  Source amount in `source_currency`.
+- `source_currency` (string, optional)
+  Source currency, i.e. the currency that the Payer uses to fund the transfer (3-letter ISO-4217 code).
+- `swift_charge_option` (string, optional)
+  (For SWIFT transfers only), specify who should bear SWIFT charges, either `SHARED` (default) or `PAYER`.
+- `transfer_amount` (string, optional)
+  Transfer amount in `transfer_currency`.
+- `transfer_date` (string, optional)
+  Date when transfer should be made.
+- `transfer_method` (string, optional)
+  Transfer method, i.e. SWIFT, LOCAL.
+
+
+A complete cURL example demonstrating how to call the Create a Transfer endpoint with all available request body parameters populated.
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/api/v1/transfers/create' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "application_fee_options": [
+    {
+      "amount": "5",
+      "currency": "AUD",
+      "percentage": "0.1",
+      "source_type": "TRANSFER",
+      "type": "FIXED"
+    }
+  ],
+  "beneficiary": {
+    "additional_info": {
+      "business_area": "Travel",
+      "business_phone_number": "689342234",
+      "business_registration_number": "IT593003",
+      "external_identifier": "<string>",
+      "legal_rep_bank_account_number": "44250100003700000000",
+      "legal_rep_first_name_in_chinese": "小芳",
+      "legal_rep_id_number": "110108199304203520",
+      "legal_rep_last_name_in_chinese": "刘",
+      "legal_rep_mobile_number": "13651362890",
+      "personal_email": "john.walker@gmail.com",
+      "personal_first_name_in_chinese": "大明",
+      "personal_id_number": "1234567890",
+      "personal_id_type": "NATIONAL_ID",
+      "personal_last_name_in_chinese": "李",
+      "personal_mobile_number": "13651362890",
+      "recipient_account_id": "<string>",
+      "security_question": "What is the name of my second puppy?",
+      "security_question_answer": "Scooby Doo"
+    },
+    "address": {
+      "city": "Melbourne",
+      "country_code": "AU",
+      "postcode": "3000",
+      "state": "VIC",
+      "street_address": "15 William Street"
+    },
+    "bank_details": {
+      "account_currency": "AUD",
+      "account_name": "Lee Da Ming",
+      "account_name_alias": "Lee D M",
+      "account_number": "12750852",
+      "account_routing_type1": "bsb",
+      "account_routing_type2": "sort_code",
+      "account_routing_value1": "083064",
+      "account_routing_value2": "123456",
+      "bank_account_category": "Checking,Savings,Vista,Maestra",
+      "bank_branch": "Melbourne",
+      "bank_country_code": "AU",
+      "bank_name": "National Australia Bank",
+      "bank_state": "<string>",
+      "bank_street_address": "500 Bourke Street, Melbourne 3000, Australia",
+      "binding_mobile_number": "654897612345",
+      "fingerprint": "2e99758548972a8e8822ad47fa1017ff72f06f3ff6a016851f45c398732bc50c",
+      "iban": "ES8023100001180000012345",
+      "intermediary_bank_name": "National Australia Bank",
+      "intermediary_bank_swift_code": "CTBAAU2S",
+      "local_clearing_system": "ACH",
+      "swift_code": "CTBAAU2S"
+    },
+    "card": {
+      "brand": "VISA",
+      "cardholder_name": "John Walker",
+      "currency": "USD",
+      "expiry_month": "10",
+      "expiry_year": "2033",
+      "number": "************1111",
+      "token": "AKvN4TqxI04SNFZ+oYRXaECtDA=="
+    },
+    "company_name": "Complete Concrete Pty Ltd",
+    "date_of_birth": "1976-08-26",
+    "digital_wallet": {
+      "account_name": "John Walker Corporation",
+      "country_code": "US",
+      "id_type": "account_number",
+      "id_value": "1033106816639334",
+      "provider": "AIRWALLEX"
+    },
+    "entity_type": "COMPANY",
+    "first_name": "John",
+    "last_name": "Walker",
+    "type": "<string>"
+  },
+  "beneficiary_id": "8365ea88-2946-4877-abe1-e02a1015288d",
+  "client_data": "string",
+  "fee_paid_by": "PAYER",
+  "lock_rate_on_create": false,
+  "metadata": {
+    "order_id": "0123456789"
+  },
+  "payer": {
+    "additional_info": {
+      "business_registration_number": "EU300503",
+      "business_registration_type": "Partnership",
+      "external_id": "1234567890",
+      "personal_email": "james.smith@google.com",
+      "personal_id_number": "1234567890"
+    },
+    "address": {
+      "city": "Melbourne",
+      "country_code": "AU",
+      "postcode": "3000",
+      "state": "VIC",
+      "street_address": "15 William Street"
+    },
+    "company_name": "Complete Concrete Pty Ltd",
+    "date_of_birth": "1976-08-26",
+    "entity_type": "COMPANY",
+    "first_name": "James",
+    "last_name": "Smith"
+  },
+  "payer_id": "46c22228-5831-4c53-a4fa-a3ab4954877c",
+  "quote_id": "<string>",
+  "reason": "travel",
+  "reference": "PMT1936398",
+  "remarks": "Any information",
+  "request_id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+  "source_amount": "10000",
+  "source_currency": "AUD",
+  "swift_charge_option": "SHARED",
+  "transfer_amount": "10000",
+  "transfer_currency": "AUD",
+  "transfer_date": "2017-03-20",
+  "transfer_method": "SWIFT"
+}'
+```
+
+Step 2 details how to call the Create a new transfer endpoint, covering all required and optional request parameters including beneficiary details, currency fields, transfer method, scheduling, FX rate locking, and payer information.
+
+## Step 2: Create a transfer
+
+> **\[INFORMATIONAL]**
+>
+> **New features**
+>
+> - [Transfers via Airwallex Pay](https://www.airwallex.com/docs/payouts/transfers/transfers-via-airwallex-pay.md): Transfer to other Airwallex accounts via Airwallex Pay by specifying `DIGITAL_WALLET` for type under the beneficiary object.
+> - [Transfers via Stablecoin](https://www.airwallex.com/docs/payouts/transfers/transfers-via-stablecoin.md): Pay out stablecoins to a beneficiary's wallet on a supported blockchain network by specifying `STABLECOIN_WALLET` for type under the beneficiary object.
+> - Schedule transfers: Create future-dated transfers up to 180 days with the flexibility to lock in the FX rate with an upfront prepayment using the `lock_rate_on_create` field. Learn more in [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction).
+
+Call [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md) with the required beneficiary and transaction information (currency, amount, date, reference) to create a transfer.
+
+Beneficiary information can be specified within the request in two ways:
+
+1. Beneficiary ID
+
+   If you prefer to save beneficiary information with Airwallex in advance to simplify the transfer creation process, you can call [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md), and a unique `beneficiary_id` will be returned. This can be used in place of the `beneficiary` object to create the transfer subsequently.
+
+   See [Create beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md) and [Manage beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/manage-beneficiaries.md) to learn more.
+
+2. Directly within the request
+
+   If you prefer to manage all beneficiary information outside of Airwallex, you can provide beneficiary information directly under the beneficiary object each time when calling [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+Refer to the [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) for precise field requirements specific to the intended transfer scenario. If you specify a parameter that is either not required or not on the full schema, it will be ignored and removed from the response. Please find below further considerations on some of the required parameters:
+
+- `beneficiary`: beneficiary details should be provided directly in this object if `beneficiary_id` is not used:
+  - `type`: Specify whether the beneficiary type is a `BANK_ACCOUNT`, a `DIGITAL_WALLET` (including Airwallex Pay), a `CARD`, or a `STABLECOIN_WALLET`. The value will default to `BANK_ACCOUNT` if not specified.
+  - `bank_details`, `digital_wallet`, `card`, or `stablecoin_wallet`: Required beneficiary bank account details, digital wallet, card, or stablecoin wallet parameters (depending on the type specified), varies according to the specified transfer scenario. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `address`:  Required address parameters such as street address, city, state and postcode will vary according to the specified address country. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `entity_type`: Specify whether the beneficiary is an individual (`PERSONAL`) or a business (`COMPANY`).
+  - `company_name`, OR `first_name` and `last_name`: The beneficiary’s name according to the `entity_type`.
+
+- `transfer_currency`: The currency (3-letter ISO 4217 code) in which the beneficiary receives. It must match `account_currency` of the beneficiary’s bank account details. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported currencies.
+
+- `source_currency`: The currency (3-letter ISO 4217 code) in which to fund the transfer. If it is different from `transfer_currency`, an underlying currency conversion will be booked (Refer to [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) for more details).
+
+- `transfer_amount` OR `source_amount`: Please only specify one of these two amounts in their respective currencies. The other amount will be calculated and returned in the response.
+
+  Actual amounts with transfer fees applied (if any) are returned as `amount_beneficiary_receives` and `amount_payer_pays` in the response. If a transfer was initially [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), these amounts are tentative based on the exchange rate at the time of creation until the transfer status changes to `SCHEDULED`, at which point the exchange rate is confirmed. By default, transfer fees are charged to the payer i.e. added to `transfer_amount` and resulted in `amount_payer_pays`. If you wish to pass on the fees to the beneficiary, you can specify using the `fee_paid_by` parameter (see below for more details).
+
+- `transfer_method`: Specify `SWIFT` to create an international SWIFT transfer; or `LOCAL` to create a transfer via the local clearing system, which is faster and more cost-effective. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported transfer methods by countries/regions and currencies.
+
+- `reference`:  A custom reference for this transfer, intended to identify the transaction to the beneficiary. Whether this reference appears on the beneficiary's bank statement depends on the local clearing system and our banking partners. Contact your Account Manager to confirm whether display of reference is supported for your transfer scenarios.
+
+- `reason`: Specify the purpose of the transfer from one of the accepted values: `audio_visual_services`, `bill_payment`, `business_expenses`, `construction`, `donation_charitable_contribution`, `education_training`, `freight`, `goods_purchased`, `investment_capital`, `investment_proceeds`, `living_expenses`, `loan_credit_repayment`, `medical_services`, `pension`, `professional_business_services`, `real_estate`, `taxes`, `technical_services`, `transfer_to_own_account`, `travel`, `wages_salary`, `other_services`. Note that a different set of reasons applies for international transfers from customers registered in Israel. See [Israel](https://www.airwallex.com/docs/payouts/transfers/transfers-to-from-countries-with-regulatory-requirements/israel.md) for the list of accepted values.
+
+In addition, you may also choose to specify the following optional parameters in your request to further customize the transfer or leverage other related features:
+
+- `beneficiary.additional_info.personal_email`: Specify this parameter if you want the beneficiary to receive an email notification upon transfer being dispatched. Please contact your Account Manager to enable this feature beforehand.
+
+- `fee_paid_by`: By default, transfer fees will be charged to the `PAYER` and included in the `amount_payer_pays` within the response. If you wish to pass on the fees to the beneficiary, set the value to `BENEFICIARY`.
+
+- `swift_charge_option`: By default, `SHARED` will be applied, in which case the SWIFT charges will be shared between the payer and the beneficiary, i.e. the beneficiary will receive  the `amount_beneficiary_receives` less corresponding SWIFT charges by the beneficiary bank. If you want the beneficiary to receive the full `amount_beneficiary_receives`, set the value to PAYER to cover the additional SWIFT charges.
+
+- `transfer_date`: Specify a current or future date (ISO 8601 format) for when the transfer should be processed. If left blank, the transfer date will default to the earliest possible date and your transfer will be dispatched as soon as possible.
+
+  > **\[WARNING]**
+  >
+  > To dispatch a transfer as soon as possible, omit `transfer_date`. Setting `transfer_date` (including today's date) routes the transfer through scheduled-transfer logic and is not equivalent to omitting the field.
+  >
+  >
+  >
+  >
+  >
+  > `transfer_date` is interpreted in your request account owning entity timezone. For related transfer lifecycle behavior (`SCHEDULED` / `OVERDUE`) and fund deduction timing, see [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) and [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction). To learn more about account timezone and settlement timing, see [Funding and Settlement Models](https://www.airwallex.com/docs/transactional-fx/funding-and-settlement-models.md).
+
+  For transfers with the same source and transfer currency, you can specify a date up to 180 days into the future. For transfers with currency conversions, generally you can specify a date up to 90 days into the future (varies by currency pairs). Longer tenors up to 180 days (varies by currency pair) is possible with our FX forwards product. Please confirm the acceptable value dates by currency pair with your Account Manager.
+
+  For transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), the `transfer_date` will be updated if it was approved after the original specified date; at which point the transfer status transitions to `SCHEDULED` and `transfer_date` is fixed. The date when the transfer is `SENT` will be returned in `dispatch_date`.
+
+- `lock_rate_on_create`: Specify whether to lock the conversion rate for a future-dated transfer upon creation. This field should only be specified for transfers with currency conversions. The value will default to `TRUE` if not specified.
+  - If `TRUE`: The transfer is created with a **confirmed** conversion rate. A `prepayment` (amount varies by currency pair and tenor) is held upfront to cover any FX delta fee in the event of transfer cancellation, and the full amount will be deducted on the scheduled `transfer_date`. Further details are returned under the `prepayment` object.
+  - If `FALSE`: The transfer is created with an **unconfirmed** conversion rate, which will be confirmed on the scheduled `transfer_date`, when the full amount will be deducted.
+
+    See [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction) for more details.
+
+- `quote_id`: Specify the `quote_id` returned from a previously created [quote](https://www.airwallex.com/docs/transactional-fx/get-started/choose-your-fx-solution/quotes.md) to fix the conversion rate of the transfer. You must also ensure that the `source_currency` and `transfer_currency` in your transfer request match the `sell_currency` and `buy_currency` from the quote. Quotes cannot be applied for [creating and submitting a transfer for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md).
+
+  If not specified, the system will automatically book the underlying currency conversion based on `transfer_date` and `lock_rate_on_create` parameters. See [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) to learn more about the options you have in performing conversions and how you can leverage the corresponding API endpoints.
+
+- `payer` or `payer_id`: Specify the payer information other than the Airwallex account owner with POBO (Pay On Behalf Of) enabled on a case-by-case approval basis. Similar to beneficiaries, the payer information may be provided directly within the `payer` object, or by specifying the `payer_id` of a saved payer. See [Create a payer](https://www.airwallex.com/docs/payouts/payers/create-a-payer.md) for more information. By default, Airwallex identifies the payer as the Airwallex account owner creating the transfer (connected account owner in a platform use case), and it is not necessary to specify the payer information.
+
+
+Step 2 of creating a transfer covers calling the Create a new transfer endpoint with required and optional parameters, including beneficiary details, currency, transfer method, fees, scheduling, and FX rate locking.
+
+## Step 2: Create a transfer
+
+> **\[INFORMATIONAL]**
+>
+> **New features**
+>
+> - [Transfers via Airwallex Pay](https://www.airwallex.com/docs/payouts/transfers/transfers-via-airwallex-pay.md): Transfer to other Airwallex accounts via Airwallex Pay by specifying `DIGITAL_WALLET` for type under the beneficiary object.
+> - [Transfers via Stablecoin](https://www.airwallex.com/docs/payouts/transfers/transfers-via-stablecoin.md): Pay out stablecoins to a beneficiary's wallet on a supported blockchain network by specifying `STABLECOIN_WALLET` for type under the beneficiary object.
+> - Schedule transfers: Create future-dated transfers up to 180 days with the flexibility to lock in the FX rate with an upfront prepayment using the `lock_rate_on_create` field. Learn more in [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction).
+
+Call [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md) with the required beneficiary and transaction information (currency, amount, date, reference) to create a transfer.
+
+Beneficiary information can be specified within the request in two ways:
+
+1. Beneficiary ID
+
+   If you prefer to save beneficiary information with Airwallex in advance to simplify the transfer creation process, you can call [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md), and a unique `beneficiary_id` will be returned. This can be used in place of the `beneficiary` object to create the transfer subsequently.
+
+   See [Create beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md) and [Manage beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/manage-beneficiaries.md) to learn more.
+
+2. Directly within the request
+
+   If you prefer to manage all beneficiary information outside of Airwallex, you can provide beneficiary information directly under the beneficiary object each time when calling [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+Refer to the [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) for precise field requirements specific to the intended transfer scenario. If you specify a parameter that is either not required or not on the full schema, it will be ignored and removed from the response. Please find below further considerations on some of the required parameters:
+
+- `beneficiary`: beneficiary details should be provided directly in this object if `beneficiary_id` is not used:
+  - `type`: Specify whether the beneficiary type is a `BANK_ACCOUNT`, a `DIGITAL_WALLET` (including Airwallex Pay), a `CARD`, or a `STABLECOIN_WALLET`. The value will default to `BANK_ACCOUNT` if not specified.
+  - `bank_details`, `digital_wallet`, `card`, or `stablecoin_wallet`: Required beneficiary bank account details, digital wallet, card, or stablecoin wallet parameters (depending on the type specified), varies according to the specified transfer scenario. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `address`:  Required address parameters such as street address, city, state and postcode will vary according to the specified address country. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `entity_type`: Specify whether the beneficiary is an individual (`PERSONAL`) or a business (`COMPANY`).
+  - `company_name`, OR `first_name` and `last_name`: The beneficiary’s name according to the `entity_type`.
+
+- `transfer_currency`: The currency (3-letter ISO 4217 code) in which the beneficiary receives. It must match `account_currency` of the beneficiary’s bank account details. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported currencies.
+
+- `source_currency`: The currency (3-letter ISO 4217 code) in which to fund the transfer. If it is different from `transfer_currency`, an underlying currency conversion will be booked (Refer to [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) for more details).
+
+- `transfer_amount` OR `source_amount`: Please only specify one of these two amounts in their respective currencies. The other amount will be calculated and returned in the response.
+
+  Actual amounts with transfer fees applied (if any) are returned as `amount_beneficiary_receives` and `amount_payer_pays` in the response. If a transfer was initially [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), these amounts are tentative based on the exchange rate at the time of creation until the transfer status changes to `SCHEDULED`, at which point the exchange rate is confirmed. By default, transfer fees are charged to the payer i.e. added to `transfer_amount` and resulted in `amount_payer_pays`. If you wish to pass on the fees to the beneficiary, you can specify using the `fee_paid_by` parameter (see below for more details).
+
+- `transfer_method`: Specify `SWIFT` to create an international SWIFT transfer; or `LOCAL` to create a transfer via the local clearing system, which is faster and more cost-effective. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported transfer methods by countries/regions and currencies.
+
+- `reference`:  A custom reference for this transfer, intended to identify the transaction to the beneficiary. Whether this reference appears on the beneficiary's bank statement depends on the local clearing system and our banking partners. Contact your Account Manager to confirm whether display of reference is supported for your transfer scenarios.
+
+- `reason`: Specify the purpose of the transfer from one of the accepted values: `audio_visual_services`, `bill_payment`, `business_expenses`, `construction`, `donation_charitable_contribution`, `education_training`, `freight`, `goods_purchased`, `investment_capital`, `investment_proceeds`, `living_expenses`, `loan_credit_repayment`, `medical_services`, `pension`, `professional_business_services`, `real_estate`, `taxes`, `technical_services`, `transfer_to_own_account`, `travel`, `wages_salary`, `other_services`. Note that a different set of reasons applies for international transfers from customers registered in Israel. See [Israel](https://www.airwallex.com/docs/payouts/transfers/transfers-to-from-countries-with-regulatory-requirements/israel.md) for the list of accepted values.
+
+In addition, you may also choose to specify the following optional parameters in your request to further customize the transfer or leverage other related features:
+
+- `beneficiary.additional_info.personal_email`: Specify this parameter if you want the beneficiary to receive an email notification upon transfer being dispatched. Please contact your Account Manager to enable this feature beforehand.
+
+- `fee_paid_by`: By default, transfer fees will be charged to the `PAYER` and included in the `amount_payer_pays` within the response. If you wish to pass on the fees to the beneficiary, set the value to `BENEFICIARY`.
+
+- `swift_charge_option`: By default, `SHARED` will be applied, in which case the SWIFT charges will be shared between the payer and the beneficiary, i.e. the beneficiary will receive  the `amount_beneficiary_receives` less corresponding SWIFT charges by the beneficiary bank. If you want the beneficiary to receive the full `amount_beneficiary_receives`, set the value to PAYER to cover the additional SWIFT charges.
+
+- `transfer_date`: Specify a current or future date (ISO 8601 format) for when the transfer should be processed. If left blank, the transfer date will default to the earliest possible date and your transfer will be dispatched as soon as possible.
+
+  > **\[WARNING]**
+  >
+  > To dispatch a transfer as soon as possible, omit `transfer_date`. Setting `transfer_date` (including today's date) routes the transfer through scheduled-transfer logic and is not equivalent to omitting the field.
+  >
+  >
+  >
+  >
+  >
+  > `transfer_date` is interpreted in your request account owning entity timezone. For related transfer lifecycle behavior (`SCHEDULED` / `OVERDUE`) and fund deduction timing, see [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) and [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction). To learn more about account timezone and settlement timing, see [Funding and Settlement Models](https://www.airwallex.com/docs/transactional-fx/funding-and-settlement-models.md).
+
+  For transfers with the same source and transfer currency, you can specify a date up to 180 days into the future. For transfers with currency conversions, generally you can specify a date up to 90 days into the future (varies by currency pairs). Longer tenors up to 180 days (varies by currency pair) is possible with our FX forwards product. Please confirm the acceptable value dates by currency pair with your Account Manager.
+
+  For transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), the `transfer_date` will be updated if it was approved after the original specified date; at which point the transfer status transitions to `SCHEDULED` and `transfer_date` is fixed. The date when the transfer is `SENT` will be returned in `dispatch_date`.
+
+- `lock_rate_on_create`: Specify whether to lock the conversion rate for a future-dated transfer upon creation. This field should only be specified for transfers with currency conversions. The value will default to `TRUE` if not specified.
+  - If `TRUE`: The transfer is created with a **confirmed** conversion rate. A `prepayment` (amount varies by currency pair and tenor) is held upfront to cover any FX delta fee in the event of transfer cancellation, and the full amount will be deducted on the scheduled `transfer_date`. Further details are returned under the `prepayment` object.
+  - If `FALSE`: The transfer is created with an **unconfirmed** conversion rate, which will be confirmed on the scheduled `transfer_date`, when the full amount will be deducted.
+
+    See [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction) for more details.
+
+- `quote_id`: Specify the `quote_id` returned from a previously created [quote](https://www.airwallex.com/docs/transactional-fx/get-started/choose-your-fx-solution/quotes.md) to fix the conversion rate of the transfer. You must also ensure that the `source_currency` and `transfer_currency` in your transfer request match the `sell_currency` and `buy_currency` from the quote. Quotes cannot be applied for [creating and submitting a transfer for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md).
+
+  If not specified, the system will automatically book the underlying currency conversion based on `transfer_date` and `lock_rate_on_create` parameters. See [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) to learn more about the options you have in performing conversions and how you can leverage the corresponding API endpoints.
+
+- `payer` or `payer_id`: Specify the payer information other than the Airwallex account owner with POBO (Pay On Behalf Of) enabled on a case-by-case approval basis. Similar to beneficiaries, the payer information may be provided directly within the `payer` object, or by specifying the `payer_id` of a saved payer. See [Create a payer](https://www.airwallex.com/docs/payouts/payers/create-a-payer.md) for more information. By default, Airwallex identifies the payer as the Airwallex account owner creating the transfer (connected account owner in a platform use case), and it is not necessary to specify the payer information.
+
+
+Step 2 of creating a transfer covers calling the Create a new transfer endpoint with the required and optional request parameters, including beneficiary details, currencies, amounts, transfer method, scheduling, FX rate locking, and payer information.
+
+## Step 2: Create a transfer
+
+> **\[INFORMATIONAL]**
+>
+> **New features**
+>
+> - [Transfers via Airwallex Pay](https://www.airwallex.com/docs/payouts/transfers/transfers-via-airwallex-pay.md): Transfer to other Airwallex accounts via Airwallex Pay by specifying `DIGITAL_WALLET` for type under the beneficiary object.
+> - [Transfers via Stablecoin](https://www.airwallex.com/docs/payouts/transfers/transfers-via-stablecoin.md): Pay out stablecoins to a beneficiary's wallet on a supported blockchain network by specifying `STABLECOIN_WALLET` for type under the beneficiary object.
+> - Schedule transfers: Create future-dated transfers up to 180 days with the flexibility to lock in the FX rate with an upfront prepayment using the `lock_rate_on_create` field. Learn more in [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction).
+
+Call [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md) with the required beneficiary and transaction information (currency, amount, date, reference) to create a transfer.
+
+Beneficiary information can be specified within the request in two ways:
+
+1. Beneficiary ID
+
+   If you prefer to save beneficiary information with Airwallex in advance to simplify the transfer creation process, you can call [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md), and a unique `beneficiary_id` will be returned. This can be used in place of the `beneficiary` object to create the transfer subsequently.
+
+   See [Create beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md) and [Manage beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/manage-beneficiaries.md) to learn more.
+
+2. Directly within the request
+
+   If you prefer to manage all beneficiary information outside of Airwallex, you can provide beneficiary information directly under the beneficiary object each time when calling [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+Refer to the [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) for precise field requirements specific to the intended transfer scenario. If you specify a parameter that is either not required or not on the full schema, it will be ignored and removed from the response. Please find below further considerations on some of the required parameters:
+
+- `beneficiary`: beneficiary details should be provided directly in this object if `beneficiary_id` is not used:
+  - `type`: Specify whether the beneficiary type is a `BANK_ACCOUNT`, a `DIGITAL_WALLET` (including Airwallex Pay), a `CARD`, or a `STABLECOIN_WALLET`. The value will default to `BANK_ACCOUNT` if not specified.
+  - `bank_details`, `digital_wallet`, `card`, or `stablecoin_wallet`: Required beneficiary bank account details, digital wallet, card, or stablecoin wallet parameters (depending on the type specified), varies according to the specified transfer scenario. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `address`:  Required address parameters such as street address, city, state and postcode will vary according to the specified address country. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `entity_type`: Specify whether the beneficiary is an individual (`PERSONAL`) or a business (`COMPANY`).
+  - `company_name`, OR `first_name` and `last_name`: The beneficiary’s name according to the `entity_type`.
+
+- `transfer_currency`: The currency (3-letter ISO 4217 code) in which the beneficiary receives. It must match `account_currency` of the beneficiary’s bank account details. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported currencies.
+
+- `source_currency`: The currency (3-letter ISO 4217 code) in which to fund the transfer. If it is different from `transfer_currency`, an underlying currency conversion will be booked (Refer to [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) for more details).
+
+- `transfer_amount` OR `source_amount`: Please only specify one of these two amounts in their respective currencies. The other amount will be calculated and returned in the response.
+
+  Actual amounts with transfer fees applied (if any) are returned as `amount_beneficiary_receives` and `amount_payer_pays` in the response. If a transfer was initially [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), these amounts are tentative based on the exchange rate at the time of creation until the transfer status changes to `SCHEDULED`, at which point the exchange rate is confirmed. By default, transfer fees are charged to the payer i.e. added to `transfer_amount` and resulted in `amount_payer_pays`. If you wish to pass on the fees to the beneficiary, you can specify using the `fee_paid_by` parameter (see below for more details).
+
+- `transfer_method`: Specify `SWIFT` to create an international SWIFT transfer; or `LOCAL` to create a transfer via the local clearing system, which is faster and more cost-effective. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported transfer methods by countries/regions and currencies.
+
+- `reference`:  A custom reference for this transfer, intended to identify the transaction to the beneficiary. Whether this reference appears on the beneficiary's bank statement depends on the local clearing system and our banking partners. Contact your Account Manager to confirm whether display of reference is supported for your transfer scenarios.
+
+- `reason`: Specify the purpose of the transfer from one of the accepted values: `audio_visual_services`, `bill_payment`, `business_expenses`, `construction`, `donation_charitable_contribution`, `education_training`, `freight`, `goods_purchased`, `investment_capital`, `investment_proceeds`, `living_expenses`, `loan_credit_repayment`, `medical_services`, `pension`, `professional_business_services`, `real_estate`, `taxes`, `technical_services`, `transfer_to_own_account`, `travel`, `wages_salary`, `other_services`. Note that a different set of reasons applies for international transfers from customers registered in Israel. See [Israel](https://www.airwallex.com/docs/payouts/transfers/transfers-to-from-countries-with-regulatory-requirements/israel.md) for the list of accepted values.
+
+In addition, you may also choose to specify the following optional parameters in your request to further customize the transfer or leverage other related features:
+
+- `beneficiary.additional_info.personal_email`: Specify this parameter if you want the beneficiary to receive an email notification upon transfer being dispatched. Please contact your Account Manager to enable this feature beforehand.
+
+- `fee_paid_by`: By default, transfer fees will be charged to the `PAYER` and included in the `amount_payer_pays` within the response. If you wish to pass on the fees to the beneficiary, set the value to `BENEFICIARY`.
+
+- `swift_charge_option`: By default, `SHARED` will be applied, in which case the SWIFT charges will be shared between the payer and the beneficiary, i.e. the beneficiary will receive  the `amount_beneficiary_receives` less corresponding SWIFT charges by the beneficiary bank. If you want the beneficiary to receive the full `amount_beneficiary_receives`, set the value to PAYER to cover the additional SWIFT charges.
+
+- `transfer_date`: Specify a current or future date (ISO 8601 format) for when the transfer should be processed. If left blank, the transfer date will default to the earliest possible date and your transfer will be dispatched as soon as possible.
+
+  > **\[WARNING]**
+  >
+  > To dispatch a transfer as soon as possible, omit `transfer_date`. Setting `transfer_date` (including today's date) routes the transfer through scheduled-transfer logic and is not equivalent to omitting the field.
+  >
+  >
+  >
+  >
+  >
+  > `transfer_date` is interpreted in your request account owning entity timezone. For related transfer lifecycle behavior (`SCHEDULED` / `OVERDUE`) and fund deduction timing, see [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) and [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction). To learn more about account timezone and settlement timing, see [Funding and Settlement Models](https://www.airwallex.com/docs/transactional-fx/funding-and-settlement-models.md).
+
+  For transfers with the same source and transfer currency, you can specify a date up to 180 days into the future. For transfers with currency conversions, generally you can specify a date up to 90 days into the future (varies by currency pairs). Longer tenors up to 180 days (varies by currency pair) is possible with our FX forwards product. Please confirm the acceptable value dates by currency pair with your Account Manager.
+
+  For transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), the `transfer_date` will be updated if it was approved after the original specified date; at which point the transfer status transitions to `SCHEDULED` and `transfer_date` is fixed. The date when the transfer is `SENT` will be returned in `dispatch_date`.
+
+- `lock_rate_on_create`: Specify whether to lock the conversion rate for a future-dated transfer upon creation. This field should only be specified for transfers with currency conversions. The value will default to `TRUE` if not specified.
+  - If `TRUE`: The transfer is created with a **confirmed** conversion rate. A `prepayment` (amount varies by currency pair and tenor) is held upfront to cover any FX delta fee in the event of transfer cancellation, and the full amount will be deducted on the scheduled `transfer_date`. Further details are returned under the `prepayment` object.
+  - If `FALSE`: The transfer is created with an **unconfirmed** conversion rate, which will be confirmed on the scheduled `transfer_date`, when the full amount will be deducted.
+
+    See [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction) for more details.
+
+- `quote_id`: Specify the `quote_id` returned from a previously created [quote](https://www.airwallex.com/docs/transactional-fx/get-started/choose-your-fx-solution/quotes.md) to fix the conversion rate of the transfer. You must also ensure that the `source_currency` and `transfer_currency` in your transfer request match the `sell_currency` and `buy_currency` from the quote. Quotes cannot be applied for [creating and submitting a transfer for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md).
+
+  If not specified, the system will automatically book the underlying currency conversion based on `transfer_date` and `lock_rate_on_create` parameters. See [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) to learn more about the options you have in performing conversions and how you can leverage the corresponding API endpoints.
+
+- `payer` or `payer_id`: Specify the payer information other than the Airwallex account owner with POBO (Pay On Behalf Of) enabled on a case-by-case approval basis. Similar to beneficiaries, the payer information may be provided directly within the `payer` object, or by specifying the `payer_id` of a saved payer. See [Create a payer](https://www.airwallex.com/docs/payouts/payers/create-a-payer.md) for more information. By default, Airwallex identifies the payer as the Airwallex account owner creating the transfer (connected account owner in a platform use case), and it is not necessary to specify the payer information.
+
+
+Step 2 of creating a transfer covers calling the Create a new transfer endpoint, the two ways to supply beneficiary information (by saved `beneficiary_id` or inline), and all required and optional request parameters including currency, method, date, rate-locking, fees, and payer details.
+
+## Step 2: Create a transfer
+
+> **\[INFORMATIONAL]**
+>
+> **New features**
+>
+> - [Transfers via Airwallex Pay](https://www.airwallex.com/docs/payouts/transfers/transfers-via-airwallex-pay.md): Transfer to other Airwallex accounts via Airwallex Pay by specifying `DIGITAL_WALLET` for type under the beneficiary object.
+> - [Transfers via Stablecoin](https://www.airwallex.com/docs/payouts/transfers/transfers-via-stablecoin.md): Pay out stablecoins to a beneficiary's wallet on a supported blockchain network by specifying `STABLECOIN_WALLET` for type under the beneficiary object.
+> - Schedule transfers: Create future-dated transfers up to 180 days with the flexibility to lock in the FX rate with an upfront prepayment using the `lock_rate_on_create` field. Learn more in [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction).
+
+Call [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md) with the required beneficiary and transaction information (currency, amount, date, reference) to create a transfer.
+
+Beneficiary information can be specified within the request in two ways:
+
+1. Beneficiary ID
+
+   If you prefer to save beneficiary information with Airwallex in advance to simplify the transfer creation process, you can call [Create a new beneficiary](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md), and a unique `beneficiary_id` will be returned. This can be used in place of the `beneficiary` object to create the transfer subsequently.
+
+   See [Create beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/create-beneficiaries.md) and [Manage beneficiaries](https://www.airwallex.com/docs/payouts/beneficiaries/manage-beneficiaries.md) to learn more.
+
+2. Directly within the request
+
+   If you prefer to manage all beneficiary information outside of Airwallex, you can provide beneficiary information directly under the beneficiary object each time when calling [Create a new transfer](https://www.airwallex.com/docs/api/payouts/transfers/create.md).
+
+Refer to the [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) for precise field requirements specific to the intended transfer scenario. If you specify a parameter that is either not required or not on the full schema, it will be ignored and removed from the response. Please find below further considerations on some of the required parameters:
+
+- `beneficiary`: beneficiary details should be provided directly in this object if `beneficiary_id` is not used:
+  - `type`: Specify whether the beneficiary type is a `BANK_ACCOUNT`, a `DIGITAL_WALLET` (including Airwallex Pay), a `CARD`, or a `STABLECOIN_WALLET`. The value will default to `BANK_ACCOUNT` if not specified.
+  - `bank_details`, `digital_wallet`, `card`, or `stablecoin_wallet`: Required beneficiary bank account details, digital wallet, card, or stablecoin wallet parameters (depending on the type specified), varies according to the specified transfer scenario. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `address`:  Required address parameters such as street address, city, state and postcode will vary according to the specified address country. Please refer to [dynamic schema](https://www.airwallex.com/docs/api/payouts/transfers/create.md) or call [Get the API schema](https://www.airwallex.com/docs/api/payouts/beneficiaries/generate_beneficiary_api_schemas.md) to obtain the corresponding parameter requirements.
+  - `entity_type`: Specify whether the beneficiary is an individual (`PERSONAL`) or a business (`COMPANY`).
+  - `company_name`, OR `first_name` and `last_name`: The beneficiary’s name according to the `entity_type`.
+
+- `transfer_currency`: The currency (3-letter ISO 4217 code) in which the beneficiary receives. It must match `account_currency` of the beneficiary’s bank account details. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported currencies.
+
+- `source_currency`: The currency (3-letter ISO 4217 code) in which to fund the transfer. If it is different from `transfer_currency`, an underlying currency conversion will be booked (Refer to [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) for more details).
+
+- `transfer_amount` OR `source_amount`: Please only specify one of these two amounts in their respective currencies. The other amount will be calculated and returned in the response.
+
+  Actual amounts with transfer fees applied (if any) are returned as `amount_beneficiary_receives` and `amount_payer_pays` in the response. If a transfer was initially [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), these amounts are tentative based on the exchange rate at the time of creation until the transfer status changes to `SCHEDULED`, at which point the exchange rate is confirmed. By default, transfer fees are charged to the payer i.e. added to `transfer_amount` and resulted in `amount_payer_pays`. If you wish to pass on the fees to the beneficiary, you can specify using the `fee_paid_by` parameter (see below for more details).
+
+- `transfer_method`: Specify `SWIFT` to create an international SWIFT transfer; or `LOCAL` to create a transfer via the local clearing system, which is faster and more cost-effective. See [Payout Network](https://www.airwallex.com/docs/payouts/payout-network.md) for supported transfer methods by countries/regions and currencies.
+
+- `reference`:  A custom reference for this transfer, intended to identify the transaction to the beneficiary. Whether this reference appears on the beneficiary's bank statement depends on the local clearing system and our banking partners. Contact your Account Manager to confirm whether display of reference is supported for your transfer scenarios.
+
+- `reason`: Specify the purpose of the transfer from one of the accepted values: `audio_visual_services`, `bill_payment`, `business_expenses`, `construction`, `donation_charitable_contribution`, `education_training`, `freight`, `goods_purchased`, `investment_capital`, `investment_proceeds`, `living_expenses`, `loan_credit_repayment`, `medical_services`, `pension`, `professional_business_services`, `real_estate`, `taxes`, `technical_services`, `transfer_to_own_account`, `travel`, `wages_salary`, `other_services`. Note that a different set of reasons applies for international transfers from customers registered in Israel. See [Israel](https://www.airwallex.com/docs/payouts/transfers/transfers-to-from-countries-with-regulatory-requirements/israel.md) for the list of accepted values.
+
+In addition, you may also choose to specify the following optional parameters in your request to further customize the transfer or leverage other related features:
+
+- `beneficiary.additional_info.personal_email`: Specify this parameter if you want the beneficiary to receive an email notification upon transfer being dispatched. Please contact your Account Manager to enable this feature beforehand.
+
+- `fee_paid_by`: By default, transfer fees will be charged to the `PAYER` and included in the `amount_payer_pays` within the response. If you wish to pass on the fees to the beneficiary, set the value to `BENEFICIARY`.
+
+- `swift_charge_option`: By default, `SHARED` will be applied, in which case the SWIFT charges will be shared between the payer and the beneficiary, i.e. the beneficiary will receive  the `amount_beneficiary_receives` less corresponding SWIFT charges by the beneficiary bank. If you want the beneficiary to receive the full `amount_beneficiary_receives`, set the value to PAYER to cover the additional SWIFT charges.
+
+- `transfer_date`: Specify a current or future date (ISO 8601 format) for when the transfer should be processed. If left blank, the transfer date will default to the earliest possible date and your transfer will be dispatched as soon as possible.
+
+  > **\[WARNING]**
+  >
+  > To dispatch a transfer as soon as possible, omit `transfer_date`. Setting `transfer_date` (including today's date) routes the transfer through scheduled-transfer logic and is not equivalent to omitting the field.
+  >
+  >
+  >
+  >
+  >
+  > `transfer_date` is interpreted in your request account owning entity timezone. For related transfer lifecycle behavior (`SCHEDULED` / `OVERDUE`) and fund deduction timing, see [Transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md) and [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction). To learn more about account timezone and settlement timing, see [Funding and Settlement Models](https://www.airwallex.com/docs/transactional-fx/funding-and-settlement-models.md).
+
+  For transfers with the same source and transfer currency, you can specify a date up to 180 days into the future. For transfers with currency conversions, generally you can specify a date up to 90 days into the future (varies by currency pairs). Longer tenors up to 180 days (varies by currency pair) is possible with our FX forwards product. Please confirm the acceptable value dates by currency pair with your Account Manager.
+
+  For transfers [created and submitted for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md), the `transfer_date` will be updated if it was approved after the original specified date; at which point the transfer status transitions to `SCHEDULED` and `transfer_date` is fixed. The date when the transfer is `SENT` will be returned in `dispatch_date`.
+
+- `lock_rate_on_create`: Specify whether to lock the conversion rate for a future-dated transfer upon creation. This field should only be specified for transfers with currency conversions. The value will default to `TRUE` if not specified.
+  - If `TRUE`: The transfer is created with a **confirmed** conversion rate. A `prepayment` (amount varies by currency pair and tenor) is held upfront to cover any FX delta fee in the event of transfer cancellation, and the full amount will be deducted on the scheduled `transfer_date`. Further details are returned under the `prepayment` object.
+  - If `FALSE`: The transfer is created with an **unconfirmed** conversion rate, which will be confirmed on the scheduled `transfer_date`, when the full amount will be deducted.
+
+    See [Fund deduction](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer.md#fund-deduction) for more details.
+
+- `quote_id`: Specify the `quote_id` returned from a previously created [quote](https://www.airwallex.com/docs/transactional-fx/get-started/choose-your-fx-solution/quotes.md) to fix the conversion rate of the transfer. You must also ensure that the `source_currency` and `transfer_currency` in your transfer request match the `sell_currency` and `buy_currency` from the quote. Quotes cannot be applied for [creating and submitting a transfer for approval](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/manage-approvals-for-transfers.md).
+
+  If not specified, the system will automatically book the underlying currency conversion based on `transfer_date` and `lock_rate_on_create` parameters. See [Transactional FX](https://www.airwallex.com/docs/transactional-fx/overview.md) to learn more about the options you have in performing conversions and how you can leverage the corresponding API endpoints.
+
+- `payer` or `payer_id`: Specify the payer information other than the Airwallex account owner with POBO (Pay On Behalf Of) enabled on a case-by-case approval basis. Similar to beneficiaries, the payer information may be provided directly within the `payer` object, or by specifying the `payer_id` of a saved payer. See [Create a payer](https://www.airwallex.com/docs/payouts/payers/create-a-payer.md) for more information. By default, Airwallex identifies the payer as the Airwallex account owner creating the transfer (connected account owner in a platform use case), and it is not necessary to specify the payer information.
+
+
+The following cURL example and response schema describe how to call the Create a Transfer endpoint and interpret its result, including all required and optional response fields and possible transfer statuses.
+
+## cURL example
+
+```bash
+curl --request POST \
+  --url 'https://api.sandbox.airwallex.com/partner-api/v1/transfers/create' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "beneficiary": "{\"bank_transfer_beneficiary\":{\"additional_info\":\n            |{\"personal_email\":\"john.walker@gmail.com\"},\"address\":{\"city\":\"Hong Kong\",\n            |\"country_code\":\"HK\",\"postcode\":\"3000\",\"state\":\"VIC\",\"street_address\":\"38 \n            |Chengtu Rd\"},\"bank_details\":{\"account_currency\":\"USD\",\"account_name\":\"John \n            |Walker\",\"account_number\":\"786005728434\",\"bank_country_code\":\"HK\",\"bank_name\":\n            |\"HANG SENG BANK LIMITED BIC\",\"local_clearing_system\":\"RTGS\",\"swift_code\":\"HASEHKHH\"}\n            |,\"company_name\":\"Complete Concrete Pty Ltd\",\"entity_type\":\"COMPANY\"}}",
+  "factor_managed_account_id": "e1f3c6e3-ba66-4400-83ec-e81553647806",
+  "fee_paid_by": "BENEFICIARY",
+  "reference": "payment-2025-01-01",
+  "request_id": "e26fe780-ac29-4130-b650-edb1cc1bd4a4",
+  "source_amount": 100,
+  "source_currency": "USD",
+  "target_amount": 100,
+  "transfer_currency": "USD"
+}'
+```
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "amount_beneficiary_receives": 1,
+  "beneficiary": "<string>",
+  "created_at": "<date-time>",
+  "factor_managed_account_id": "e1f3c6e3-ba66-4400-83ec-e81553647806",
+  "fee_amount": 1,
+  "fee_currency": "USD",
+  "fee_paid_by": "BENEFICIARY",
+  "id": "b05a7b0f-e24f-4339-ab4f-67bf398b2b0a",
+  "reference": "payment-2025-01-01",
+  "request_id": "ffb277f7-c10d-4e46-ab1e-25acd90a79fc",
+  "source_amount": 100,
+  "source_currency": "USD",
+  "status": "PENDING",
+  "target_amount": 100,
+  "transfer_currency": "USD",
+  "updated_at": "<date-time>"
+}
+```
+
+- `created_at` (string, format: date-time, required)
+  The time when this transaction was created.
+- `factor_managed_account_id` (string, format: uuid, required)
+  The unique identifier of the factor managed account.
+- `id` (string, format: uuid, required)
+  The unique identifier of the transfer.
+- `reference` (string, required)
+  A user specified reference that will be displayed to the beneficiary on the payment transaction with their bank.
+  - 1-140 characters long
+  - Should not contain emojis.
+- `request_id` (string, required)
+  A unique request identifier specified by you for idempotency. Up to 50 characters.
+- `status` (string, required)
+  The status of the transfer.
+  Possible values:
+  - `PENDING` — The transfer is pending to be executed.
+  - `COMPLETED` — The transfer is completed successfully.
+  - `FAILED` — The transfer is failed.
+- `updated_at` (string, format: date-time, required)
+  The time when this transaction was last updated.
+- `amount_beneficiary_receives` (number, optional)
+  The total amount the beneficiary receives for this transfer,.
+- `beneficiary` (string, optional)
+  Details for the repayment beneficiary.  The schema of the bank_transfer_beneficiary can be referenced from the `beneficiary` field in the  request body in  [create a new beneficiary API](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md). We only support `LOCAL` as payment method for now.
+- `fee_amount` (number, optional)
+  The amount of the fee.
+- `fee_currency` (object, optional)
+  The currency of the fee.
+- `fee_paid_by` (string, optional)
+  Denotes whether PAYER/BENEFICIARY will be liable for the transfer fees, and it affects the actual amount the beneficiary receives.
+  Possible values:
+  - `PAYER`
+  - `BENEFICIARY`
+- `source_amount` (number, optional)
+  The amount of the source transfer.
+- `source_currency` (object, optional)
+  The currency of the source transfer.
+- `target_amount` (number, optional)
+  The amount of the target transfer.
+- `transfer_currency` (object, optional)
+  The currency of the target transfer.
+
+The remaining optional request body parameters cover beneficiary ID, client data, fees, rate locking, metadata, payer details, quote, source/transfer amounts, and transfer method.
+
+- `beneficiary_id` (string, optional)
+  An Airwallex beneficiary_id previously generated by utilising the Airwallex Contact API.  This may be provided in place of the beneficiary section and should be empty if the beneficiary fields are provided.
+- `client_data` (string, optional)
+  Free text field available to you; can be populated with any additional identifiers that may be required for the transfer.
+- `fee_paid_by` (string, optional)
+  Denotes whether `PAYER`/`BENEFICIARY` will be liable for the transfer fees, and it affects the actual amount the beneficiary receives.
+- `lock_rate_on_create` (boolean, optional)
+  Customers could choose whether to use confirmed rates for scheduled transfer with conversion. This field should only be specified when a conversion is involved.If customers do not specify this field, the default value is true. This field can either be specified to be TRUE when creating a transfer with currency conversions at a confirmed rate or FALSE if an unconfirmed rate is wanted.
+- `metadata` (object, optional)
+  A set of key-value pairs for storing your own data together with the transfer.
+- `payer` (object, optional)
+  Details for the payer in the transfer request. If payer_id provided in the transfer request then payer should be empty.
+  - `address` (object, required)
+    Payer's address details.
+    - `country_code` (string, required)
+      Payer's country code (2-letter ISO 3166-2 country code).
+    - `city` (string, optional)
+      Payer's city.
+    - `postcode` (string, optional)
+      Payer's post code.
+    - `state` (string, optional)
+      Payer's state.
+    - `street_address` (string, optional)
+      Payer's street address.
+  - `entity_type` (string, required)
+    Entity type of the payer.
+  - `additional_info` (object, optional)
+    Additional information about the payer.
+    - `business_registration_number` (string, optional)
+      Business registration number.
+    - `business_registration_type` (string, optional)
+      Type of business as registered with the local government authority.
+    - `external_id` (string, optional)
+      Unique identifier of the person in your company.
+    - `personal_email` (string, optional)
+      Personal email.
+    - `personal_id_number` (string, optional)
+      Personal unique identifier number.
+  - `company_name` (string, optional)
+    Company name of the payer.
+  - `date_of_birth` (string, optional)
+    Payer's date of birth.
+  - `first_name` (string, optional)
+    First name of the payer.
+  - `last_name` (string, optional)
+    Last name of the payer.
+- `payer_id` (string, optional)
+  An Airwallex payer_id previously generated by utilising the Airwallex Contact API.  This may be provided in place of the payer section and should be empty if the payer fields are provided.
+- `quote_id` (string, optional)
+  quote id from a previously created lockfx quote.
+- `remarks` (string, optional)
+  Additional information about this transfer, which will not be passed to the beneficiary.
+- `source_amount` (string, optional)
+  Source amount in `source_currency`.
+- `source_currency` (string, optional)
+  Source currency, i.e. the currency that the Payer uses to fund the transfer (3-letter ISO-4217 code).
+- `swift_charge_option` (string, optional)
+  (For SWIFT transfers only), specify who should bear SWIFT charges, either `SHARED` (default) or `PAYER`.
+- `transfer_amount` (string, optional)
+  Transfer amount in `transfer_currency`.
+- `transfer_date` (string, optional)
+  Date when transfer should be made.
+- `transfer_method` (string, optional)
+  Transfer method, i.e. SWIFT, LOCAL.
+
+The Create a Transfer endpoint allows a partner to initiate a transfer from an Airwallex user's account to a factor's bank account via the Partner API. On success, the transfer's status is returned as PENDING.
+
+# Create a Transfer
+
+Creates a transfer from the Airwallex user's account to the factor's bank account. On success, the transfer's status will be returned as PENDING.
+
+## Endpoint
+
+`POST /partner-api/v1/transfers/create`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via partner authentication or OAuth endpoints, then pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`.
+
+## Request Parameters
+
+### Request Body
+
+- `beneficiary` (object, required)
+  Details for the repayment beneficiary. The schema of the bank_transfer_beneficiary can be referenced from the `beneficiary` field in the  request body in  [create a new beneficiary API](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md). We only support `LOCAL` as payment method for now.
+  - `type` (string, required)
+  - `additional_info` (object, optional)
+    - `business_area` (string, optional)
+    - `business_phone_number` (string, optional)
+    - `business_registration_expiry_date` (string, optional)
+    - `business_registration_number` (string, optional)
+    - `business_registration_type` (string, optional)
+    - `external_identifier` (string, optional)
+    - `external_name` (string, optional)
+    - `legal_rep_address` (object, optional)
+      - `city` (string, optional)
+      - `country_code` (string, optional)
+      - `full_address` (string, optional)
+      - `postcode` (string, optional)
+      - `state` (string, optional)
+      - `street_address` (string, optional)
+    - `legal_rep_bank_account_number` (string, optional)
+    - `legal_rep_date_of_birth` (string, optional)
+    - `legal_rep_email` (string, optional)
+    - `legal_rep_first_name` (string, optional)
+    - `legal_rep_first_name_in_chinese` (string, optional)
+    - `legal_rep_id_expiry_date` (string, optional)
+    - `legal_rep_id_number` (string, optional)
+    - `legal_rep_id_type` (string, optional)
+    - `legal_rep_last_name` (string, optional)
+    - `legal_rep_last_name_in_chinese` (string, optional)
+    - `legal_rep_mobile_number` (string, optional)
+    - `legal_rep_nationality` (string, optional)
+    - `legal_rep_occupation` (string, optional)
+    - `personal_email` (string, optional)
+    - `personal_first_name_in_chinese` (string, optional)
+    - `personal_id_expiry_date` (string, optional)
+    - `personal_id_number` (string, optional)
+    - `personal_id_type` (string, optional)
+    - `personal_last_name_in_chinese` (string, optional)
+    - `personal_mobile_number` (string, optional)
+    - `personal_nationality` (string, optional)
+    - `personal_occupation` (string, optional)
+    - `recipient_account_id` (string, optional)
+    - `security_question` (string, optional)
+    - `security_question_answer` (string, optional)
+  - `address` (object, optional)
+    - `city` (string, optional)
+    - `country_code` (string, optional)
+    - `full_address` (string, optional)
+    - `postcode` (string, optional)
+    - `state` (string, optional)
+    - `street_address` (string, optional)
+  - `bank_details` (object, optional)
+    - `account_currency` (string, optional)
+    - `account_name` (string, optional)
+    - `account_name_alias` (string, optional)
+    - `account_number` (string, optional)
+    - `account_routing_type1` (string, optional)
+    - `account_routing_type2` (string, optional)
+    - `account_routing_value1` (string, optional)
+    - `account_routing_value2` (string, optional)
+    - `bank_account_category` (string, optional)
+    - `bank_branch` (string, optional)
+    - `bank_city` (string, optional)
+    - `bank_country_code` (string, optional)
+    - `bank_name` (string, optional)
+    - `bank_state` (string, optional)
+    - `bank_street_address` (string, optional)
+    - `binding_mobile_number` (string, optional)
+    - `iban` (string, optional)
+    - `intermediary_bank_name` (string, optional)
+    - `intermediary_bank_swift_code` (string, optional)
+    - `local_clearing_system` (string, optional)
+    - `swift_code` (string, optional)
+  - `company_name` (string, optional)
+  - `date_of_birth` (string, optional)
+  - `digital_wallet` (object, optional)
+    - `account_name` (string, optional)
+    - `country_code` (string, optional)
+    - `currency` (string, optional)
+    - `id_type` (string, optional)
+    - `id_value` (string, optional)
+    - `provider` (string, optional)
+  - `entity_type` (string, optional)
+  - `first_name` (string, optional)
+  - `last_name` (string, optional)
+- `factor_managed_account_id` (string, format: uuid, required)
+  The unique identifier of the associated factor managed account.
+- `fee_paid_by` (string, required)
+  Denotes whether PAYER/BENEFICIARY will be liable for the transfer fees, and it affects the actual amount the beneficiary receives.
+  Possible values:
+  - `PAYER`
+  - `BENEFICIARY`
+- `reference` (string, required)
+  A user specified reference that will be displayed to the beneficiary on the payment transaction with their bank.
+  - 1-140 characters long
+  - Should not contain emojis.
+- `request_id` (string, required)
+  A unique request identifier specified by you for idempotency. Up to 50 characters.
+- `source_currency` (object, required)
+  The currency of the source transfer.
+- `transfer_currency` (object, required)
+  The currency of the target transfer.
+- `source_amount` (number, optional)
+  The amount of the source transfer.
+- `target_amount` (number, optional)
+  The amount of the target transfer.
+
+The following example requests and responses demonstrate how to create a transfer using a saved beneficiary ID and by providing beneficiary details inline, including the full API response structure.
+
+### Example request
+
+To create a transfer to a saved beneficiary using `beneficiary_id`:
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/transfers/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "beneficiary_id": "9a45987e-cffc-4f0a-81d7-82e80f0ce336",
+    "transfer_amount": "50",
+    "transfer_currency": "USD",
+    "transfer_method": "LOCAL",
+    "reason": "travel",
+    "reference": "PMT1936398",
+    "request_id": "8750f946-39f4-46e5-8a9d-2b2fca63a18a",
+    "source_currency": "SGD",
+    "lock_rate_on_create": true,
+    "transfer_date": "2025-07-25"
+  }'
+```
+
+To create a transfer by directly providing beneficiary information:
+
+```shell
+curl -X POST https://api.sandbox.airwallex.com/api/v1/transfers/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -d '{
+    "beneficiary": {
+      "additional_info": {
+        "personal_email": "john.walker@gmail.com"
+      },
+      "address": {
+        "city": "Seattle",
+        "country_code": "US",
+        "postcode": "98104",
+        "state": "Washington",
+        "street_address": "412 5th Avenue"
+      },
+      "bank_details": {
+        "account_currency": "USD",
+        "account_name": "John Walker",
+        "account_number": "50001121",
+        "account_routing_type1": "aba",
+        "account_routing_value1": "021000021",
+        "bank_country_code": "US",
+        "bank_account_category": "Checking",
+        "local_clearing_system": "ACH"
+      },
+      "entity_type": "COMPANY"
+    },
+    "transfer_amount": "50",
+    "transfer_currency": "USD",
+    "transfer_method": "LOCAL",
+    "reason": "travel",
+    "reference": "PMT1936398",
+    "request_id": "8750f946-39f4-46e5-8a9d-2b2fca63a18a",
+    "source_currency": "SGD",
+    "lock_rate_on_create": true,
+    "transfer_date": "2025-07-25"
+  }'
+```
+
+If you are registered as a platform account, you can call this endpoint on behalf of your connected accounts by specifying the open ID in the `x-on-behalf-of` header.
+
+### Example response
+
+```json
+{
+    "amount_beneficiary_receives": 50.0,
+    "amount_payer_pays": 68.13,
+    "beneficiary": {
+        "additional_info": {
+            "personal_email": "john.walker@gmail.com"
+        },
+        "address": {
+            "city": "Seattle",
+            "country_code": "US",
+            "postcode": "98104",
+            "state": "Washington",
+            "street_address": "412 5th Avenue"
+        },
+        "bank_details": {
+            "account_currency": "USD",
+            "account_name": "John Walker",
+            "account_number": "50001121",
+            "account_routing_type1": "aba",
+            "account_routing_value1": "021000021",
+            "bank_account_category": "Checking",
+            "bank_country_code": "US",
+            "bank_name": "JPMorgan Chase Bank, NA",
+            "local_clearing_system": "ACH"
+        },
+        "entity_type": "COMPANY",
+        "type": "BANK_ACCOUNT"
+    },
+    "conversion": {
+        "currency_pair": "USDSGD",
+        "rate": 1.285352
+    },
+    "created_at": "2025-07-09T15:05:45+0000",
+    "fee_amount": 3.86,
+    "fee_currency": "SGD",
+    "fee_paid_by": "PAYER",
+    "funding": {
+        "status": "SCHEDULED"
+    },
+    "id": "99c36dff-4f21-49f9-9ffa-6698323772c5",
+    "lock_rate_on_create": true,
+    "payer": {
+        "additional_info": {
+            "business_incorporation_date": "2024-03-04",
+            "business_registration_number": "HK-575-92-5785",
+            "business_registration_type": "COMPANY"
+        },
+        "address": {
+            "city": "Melbourne",
+            "country_code": "HK",
+            "postcode": "3000",
+            "state": "VIC",
+            "street_address": "Melbourne St, Melbourne St"
+        },
+        "company_name": "ivy sandbox test",
+        "entity_type": "COMPANY"
+    },
+    "prepayment": {
+        "amount": 3.22,
+        "currency": "SGD"
+    },
+    "reason": "travel",
+    "reference": "PMT1936398",
+    "remarks": "",
+    "request_id": "8750f946-39f4-46e5-8a9d-2b2fca63a18a",
+    "short_reference_id": "P250709-J48HB2M",
+    "source_amount": 64.27,
+    "source_currency": "SGD",
+    "status": "SCHEDULED",
+    "swift_charge_option": "SHARED",
+    "transfer_amount": 50.0,
+    "transfer_currency": "USD",
+    "transfer_date": "2025-07-25",
+    "transfer_method": "LOCAL",
+    "updated_at": "2025-07-09T15:05:46+0000"
+}
+```

@@ -1,0 +1,579 @@
+The Retrieve Balance History API endpoint returns a paginated list of balance change records for an account, filterable by currency and date range.
+
+# Retrieve the Balance History
+
+Get balance history for an account based on the transaction currency. The response contains records where each record represents a change to the balance. You can filter results using the date range parameters, `from_post_at` and `to_post_at`, representing the time the balance change occurred in your Wallet. The date range should be within 7 days when using `page_num` to paginate through history. Alternatively, you can paginate using the `page` parameter to retrieve either the previous page or the next page of results.
+
+## Endpoint
+
+`GET /api/v1/balances/history`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+- `x-on-behalf-of` (string, optional)
+  Unique identifier of the connected sub account.
+
+## Request Parameters
+
+### Query Parameters
+
+- `account_type` (string, optional)
+  The type of account to query. Supported values: `cash`, `yield`, `credit`.
+- `currency` (string, optional)
+  The transaction currency in 3-letter ISO-4217 format.
+- `from_post_at` (string, optional)
+  The start date (inclusive) of the date range during which balance activity occurred in your Wallet. Specify the date in ISO8601 format. If not specified, `from_post_at` defaults to 7 days before `to_post_at`.
+- `page` (string, optional)
+  A bookmark for use in pagination to retrieve either the next page or the previous page of results. You can fetch the value for this identifier from the response of the previous API call.
+  To retrieve the next page of results, pass the value of `page_after` (if not null) from the response to a subsequent call.
+  To retrieve the previous page of results, pass the value of `page_before` (if not null) from the response to a subsequent call.
+  Passing `page=0` will override the 7 day default for null date ranges, enabling a complete search of the Wallet balance records.
+- `page_num` (integer, format: int32, optional)
+  The page number of the page to be retrieved. Page numbers range from 0 to a maximum value of 10000.
+- `page_size` (integer, format: int32, optional)
+  A limit on the number of records to be returned on a page, between 10 and 2000. The default is 100.
+- `request_id` (string, optional)
+  request_id from clients for the transaction.
+- `to_post_at` (string, optional)
+  The end date (exclusive) of the date range during which the balance activity occurred in your Wallet. Specify the date in ISO8601 format. Defaults to today if neither this field nor from_post_at are specified. If from_post_at is specified, then to_post_at defaults to 7 days after the from_post_at date.
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/api/v1/balances/history' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "has_more": true,
+  "items": [
+    {
+      "account_type": "cash",
+      "amount": 50,
+      "balance": 1050,
+      "currency": "AUD",
+      "description": "Pay AUD 50.00.",
+      "fee": 25,
+      "id": "0197f322-6667-7d76-b848-bfccedb2a97e",
+      "posted_at": "2017-04-01T03:52:34+0000",
+      "source": "a08c0f2f-3f26-4443-b5df-fad15582eb94",
+      "source_type": "CONVERSION",
+      "transaction_type": "CONVERSION_BUY"
+    }
+  ],
+  "page_after": "Nzc5OTlmN2MtZjVhYi0zMWI2LTlmMGMtYzA1NWRkNzY5Mzk0OkFGVEVS",
+  "page_before": "NzY5NmZjMmYtOWExMS0zN2Y0LWJkMWUtYWM1YzdjODQ5ZDg1OkJFRk9SRQ=="
+}
+```
+
+- `has_more` (boolean, optional)
+  A flag which identifies whether there are more results in forward direction.
+- `items` (array[object], optional)
+  List items.
+  - `account_type` (string, optional)
+    Account Type. One of: `cash`, `yield`, or `credit`.
+  - `amount` (number, optional)
+    The amount of this balance change.
+  - `balance` (number, optional)
+    The balance after this balance change occurred.
+
+    For account type **CASH** and **YIELD**, tracks spendable amount.
+
+    For account type **CREDIT**, tracks utilized credit balance.
+  - `currency` (string, optional)
+    The currency of this balance change.
+  - `description` (string, optional)
+    The description for this balance change.
+  - `fee` (number, optional)
+    The fee amount occurred with same currency, the account who paid this fee will receive this field.
+  - `id` (string, optional)
+    The Unique identifier of the balance activity.
+  - `posted_at` (string, optional)
+    The time this change posted to balance.
+  - `source` (string, optional)
+    The unique identifier of the source transaction.
+  - `source_type` (string, optional)
+    The original transaction type. One of: `DEPOSIT`, `CONVERSION`, `PAYMENT`, `CHARGE`, `TRANSFER`, `ADJUSTMENT`, `FEE`, `ISSUING`, `PAYMENT_SETTLEMENT`, `PAYMENT_RESERVE`, `PAYMENT_REFUND`, `PAYMENT_REFUND_FAILED`, `DIRECT_DEBIT`, `PAYOUT`, `PURCHASE`, `BATCH_PAYOUT`, `YIELD`, `REPAYMENT`, `WITHHOLDING_TAX`.
+  - `transaction_type` (string, optional)
+    The transaction type of the balance history. One of: `PAYMENT`, `PRE_CHARGEBACK_ACCEPTED`, `REFUND_CHARGEBACK_RECEIVED`, `REFUND_CHARGEBACK_WITHDRAWN`, `SECOND_CAPTURE_WITHDRAWN`, `DISPUTE`, `SECOND_DISPUTE`, `DISPUTE_REVERSAL`, `DISPUTE_LOST`, `DISPUTE_WON`, `REFUND`, `REFUND_REVERSAL`, `REFUND_FAILURE`, `PAYMENT_RESERVE_HOLD`, `PAYMENT_RESERVE_RELEASE`, `PAYOUT`, `PAYOUT_FAILURE`, `PAYOUT_REVERSAL`, `CONVERSION_SELL`, `CONVERSION_BUY`, `CONVERSION_REVERSAL`, `DEPOSIT`, `DEPOSIT_REVERSAL`, `ADJUSTMENT`, `FEE`, `DD_CREDIT`, `DD_DEBIT`, `DC_CREDIT`, `DC_DEBIT`, `DC_DEBIT_REVERSAL`, `ISSUING_AUTHORISATION_HOLD`, `ISSUING_AUTHORISATION_RELEASE`, `ISSUING_CAPTURE`, `ISSUING_REFUND`, `SPLIT`, `SPLIT_REVERSAL`, `LENDER_FUNDS_BORROWED`, `LENDER_FUNDS_RETURNED`, `DIRECT_DEBIT`, `DIRECT_DEBIT_REVERSAL`, `HOLD`, `HOLD_RELEASE`, `RETURN_TO_FUNDING_SOURCE`, `PURCHASE`, `PURCHASE_REVERSAL`, `TRANSFER`, `PREPAYMENT`, `PREPAYMENT_RELEASE`, `REPAYMENT_DEDUCTION`, `REPAYMENT_FUNDING`, `TRANSFER_OUT`, `TRANSFER_IN`, `TRANSFER_OUT_REVERSAL`, `TRANSFER_IN_REVERSAL`, `WITHHOLDING_TAX`, `WITHHOLDING_TAX_REVERSAL`, `null`.
+- `page_after` (string, optional)
+  A bookmark for use in pagination to retrieve the next page of results. Provide this identifier in the `page` request parameter in a subsequent call to retrieve the next page of results. The value will be null for the last page.
+- `page_before` (string, optional)
+  A bookmark for use in pagination to retrieve the previous page of results. Provide this identifier in the `page` request parameter in a subsequent call to retrieve the previous page of results. The value will be null for the first page.
+
+## Errors
+
+### 400 Bad request
+
+Possible errors: `invalid_argument`
+
+### 401 Unauthorized
+
+Possible errors: `credentials_invalid`, `credentials_expired`
+
+### 403 Forbidden
+
+`forbidden`
+
+### 404 Not found
+
+`not_found`
+
+### 500 Server error
+
+`service_unavailable`
+
+Airwallex's bank feed integration enables accounting software partners to ingest Airwallex transactions directly, automating data entry and reducing manual bookkeeping errors. The integration requires the `balance:read` OAuth scope and uses the balance history API to retrieve transaction data.
+
+# Bank feed
+
+Integrating Airwallex transactions directly into your accounting software streamlines the bookkeeping process by automating data entry. This integration minimizes errors and saves valuable time that would otherwise be spent manually inputting transaction details.
+
+To ingest Airwallex transactions, you will need the following OAuth scopes:
+
+- `balance:read`
+
+![Bank Feed Integration](https://www.airwallex.com/docs/assets/developer-tools/bank-feed.png)
+
+> **\[INFORMATIONAL]**
+>
+> Make sure that you add the header `x-api-version` in your API calls and set it to the latest version. For details, see [Versioning](https://www.airwallex.com/docs/api/versioning.md).
+
+To build the transaction feed:
+
+1. Read balance history by calling GET [/api/v1/balances/history](https://www.airwallex.com/docs/api/core_resources/balances/history.md).
+
+2. Note that this API returns transaction data within a 7-day date range. If you attempt to query transactions beyond this range, you will receive a `time_range_exceed` error. To access the full transaction history, you can set the `page` parameter to `0` and use the `page_before` and `page_after` fields in the response to navigate through pages of transactions. Additionally, you may also adjust the `page_size` to return more transactions on a single page.
+
+   ```shell
+   curl -G https://api.sandbox.airwallex.com/api/v1/balances/history \
+     -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+     -H 'x-api-version: 2025-08-29' \
+     --data-urlencode 'page=0'
+   ```
+
+3. Additionally, this API call includes reserve transactions that don't affect the account balance. These transactions won't appear in the Airwallex web app wallet transactions or the Balance Activity report. You can filter them out by using the `transaction_type` field and exclude the following transaction types:
+   - `PAYMENT_RESERVE_HOLD`
+   - `PAYMENT_RESERVE_RELEASE`
+   - `HOLD`
+   - `HOLD_RELEASE`
+   - `ISSUING_AUTHORISATION_HOLD`
+   - `ISSUING_AUTHORISATION_RELEASE`
+
+4. Negate the amount for transactions where `source_type` is set to `PAYMENT_RESERVE`.
+
+The Balances API provides access to different types of balances (such as available and pending) under your Airwallex account.
+
+# Balances
+
+Different types of balances such as available and pending can be retrieved to reflect the present balances under your Airwallex account.
+
+## Endpoints
+
+- [List all Current Balances](https://www.airwallex.com/docs/api/core_resources/balances/current.md) — `GET /api/v1/balances/current`
+- [Retrieve the Balance History](https://www.airwallex.com/docs/api/core_resources/balances/history.md) — `GET /api/v1/balances/history`
+
+The 2024-08-07 version introduces new default report version 1.1.0 for Balance Activity and Transaction Reconciliation reports, renames financial report request fields (timezone to time_zone, from_created_at to from_date), updates Financial Transactions responses (currency_pair alignment, payout fees as separate line items), introduces multi-currency Global Accounts with restructured API fields and updated pagination, enriches the Deposits resource with payer object and fee details, and adds application_fee_options to Transfers.
+
+## 2024-08-07
+
+* Introduced new versions of the [Transaction Reconciliation Report](https://www.airwallex.com/docs/global-treasury/reporting/financial-reports/transaction-reconciliation-report.md) and [Balance Activity Report](https://www.airwallex.com/docs/global-treasury/reporting/financial-reports/balance-activity-report.md). The new version 1.1.0 will be the default `report_version` for these reports.
+
+  Affected endpoints:
+
+    * **POST `/api/v1/finance/financial_reports/create`**, request and response
+
+  Changes:
+
+    * The default report version for the `BALANCE_ACTIVITY_REPORT` and `TRANSACTION_RECON_REPORT` financial report types was changed to 1.1.0.
+
+* Modified request and response for create and get financial report(s) endpoints.
+
+  Affected endpoints:
+
+    * **POST `/api/v1/finance/financial_reports/create`**, request and response
+    * **GET `/api/v1/finance/financial_reports/{id}`**, response
+    * **GET `/api/v1/finance/financial_reports/`**, response
+
+  Changes:
+
+    * Renamed fields on the create financial report request payload
+      * `timezone` to `time_zone`
+      * `from_created_at` to `from_date`
+      * `to_created_at` to `date`
+    * Renamed fields on the create and get financial report(s) response payloads
+      * `report_parameters.from_created_at` to `report_parameters.from_date`
+      * `report_parameters.to_created_at to report_parameters.to_date`
+
+* Modified responses for [Financial Transactions](https://www.airwallex.com/docs/api/finance/financial_transactions.md) resources.
+
+  Affected endpoints:
+
+    * **GET `/api/v1/financial_transactions`**, response
+    * **GET `/api/v1/financial_transactions/{id}`**, response
+
+  Changes:
+
+    * Update `currency_pair` value to align with standard FX currency pair conventions
+    * For payouts created after 2024-11-21, payout fees will now appear as separate line items to respective payouts
+    * Payouts for which the source currency and the payment currency are different will no longer generate `CONVERSION_SELL` and `CONVERSION_BUY` financial transactions records
+
+* Modified response for **Get balance history** endpoint.
+
+  Affected endpoints:
+
+    * **GET `/api/v1/balances/history`**, response
+
+  Changes:
+
+    * For payouts created after 2024-11-21, payout fees will now appear as separate line items to respective payouts
+
+* This version introduces major changes to the [Global Accounts](https://www.airwallex.com/docs/api/2024-08-07/core_resources/global_accounts.md) resource, notably relating to the opening and querying of Global Accounts due to:
+
+* Introduction of Multi-currency Global Accounts which can now receive funds in multiple currencies
+* Alignment to latest Airwallex API convention on pagination and URL naming
+
+  Affected endpoint:
+
+    * **POST `/api/v1/global_accounts/create`** request only
+
+  Changes:
+
+    * Renamed **payment_methods** to **transfer_method**
+    * Moved **currency** and **transfer_method** under a new **required_features** object
+
+  Affected endpoints:
+
+    * **POST `/api/v1/global_accounts/create`** response only
+    * **GET `/api/v1/global_accounts`** response only
+    * **GET `/api/v1/global_accounts/{id}`** response only
+    * **POST `/api/v1/global_accounts/{id}/close`** response only
+    * **POST `/api/v1/global_accounts/{id}/update`** response only
+
+  Changes:
+
+    * Renamed **payment_methods** to **transfer_method**
+    * Renamed **clearing_system** to **local_clearing_system**
+    * Removed **capability** object and moved **transfer_methods** and **local_clearing_system** under a new **supported_features** object, together with **currency** and **routing_codes**
+    * Replaced **support_direct_debit** by new **type** field under new **supported_features** object
+    * Added **required_features** object containing **currency** and **transfer_method**
+
+  Affected endpoint:
+
+    * **GET `/api/v1/global_accounts`**
+
+  Changes:
+
+    * Replaced **page_num** with **page** on request payload
+    * Renamed **currency** to **supported_features.currency** on request payload
+    * Added **required_features.currency** to request payload
+    * Replaced **has_more** with **page_before** and **page_after** on response payload
+
+* Update existing Global Account endpoint URL updated from **POST `/api/v1/global_accounts/update/{id}`**
+
+  Affected endpoint:
+
+    * **POST `/api/v1/global_accounts/{id}/update`**
+
+* This version also introduces major changes to the **Deposits** resource, notably relating to the responses and webhooks of deposits to include additional details such as remitter and fee information
+
+  Affected endpoints (Refer to [direct debit](https://www.airwallex.com/docs/global-treasury/receive-funds/receive-bank-transfers-to-global-accounts/retrieve-your-deposits.md) for more details)
+
+    * **GET `/api/v1/deposits`** response only
+    * **GET `/api/v1/deposits/{id}`** response only
+
+  Changes:
+
+    * Renamed `payer_name` to `name` under new `payer` object, containing additional deposit information:
+      * `bank_account` object added which details payer bank account information
+      * `country_code` added
+    * Added `provider_transaction_id` to response body
+    * Added `fee` object to response body
+      * `amount` added
+      * `currency` added
+    * Removed `source` object from response body, moving `funding_source_id` and `global_account_id` directly under items
+    * Renamed `deposit_id` to `id` in response body
+    * Renamed `estimated_settlement_time` to `estimated_settled_at` in response body
+    * Renamed `statement_ref` to `reference` in response body
+    * Note that additional fields in the response are conditional based on the type of deposit and the data available from our banking partners. For example, the `payer` object is now only included for bank transfer deposits, but not for direct debit deposits (Refer to [response body](https://www.airwallex.com/docs/api/2024-08-07/core_resources/deposits/list.md) for more details)
+
+* Deposits webhook events now cover bank transfer deposits in addition to direct debit deposits, distinguished by modified `type` field to be either `BANK_TRANSFER` or, `DIRECT_DEBIT`
+* Added new `deposit.pending` webhook event
+
+  Affected webhook events (Refer to webhook [event types](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/deposits.md) for more details)
+
+    * `deposit.settled`
+    * `deposit.rejected`
+    * `deposit.reversed`
+
+  Payload Changes:
+
+    * Added `data` object that includes all enriched details retrieved from **GET `/api/v1/deposits`** endpoints
+
+* This version also introduces major changes to the **Transfers** and **Batch Transfers** resource, notably relating to the responses and webhooks of transfers to include application fees for Platform Revenue Control.
+
+  Affected endpoints:
+
+    * **POST `/api/v1/transfers/create`**, request and response
+    * **GET `/api/v1/transfers/{id}`**, response only
+    * **GET `/api/v1/transfers`**, response only
+    * **POST `/api/v1/batch_transfers/{{batch_id}}/add_items`**, request and response
+    * **GET `/api/v1/batch_transfers/{{batch_id}}/items`**, response only
+
+  Changes:
+
+    * Added `application_fee_options` to request payload
+    * Added `application_fee_options` to response payload
+    * Added `application_fees` to response payload
+
+
+Strong Customer Authentication (SCA) is enforced when a platform user attempts to access sensitive account balance or transaction data via the Airwallex API. This section lists all endpoints subject to SCA and explains the SCA token mechanism, including exemption conditions.
+
+# SCA for transaction data retrieval
+
+SCA will be enforced when a platform user attempts to access sensitive data such as the account balance or transaction data generated within the last 90 days unless SCA exemptions apply.
+
+After the user successfully completes two-factor authentication, Airwallex will issue a short-lived SCA token (expires in five minutes), which the user can use multiple times to perform one or more sensitive operations until it expires.
+
+The following Airwallex transaction data endpoints are subject to SCA.
+
+- Get current balance
+  - `GET /api/v1/balances/current`
+- Get payment transactions
+  - `GET /api/v1/balances/history`
+  - `GET /api/v1/financial_transactions`
+  - `GET /api/v1/financial_transactions/{id}`
+  - `GET /api/v1/issuing/card_transactions`
+  - `GET /api/v1/issuing/card_transactions/{id}`
+  - `GET /api/v1/issuing/card_transaction_events`
+  - `GET /api/v1/issuing/card_transaction_events/{id}`
+  - `GET /api/v1/issuing/lifecycles`
+  - `GET /api/v1/issuing/lifecycles/{id}`
+  - `GET /api/v1/issuing/transactions`
+  - `GET /api/v1/issuing/transactions/{id}`
+  - `GET /api/v1/issuing/transaction_lifecycles`
+  - `GET /api/v1/issuing/transaction_lifecycles/{id}`
+  - `GET /api/v1/issuing/transaction_lifecycles/{id}/events`
+  - `GET /api/v1/issuing/transaction_lifecycles/{id}/events/{eventId}`
+  - `GET /api/v1/transfers`
+  - `GET /api/v1/transfers/{transfer_id}`
+  - `GET /api/v1/wallet_transfers`
+  - `GET /api/v1/wallet_transfers/{wallet_transfer_id}`
+  - `GET /api/v1/batch_transfers`
+  - `GET /api/v1/batch_transfers/{id}`
+  - `GET /api/v1/connected_account_transfers`
+  - `GET /api/v1/connected_account_transfers/{id}`
+
+This integration guide describes how to handle SCA enforcement for account balance or transaction retrieval using Airwallex's Embedded SCA component.
+
+> **\[INFORMATIONAL]**
+>
+> Note that retrieving recent account balance and transaction data can be exempt from SCA if SCA has been completed within the past 180 days.
+
+
+Once a valid SCA token is obtained, it must be passed in the `x-sca-token` request header to retrieve account balance and transaction data. For historical transaction data older than 90 days, stricter enforcement applies and the integration must handle the `sca_token_insufficient` error by re-authenticating the user.
+
+## Step 4:  Retrieve account balance and transactions using SCA token
+
+Call [Get current balances](https://www.airwallex.com/docs/api/core_resources/balances/current.md) by specifying the short-lived SCA token in the `x-sca-token` request header to view the connected account's current balance.
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/balances/current \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -H 'x-on-behalf-of: {{CONNECTED_ACCOUNT_OPENID}}' \
+  -H 'x-sca-token: {{YOUR_SCA_TOKEN}}'
+```
+
+Call [Get balance history](https://www.airwallex.com/docs/api/core_resources/balances/history.md) by specifying the short-lived SCA token in the `x-sca-token` request header to view the connected account's transaction history.
+
+```shell
+curl -G https://api.sandbox.airwallex.com/api/v1/balances/history \
+  -H 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  -H 'x-on-behalf-of: {{CONNECTED_ACCOUNT_OPENID}}' \
+  -H 'x-sca-token: {{YOUR_SCA_TOKEN}}'
+```
+
+## Step 5:  Handle stricter SCA enforcement for historical transaction data
+
+For 180 days after the user completes SCA verification, `getScaToken()` can use the refresh token to obtain a short-lived SCA token. This token can retrieve transaction data from the previous 90 days.
+
+To fetch transaction data older than 90 days, the user must have completed SCA verification within the previous five minutes, rather than obtaining a token through the refresh mechanism. Otherwise, the request returns the following error:
+
+```json
+Error code: 403
+body:
+{
+    "code": "sca_token_insufficient",
+    "message": "The SCA token in the request header `x-sca-token` is insufficient for this request. Please specify a stronger SCA token."
+}
+```
+
+Be prepared to handle this error in your integration code by launching the SCA component to re-authenticate the user.\
+Once re-authenticated, this grants a five minute window of time where the token is valid to fetch historical transactions.
+
+```javascript
+import { init } from '@airwallex/components-sdk';
+
+const { sca } = await init();
+// get the short-lived SCA token, which may be obtained via a refresh token
+const scaToken = await sca.getScaToken();
+if (scaToken) {
+  // call client API with scaToken
+  const response = await getTransactionData({ scaToken });
+  if (response.status === 403 && response.body?.code === 'sca_token_insufficient') {
+    // launch the SCA component again to re-authenticate the user, then retry
+  }
+} else {
+  // launch the SCA component to re-authenticate the user
+}
+```
+
+The 2022-11-14 version adds transaction type to the balance history endpoint and renames the PAYMENT source transaction type to PAYOUT. The 2022-11-11 version removes the payment_method payload from PaymentConsent create/update requests, updates 3DS next action type to redirect_iframe with GET method, deprecates acs_response in confirm_continue for redirect_iframe, and standardizes PaymentLinks error codes to text codes with ISO timestamp format.
+
+## 2022-11-14
+
+* Added transaction type to balance history endpoint
+ Changed PAYMENT source transaction type to PAYOUT for balance history endpoint
+ Changed description for Transfer Debit DEPOSIT_SPLIT subtype for balance history endpoint
+
+* **GET `/api/v1/balance/history`**
+
+## 2022-11-11
+
+* PaymentConsent `create`/`update` requests will no longer take the `payment_method` payload.
+  Impacted endpoints:
+    * **POST `/api/v1/pa/payment_consents/create`**, request only
+    * **POST `/api/v1/pa/payment_consents/{id}/update`**, request only
+
+ Instead, the user should provide the `payment_method` payload directly in the PaymentConsent `verify` request or the PaymentIntent `confirm` request (with a `PENDING_VERIFICATION` PaymentConsent):
+
+* **POST `/api/v1/pa/payment_consents/{id}/verify`**
+* **POST `/api/v1/pa/payment_intents/{id}/confirm`** * When verifying a PaymentConsent initiated by `customer`, if an existing `VERIFIED` PaymentConsent already references the provided card or bank account number, the request will be declined with `resource_already_exists` to avoid generating multiple identical PaymentConsents, which might confuse the shopper during return payment.
+  Impacted endpoints:
+    * **POST `/api/v1/pa/payment_consents/{id}/verify`** * The `id`, `status`, `created_at`, and `updated_at` of the `payment_method` payload will only be available if the corresponding PaymentMethod resource exists.
+ Therefore, for a one-off payment, these fields will be `null` in the API response.
+  Impacted endpoints:
+    * **POST `/api/v1/pa/payment_intents/{id}/confirm`**, response only
+    * **POST `/api/v1/pa/payment_intents/{id}/confirm_continue`**, response only
+    * **GET `/api/v1/pa/payment_intents/{id}`**, response only
+    * **GET `/api/v1/pa/payment_attempts/{id}`**, response only
+    * **GET `/api/v1/pa/payment_attempts`**, response only
+
+* Next action type in a response from PaymentIntent and PaymentConsent related APIs will be `redirect_iframe` with `GET` next action method, when 3DS authentication is required.
+ Also there will be no need to pass `acs_response` in `confirm_continue` request when `redirect_iframe` action is completed.
+  Impacted endpoints:
+    * **GET `/api/v1/pa/payment_intents/{id}`**, response only
+    * **POST `/api/v1/pa/payment_intents/{id}/confirm`**, response only
+    * **POST `/api/v1/pa/payment_intents/{id}/confirm_continue`**, response only
+    * **GET `/api/v1/pa/payment_consents/{id}`**, response only
+    * **POST `/api/v1/pa/payment_consents/{id}/verify`**, response only
+
+* The error codes returned from the PaymentLink APIs are changed to standard text codes (previously digits). In addition, the timestamp format of PaymentLinks API responses is now standardized to `2022-11-11T12:12:12+0000`. Impacted endpoints:
+* **POST `/api/v1/pa/payment_links/create`**, response only
+* **POST `/api/v1/pa/payment_links/{id}/update`**, response only
+* **GET `/api/v1/pa/payment_links/{id}`**, response only
+* **POST `/api/v1/pa/payment_links/{id}/notify_shopper`**, response only
+* **POST `/api/v1/pa/payment_links/{id}/activate`**, response only
+* **POST `/api/v1/pa/payment_links/{id}/delete`**, response only
+* **GET `/api/v1/pa/payment_links`**, response only
+
+
+The 2025-09-30 version introduces major changes to the Account Capability resource: new effective_at and mandate_type parameters for querying funding limits, the available field replaced by an availables object mapping direct debit schemes, renamed pagination parameters (pageNum to page_num, pageSize to page_size), and updated balance activity source and amount sign for ISSUING source_type entries.
+
+## 2025-09-30
+
+* This version includes major changes to the Account Capability resource, notably relating to the querying of available funding limit or Faster Direct Debit limit.
+
+* Introduced new parameters to allow querying for future funding limits and funding limits of specific mandate types.
+
+  Affected endpoints:
+
+    * **GET `/api/v1/account_capabilities/funding_limits`**, request and response
+
+  Changes:
+
+    * Added new `effective_at` field.
+    * Added new `mandate_type` field.
+
+* Updated response to include more details on funding limit.
+
+  Affected endpoints:
+
+    * **GET `/api/v1/account_capabilities/funding_limits`**, response only
+
+  Changes:
+
+    * Replaced the `available` field with an `availables` object. This object maps the key that is the direct debit `scheme` to the available funding limit for that scheme.
+
+* Renamed pagination parameters.
+
+  Affected endpoints:
+
+    * **GET `/api/v1/account_capabilities/funding_limits`**, request only
+
+  Changes:
+
+    * Renamed `pageNum` field to `page_num`.
+    * Renamed `pageSize` field to `page_size`.
+
+* Updated `source` and `amount` for balance activity where `source_type` is `ISSUING`:
+
+  * `source`: Change value from Retrieval Reference Number to Issuing transaction's `transaction_id`
+  * `amount`: Invert sign where `transaction_type` is `ISSUING_AUTHORISATION_HOLD` or `ISSUING_AUTHORISATION_RELEASE` to properly report on available balance changes
+
+  Affected endpoints:
+
+    * **GET `/api/v1/balance/history`** (response only)
+
+
+The Core Resources scopes govern access to account balances, deposits, direct debits, global accounts, and linked accounts — foundational APIs for money movement and account management.
+
+### Core Resources
+
+| Resource        | Read                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Write                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Webhook events                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Balances        | [Get current balances](https://www.airwallex.com/docs/api/core_resources/balances/current.md) [Get balance history](https://www.airwallex.com/docs/api/core_resources/balances/history.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | -                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | -                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Deposits        | [Get a list of deposits](https://www.airwallex.com/docs/api/core_resources/deposits/list.md) [Get a deposit by ID](https://www.airwallex.com/docs/api/core_resources/deposits/retrieve.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | [Get a list of deposits](https://www.airwallex.com/docs/api/core_resources/deposits/list.md) [Create a deposit via Direct Debit](https://www.airwallex.com/docs/api/core_resources/deposits/create.md) [Get a deposit by ID](https://www.airwallex.com/docs/api/core_resources/deposits/retrieve.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | -                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Direct Debits   | [Get list of direct debits](https://www.airwallex.com/docs/api/core_resources/direct_debits/list.md) [Get direct debit by ID](https://www.airwallex.com/docs/api/core_resources/direct_debits/retrieve.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | [Get list of direct debits](https://www.airwallex.com/docs/api/core_resources/direct_debits/list.md) [Get direct debit by ID](https://www.airwallex.com/docs/api/core_resources/direct_debits/retrieve.md) [Cancel a direct debit by ID](https://www.airwallex.com/docs/api/core_resources/direct_debits/cancel.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | [direct\_debit.created](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [direct\_debit.in\_review](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [direct\_debit.pending](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [direct\_debit.rejected](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [direct\_debit.returned](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [direct\_debit.settled](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md)                                                                                                                                                                                                                                                                                                                                                        |
+| Global Accounts | [Get current balances](https://www.airwallex.com/docs/api/core_resources/balances/current.md) [Get balance history](https://www.airwallex.com/docs/api/core_resources/balances/history.md) [Get a list of global accounts](https://www.airwallex.com/docs/api/core_resources/global_accounts/list.md) [Get a List of Direct Debit Payout Mandates](https://www.airwallex.com/docs/api/core_resources/global_accounts/mandates.md) [Get a Direct Debit Payout Mandate by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve_mandates.md) [Get global account by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve.md) [Get global account transactions](https://www.airwallex.com/docs/api/core_resources/global_accounts/transactions.md) | [Get current balances](https://www.airwallex.com/docs/api/core_resources/balances/current.md) [Get balance history](https://www.airwallex.com/docs/api/core_resources/balances/history.md) [Get a list of global accounts](https://www.airwallex.com/docs/api/core_resources/global_accounts/list.md) [Create a global account](https://www.airwallex.com/docs/api/core_resources/global_accounts/create.md) [Get a List of Direct Debit Payout Mandates](https://www.airwallex.com/docs/api/core_resources/global_accounts/mandates.md) [Get a Direct Debit Payout Mandate by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve_mandates.md) [Cancel a Direct Debit Payout Mandate by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/cancel_mandates.md) [Get global account by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve.md) [Close a global account](https://www.airwallex.com/docs/api/core_resources/global_accounts/close.md) [Generate global account statement](https://www.airwallex.com/docs/api/core_resources/global_accounts/generate_statement_letter.md) [Get global account transactions](https://www.airwallex.com/docs/api/core_resources/global_accounts/transactions.md) [Update existing global account](https://www.airwallex.com/docs/api/core_resources/global_accounts/update.md)                                                 | [global\_account.active](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/global-accounts.md) [global\_account.closed](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/global-accounts.md) [global\_account.failed](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/global-accounts.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Linked Accounts | [Get a list of Linked Accounts](https://www.airwallex.com/docs/api/core_resources/linked_accounts/list.md) [Get a Linked Account by ID](https://www.airwallex.com/docs/api/core_resources/linked_accounts/retrieve.md) [Get a Direct Debit Deposit Mandate](https://www.airwallex.com/docs/api/core_resources/linked_accounts/retrieve_mandate.md) [Check available balances](https://www.airwallex.com/docs/api/core_resources/linked_accounts/balances.md)                                                                                                                                                                                                                                                                                                                                       | [Get a list of Linked Accounts](https://www.airwallex.com/docs/api/core_resources/linked_accounts/list.md) [Get a Linked Account by ID](https://www.airwallex.com/docs/api/core_resources/linked_accounts/retrieve.md) [Generate a Linked Account authentication](https://www.airwallex.com/docs/api/core_resources/linked_accounts/auth.md) [Create a Linked Account](https://www.airwallex.com/docs/api/core_resources/linked_accounts/create.md) [Refresh a Linked Account authentication](https://www.airwallex.com/docs/api/core_resources/linked_accounts/refresh.md) [Complete the authentication refresh](https://www.airwallex.com/docs/api/core_resources/linked_accounts/complete_auth.md) [Verify Linked Account with micro-deposits](https://www.airwallex.com/docs/api/core_resources/linked_accounts/verify_microdeposits.md) [Get a Direct Debit Deposit Mandate](https://www.airwallex.com/docs/api/core_resources/linked_accounts/retrieve_mandate.md) [Update a Direct Debit Deposit Mandate](https://www.airwallex.com/docs/api/core_resources/linked_accounts/mandate.md) [Check available balances](https://www.airwallex.com/docs/api/core_resources/linked_accounts/balances.md) [Suspend a Linked Account](https://www.airwallex.com/docs/api/core_resources/linked_accounts/suspend.md) [Confirm a Linked Account among candidate accounts](https://www.airwallex.com/docs/api/core_resources/linked_accounts/confirm.md) | [deposit.pending](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/deposits.md) [deposit.rejected](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/deposits.md) [deposit.reversed](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/deposits.md) [deposit.settled](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/deposits.md) [linked\_account.failed](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [linked\_account.processing](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [linked\_account.requires\_action](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [linked\_account.succeeded](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) [linked\_account.suspended](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/direct-debit-payouts.md) |
+
+The Business Accounts, Cards, and Finance OAuth scopes control access to balance and global account APIs, card issuing APIs (cards, cardholders, transactions, and merchant brands), and financial reporting APIs, along with their associated webhook events.
+
+### Business Accounts
+
+| Scope                 | APIs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Webhook events                                                                                                                                                                                                                                                                                                                                           |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| balance:read          | [Get current balances](https://www.airwallex.com/docs/api/core_resources/balances/current.md) [Get balance history](https://www.airwallex.com/docs/api/core_resources/balances/history.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | [balance.va.top\_up](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/balance.md) [balance.ga.top\_up](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/balance.md) [balance.adjustment](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/balance.md) |
+| global\_account:read  | [Get a list of global accounts](https://www.airwallex.com/docs/api/core_resources/global_accounts/list.md) [Get a List of Direct Debit Payout Mandates](https://www.airwallex.com/docs/api/core_resources/global_accounts/mandates.md) [Get a Direct Debit Payout Mandate by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve_mandates.md) [Get global account by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve.md) [Generate global account statement](https://www.airwallex.com/docs/api/core_resources/global_accounts/generate_statement_letter.md) [Get global account transactions](https://www.airwallex.com/docs/api/core_resources/global_accounts/transactions.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                              | [ga.new](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/global-accounts.md)                                                                                                                                                                                                                                           |
+| global\_account:write | [Get a list of global accounts](https://www.airwallex.com/docs/api/core_resources/global_accounts/list.md) [Create a global account](https://www.airwallex.com/docs/api/core_resources/global_accounts/create.md) [Get a List of Direct Debit Payout Mandates](https://www.airwallex.com/docs/api/core_resources/global_accounts/mandates.md) [Get a Direct Debit Payout Mandate by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve_mandates.md) [Cancel a Direct Debit Payout Mandate by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/cancel_mandates.md) [Get global account by ID](https://www.airwallex.com/docs/api/core_resources/global_accounts/retrieve.md) [Close a global account](https://www.airwallex.com/docs/api/core_resources/global_accounts/close.md) [Generate global account statement](https://www.airwallex.com/docs/api/core_resources/global_accounts/generate_statement_letter.md) [Get global account transactions](https://www.airwallex.com/docs/api/core_resources/global_accounts/transactions.md) [Update existing global account](https://www.airwallex.com/docs/api/core_resources/global_accounts/update.md) | [ga.new](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/global-accounts.md)                                                                                                                                                                                                                                           |
+
+### Cards
+
+| Scope                        | APIs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Webhook events                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| issuing.card:read            | [Get all cards](https://www.airwallex.com/docs/api/issuing/cards/list.md) [Get card remaining limits](https://www.airwallex.com/docs/api/issuing/cards/limits.md) [Get issuing config](https://www.airwallex.com/docs/api/issuing/config/retrieve.md) [Get card details](https://www.airwallex.com/docs/api/issuing/cards/retrieve.md) [Get sensitive card details](https://www.airwallex.com/docs/api/issuing/cards/details.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | [issuing.card\_notification.created](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card\_notification.physical\_activated](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.modified](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.pending](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.failed](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.inactive](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.active](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.lost](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.stolen](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.closed](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.blocked](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.expired](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.card.low\_remaining\_transaction\_limit](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) |
+| issuing.card:write           | [Create a card](https://www.airwallex.com/docs/api/issuing/cards/create.md) [Update a card](https://www.airwallex.com/docs/api/issuing/cards/update.md) [Activate a card](https://www.airwallex.com/docs/api/issuing/cards/activate.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | -                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| issuing.cardholder:read      | [Get all cardholders](https://www.airwallex.com/docs/api/issuing/cardholders/list.md) [Get cardholder details](https://www.airwallex.com/docs/api/issuing/cardholders/retrieve.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | [issuing.cardholder.deleted](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.cardholder.disabled](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.cardholder.incomplete](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.cardholder.pending](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.cardholder.ready](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| issuing.cardholder:write     | [Create a cardholder](https://www.airwallex.com/docs/api/issuing/cardholders/create.md) [Update a cardholder](https://www.airwallex.com/docs/api/issuing/cardholders/update.md) [Delete cardholder](https://www.airwallex.com/docs/api/issuing/cardholders/delete.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | -                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| issuing.transaction:read     | [Get transactions](https://www.airwallex.com/docs/api/issuing/transactions/list.md) [Get single transaction](https://www.airwallex.com/docs/api/issuing/transactions/retrieve.md) [Get authorization status](https://www.airwallex.com/docs/api/issuing/authorizations/list.md) [Get single authorization status](https://www.airwallex.com/docs/api/issuing/authorizations/retrieve.md) [Get card transactions](https://www.airwallex.com/docs/api/issuing/card_transactions/list.md) [Get single card transaction](https://www.airwallex.com/docs/api/issuing/card_transactions/retrieve.md) [Get card transaction events](https://www.airwallex.com/docs/api/issuing/card_transaction_events/list.md) [Get single card transaction event](https://www.airwallex.com/docs/api/issuing/card_transaction_events/retrieve.md) [Get card transaction lifecycles](https://www.airwallex.com/docs/api/issuing/card_transaction_lifecycles/list.md) [Get single card transaction lifecycle](https://www.airwallex.com/docs/api/issuing/card_transaction_lifecycles/retrieve.md) | [issuing.transaction.succeeded](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md) [issuing.transaction.failed](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events/issuing.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| issuing.merchant\_brand:read | [Get single Merchant Brand by id](https://www.airwallex.com/docs/api/issuing/merchant_brands/retrieve.md) [Get all Merchant Brands matching query](https://www.airwallex.com/docs/api/issuing/merchant_brands/list.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | -                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+
+### Finance
+
+| Scope                       | APIs                                                                                                                                                                                                                                                                                                                                                                                                                           | Webhook events |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| financial\_report:read      | [Get list of financial reports](https://www.airwallex.com/docs/api/finance/financial_reports/list.md) [Get financial report by ID](https://www.airwallex.com/docs/api/finance/financial_reports/retrieve.md) [Get contents of a financial report](https://www.airwallex.com/docs/api/finance/financial_reports/content.md)                                                                                                     | -              |
+| financial\_report:write     | [Get list of financial reports](https://www.airwallex.com/docs/api/finance/financial_reports/list.md) [Create a financial report](https://www.airwallex.com/docs/api/finance/financial_reports/create.md) [Get financial report by ID](https://www.airwallex.com/docs/api/finance/financial_reports/retrieve.md) [Get contents of a financial report](https://www.airwallex.com/docs/api/finance/financial_reports/content.md) | -              |
+| financial\_transaction:read | [Get list of financial transactions](https://www.airwallex.com/docs/api/finance/financial_transactions/list.md) [Get a financial transaction by ID](https://www.airwallex.com/docs/api/finance/financial_transactions/retrieve.md)                                                                                                                                                                                             | -              |

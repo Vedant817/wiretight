@@ -1,0 +1,175 @@
+The Retrieve a Transfer endpoint returns details of a specific transfer using its unique identifier.
+
+# Retrieve a Transfer
+
+Retrieve details of a transfer using its unique identifier.
+
+## Endpoint
+
+`GET /partner-api/v1/transfers/{transferId}`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via partner authentication or OAuth endpoints, then pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`.
+
+## Request Parameters
+
+### Path Parameters
+
+- `transferId` (string, format: uuid, required)
+  The transfer unique identifier.
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/partner-api/v1/transfers/transferId' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "amount_beneficiary_receives": 1,
+  "beneficiary": "<string>",
+  "created_at": "<date-time>",
+  "factor_managed_account_id": "e1f3c6e3-ba66-4400-83ec-e81553647806",
+  "fee_amount": 1,
+  "fee_currency": "USD",
+  "fee_paid_by": "BENEFICIARY",
+  "id": "b05a7b0f-e24f-4339-ab4f-67bf398b2b0a",
+  "reference": "payment-2025-01-01",
+  "request_id": "ffb277f7-c10d-4e46-ab1e-25acd90a79fc",
+  "source_amount": 100,
+  "source_currency": "USD",
+  "status": "PENDING",
+  "target_amount": 100,
+  "transfer_currency": "USD",
+  "updated_at": "<date-time>"
+}
+```
+
+- `created_at` (string, format: date-time, required)
+  The time when this transaction was created.
+- `factor_managed_account_id` (string, format: uuid, required)
+  The unique identifier of the factor managed account.
+- `id` (string, format: uuid, required)
+  The unique identifier of the transfer.
+- `reference` (string, required)
+  A user specified reference that will be displayed to the beneficiary on the payment transaction with their bank.
+  - 1-140 characters long
+  - Should not contain emojis.
+- `request_id` (string, required)
+  A unique request identifier specified by you for idempotency. Up to 50 characters.
+- `status` (string, required)
+  The status of the transfer.
+  Possible values:
+  - `PENDING` — The transfer is pending to be executed.
+  - `COMPLETED` — The transfer is completed successfully.
+  - `FAILED` — The transfer is failed.
+- `updated_at` (string, format: date-time, required)
+  The time when this transaction was last updated.
+- `amount_beneficiary_receives` (number, optional)
+  The total amount the beneficiary receives for this transfer,.
+- `beneficiary` (string, optional)
+  Details for the repayment beneficiary.  The schema of the bank_transfer_beneficiary can be referenced from the `beneficiary` field in the  request body in  [create a new beneficiary API](https://www.airwallex.com/docs/api/payouts/beneficiaries/create.md). We only support `LOCAL` as payment method for now.
+- `fee_amount` (number, optional)
+  The amount of the fee.
+- `fee_currency` (object, optional)
+  The currency of the fee.
+- `fee_paid_by` (string, optional)
+  Denotes whether PAYER/BENEFICIARY will be liable for the transfer fees, and it affects the actual amount the beneficiary receives.
+  Possible values:
+  - `PAYER`
+  - `BENEFICIARY`
+- `source_amount` (number, optional)
+  The amount of the source transfer.
+- `source_currency` (object, optional)
+  The currency of the source transfer.
+- `target_amount` (number, optional)
+  The amount of the target transfer.
+- `transfer_currency` (object, optional)
+  The currency of the target transfer.
+
+The Retrieve a Transfer endpoint fetches a specific transfer record by its Airwallex UUID, returning full transfer details including beneficiary, payer, funding, and status information.
+
+# Retrieve a Transfer
+
+Get a specific transfer by specifying the Airwallex `id`.
+
+## Endpoint
+
+`GET /api/v1/transfers/{id}`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+
+## Request Parameters
+
+### Path Parameters
+
+- `id` (string, format: uuid, required)
+  Unique identifier of the transfer to retrieve.
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/api/v1/transfers/transfer_id' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+The Transition Transfer Status endpoint allows sandbox simulation of transfer status changes, including the endpoint definition, authentication, path and body parameters, and a cURL example.
+
+# Transition Transfer Status
+
+You can use this endpoint to simulate the status transition of your transfer. This is only available in the Sandbox environment. Learn about the [transfer status lifecycle](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses.md).
+
+## Endpoint
+
+`POST /api/v1/simulation/transfers/{id}/transition`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+- `x-api-version` (string, optional)
+  x-api-version.
+
+## Request Parameters
+
+### Path Parameters
+
+- `id` (string, format: uuid, required)
+  Unique identifier of the transfer to transition the status of.
+
+### Request Body
+
+- `next_status` (string, required)
+  The next status to transition to. Status can be OVERDUE, PROCESSING, SENT, PAID, FAILED, and CANCELLED.
+- `failure_type` (string, optional)
+  The type of failure to simulate.
+  Possible values:
+  - `ACCOUNT_CLOSED`
+  - `ACCOUNT_CURRENCY_MISMATCH`
+  - `ACCOUNT_INACTIVE_OR_DORMANT`
+  - `ACCOUNT_UNDER_RESTRICTION`
+  - `BENEFICIARY_BANK_RETURNED`
+  - `BENEFICIARY_NAME_MISMATCH`
+  - `BENEFICIARY_REQUESTED`
+  - `CARD_ISSUER_ERROR`
+  - `CHANNEL_POLICY`
+  - `CHANNEL_TIMEOUT`
+  - `CLIENT_REQUESTED`
+  - `DUPLICATION_RETURN`
+  - `EXCEEDED_TRANSACTION_AMOUNT

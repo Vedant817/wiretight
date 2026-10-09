@@ -1,0 +1,140 @@
+The 200 OK response returns a paginated list of financial transaction objects, each containing fields for amounts, identifiers, timing, source type, and transaction type.
+
+## Response
+
+### 200 OK
+
+**Example:**
+
+```json
+{
+  "has_more": true,
+  "items": [
+    {
+      "amount": 200.21,
+      "batch_id": "bat_20201202_SGD_2",
+      "client_rate": 6.93,
+      "created_at": "2021-03-22T16:08:02",
+      "currency": "CNY",
+      "currency_pair": "AUDUSD",
+      "description": "deposit to.",
+      "estimated_settled_at": "2021-03-22T16:08:02",
+      "fee": 0,
+      "funding_source_id": "99d23411-234-22dd-23po-13sd7c267b9e",
+      "id": "7f687fe6-dcf4-4462-92fa-80335301d9d2",
+      "net": 100.21,
+      "settled_at": "2021-03-22T16:08:02",
+      "source_id": "9f687fe6-dcf4-4462-92fa-80335301d9d2",
+      "source_type": "PAYMENT_ATTEMPT",
+      "status": "PENDING",
+      "transaction_type": "PAYMENT"
+    }
+  ]
+}
+```
+
+- `has_more` (boolean, optional)
+  A flag which identifies whether there are more results.
+- `items` (array[object], optional)
+  List items.
+  - `amount` (number, optional)
+    Gross amount the transaction.
+  - `batch_id` (string, optional)
+    The batch unique identifier of the settlement that the transaction belongs to.
+  - `client_rate` (number, optional)
+    The client rate for the transaction.
+  - `created_at` (string, format: date-time, optional)
+    The time this transaction was created at.
+  - `currency` (string, optional)
+    Currency the transaction should be made in (3-letter ISO-4217 code).
+  - `currency_pair` (string, optional)
+    The currency pair that the `client_rate` is quoted in.
+  - `description` (string, optional)
+    The description of the transaction.
+  - `estimated_settled_at` (string, format: date-time, optional)
+    The time when the transaction will be settled at.
+  - `fee` (number, optional)
+    Fee paid for the transaction.
+  - `funding_source_id` (string, optional)
+    The unique identifier of the funding source from which the transaction originated.
+  - `id` (string, optional)
+    Unique identifier  of the transaction.
+  - `net` (number, optional)
+    Net amount of the transaction.
+  - `settled_at` (string, format: date-time, optional)
+    The time when the transaction was settled at.
+  - `source_id` (string, optional)
+    The source unique identifier of the transaction.
+  - `source_type` (string, optional)
+    The type of the source transaction, One of `PAYOUT`, `CONVERSION`, `DEPOSIT`,
+                `ADJUSTMENT`, `FEE`, `PAYMENT_ATTEMPT`, `REFUND`, `DISPUTE`, `CHARGE`, `TRANSFER`, `YIELD`,
+                `BATCH_PAYOUT`, `CARD_PURCHASE`, `CARD_REFUND`, `PURCHASE`, `REFUND_REVERSAL`, `REPAYMENT`, `TRANSFER_OUT`, `TRANSFER_IN`, `TRANSFER_OUT_REVERSAL`, `TRANSFER_IN_REVERSAL`, `WITHHOLDING_TAX`.
+  - `status` (string, optional)
+    One of `PENDING`, `SETTLED`, `CANCELLED` .
+  - `transaction_type` (string, optional)
+    The type of the transaction, One of `DISPUTE`,
+                `DISPUTE_REVERSAL`, `DISPUTE_LOST`, `REFUND`, `REFUND_REVERSAL`,`REFUND_FAILURE`,
+                `PAYMENT_RESERVE_HOLD`,`PAYMENT_RESERVE_RELEASE`,`PAYOUT`,`PAYOUT_FAILURE`,
+                `PAYOUT_REVERSAL`, `CONVERSION_SELL`, `CONVERSION_BUY`, `CONVERSION_REVERSAL`,
+                `DEPOSIT`, `ADJUSTMENT`, `FEE`, `DD_CREDIT`, `DD_DEBIT`, `DC_CREDIT`, `DC_DEBIT`,
+                `TRANSFER`, `PAYMENT`, `ISSUING_AUTHORISATION_HOLD`,
+                `ISSUING_AUTHORISATION_RELEASE`, `ISSUING_CAPTURE`, `ISSUING_REFUND`, `PURCHASE`,
+                `PREPAYMENT`, `PREPAYMENT_RELEASE`, `REPAYMENT_FUNDING`, `REPAYMENT_DEDUCTION`,
+                `MOR_PAYOUT`, `MOR_PAYOUT_REVERSAL`, `TRANSFER_OUT`, `TRANSFER_IN`,
+                `TRANSFER_OUT_REVERSAL`, `TRANSFER_IN_REVERSAL`,
+                `WITHHOLDING_TAX`, `WITHHOLDING_TAX_REVERSAL`.
+
+The List all Financial Transactions API endpoint retrieves a paginated list of financial transactions that contributed to an Airwallex account balance, with optional filters for date range, batch, currency, source, and status.
+
+# List all Financial Transactions
+
+Get a list of financial transactions that contributed to the Airwallex account balance from a specified creation date/time, with optional filters on end creation date/time, batch_id and status.
+
+## Endpoint
+
+`GET /api/v1/financial_transactions`
+
+## Request Headers
+
+- `Authorization` (string, required)
+  Obtain a token via `POST /api/v1/authentication/login` with your API key and client unique identifier. Pass it as `Authorization: Bearer {{ACCESS_TOKEN}}`. Tokens expire after a configurable duration.
+- `x-on-behalf-of` (string, optional)
+  Unique identifier of the connected sub account.
+
+## Request Parameters
+
+### Query Parameters
+
+- `batch_id` (string, optional)
+  Batch unique identifier of the financial transaction.
+- `currency` (string, optional)
+  The currency (3-letter ISO-4217 code) of the financial transaction.
+- `from_created_at` (string, optional)
+  The start time of `created_at` in ISO8601 format (inclusive).
+- `page_num` (integer, format: int32, optional)
+  Page number, default is 0, max is 2000.
+- `page_size` (integer, format: int32, optional)
+  Number of results per page, default is 100, max is 1000.
+- `source_id` (string, optional)
+  The source unique identifier of the transaction.
+- `status` (string, optional)
+  Status of the financial transaction, one of: `PENDING`, `SETTLED`.
+- `to_created_at` (string, optional)
+  The end time of `created_at` in ISO8601 format (inclusive).
+
+## cURL example
+
+```bash
+curl --request GET \
+  --url 'https://api.sandbox.airwallex.com/api/v1/financial_transactions' \
+  --header 'Authorization: Bearer {{ACCESS_TOKEN}}' \
+  --header 'Content-Type: application/json'
+```
+
+The Financial Transactions API provides endpoints to retrieve and list transaction records within Airwallex.
+
+# Financial Transactions
+
+## Endpoints
+
+- [Retrieve a Financial Transaction](https://www.airwallex.com/docs/api/finance/financial_transactions/retrieve.md) — `GET /api/v1/financial

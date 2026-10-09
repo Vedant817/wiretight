@@ -1,0 +1,106 @@
+[
+  {
+    "id": "agent-cards",
+    "title": "Agent cards",
+    "lede": "An agent gets a card. A charge outside the policy gets declined. This sandbox demo does not verify which agent is calling.",
+    "poster": "/media/agent-cards-7.jpg",
+    "source": "https://github.com/awx-devx/airwallex-agent-cards",
+    "demo": "https://airwallex-agent-cards.danjkim.workers.dev"
+  },
+  {
+    "id": "drop-in-checkout",
+    "title": "Drop-in checkout flow",
+    "lede": "Embedded card checkout on your own page.",
+    "video": "/media/drop-in-checkout-2.mp4",
+    "poster": "/media/drop-in-checkout-3.jpg",
+    "source": "https://github.com/awx-devx/awx-drop-in-checkout",
+    "replit": "https://replit.com/github/awx-devx/awx-drop-in-checkout",
+    "demo": "https://cadence-social-scheduler.replit.app",
+    "script": [
+      "Cadence is a social scheduler on Replit. Upgrade does nothing.",
+      "There is no payment system behind it.",
+      "Adding card payments usually means weeks in API docs. Here you connect Airwallex Drop-in.",
+      "Keep the card form on your own page. Keys stay server-side.",
+      "A webhook marks the account Pro after a sandbox payment.",
+      "Checkout on the product page. Card fields from Airwallex. No real money."
+    ]
+  },
+  {
+    "id": "invoicing-bot",
+    "title": "Invoicing in Slack",
+    "lede": "Tag a Slack thread, get an Airwallex invoice.",
+    "video": "/media/invoicing-bot.mp4",
+    "poster": "/media/invoicing-in-slack.jpg",
+    "pdf": "/media/invoicing-in-slack.pdf",
+    "source": "https://github.com/awx-devx/airwallex-slack-bot",
+    "replit": "https://replit.com/github/awx-devx/airwallex-slack-bot",
+    "demo": false,
+    "script": [
+      "What if you could invoice clients straight from Slack?",
+      "You agree on the price right there in the chat.",
+      "Once the client approves, you simply tag AirwallexBot.",
+      "The invoice is prepared right inside the conversation.",
+      "One click sends it by email and shares the payment link right here in Slack.",
+      "The client opens the link and gets a secure Airwallex payment experience.",
+      "Card, Apple Pay, Google Pay — whatever they already use.",
+      "And that's just one of the billing experiences you can build with Airwallex."
+    ]
+  },
+  {
+    "id": "finance-agent-hermes",
+    "title": "AI finance manager",
+    "lede": "Text an agent that reads live Airwallex balances and can prepare payments.",
+    "video": "/media/finance-agent-hermes-2.mp4",
+    "poster": "/media/ai-finance-manager.jpg",
+    "pdf": "/media/ai-finance-manager.pdf",
+    "source": "https://github.com/awx-devx/airwallex-finance-manager",
+    "demo": "https://t.me/aw_finance_manager_bot",
+    "script": [
+      "What if you had an AI finance manager who actually knew your numbers? Not a dashboard. An AI finance manager you could just text.",
+      "So you could ask it what you have. And it wouldn't guess. It would pull your live balances, then work out your runway.",
+      "Then you could ask what's wrong this month. And it would tell you: a vendor whose spend has spiked, a supplier you've never paid, a card running way outside its normal pattern.",
+      "You could ask it to put your month-end together. Cash, spend, budget and anomalies.",
+      "And when you ask it to move money, it stops. It shows you the amount, the counterparty, the account it's coming from. Then it waits for you to say yes.",
+      "So what makes this possible?",
+      "Underneath, it's Airwallex AgentOS. That's where your balances, transactions, cards and payments come from, over one connection you authorize yourself.",
+      "Everything above that, you build. Your own tools alongside AgentOS. Runway, anomaly detection, budget variance, reporting.",
+      "And your own skills. The workflows and policies your agent follows. Like always preparing a payment, and waiting for a yes.",
+      "This example runs on Hermes. But nothing here is specific to Hermes. Any agent that speaks MCP can do this.",
+      "And getting it running is short. Install the pack, connect your own Airwallex account, point it at a Telegram bot.",
+      "This is one example of an agent built on Airwallex. Your tools. Your skills. Your experience.",
+      "Build yours now."
+    ]
+  },
+  {
+    "id": "allocard",
+    "title": "Allocard",
+    "lede": "Company cards with dynamic spending limits. An agent sets them from budget rules.",
+    "video": "/media/allocard-2.mp4",
+    "poster": "/media/allocard-poster.jpg",
+    "pdf": "/media/allocard-deck.pdf",
+    "source": "https://github.com/awx-devx/airwallex-allocard",
+    "demo": "https://allocard.heimlabs.com/sign-up",
+    "script": [
+      "Most finance tools make you work their way.",
+      "Your rules have to fit their settings page.",
+      "With Airwallex, you build your own. One that fits how your company actually spends.",
+      "So we built one.",
+      "It's called Allocard.",
+      "It hands out company cards, and nobody types in the limits.",
+      "Every limit is a rule, not a number.",
+      "So when a project's budget drops, the rules run again.",
+      "Limits follow the budget.",
+      "Below ten percent, the cards freeze.",
+      "Seconds later, the card has changed.",
+      "No ticket. No approvals. And it can show you why the limit is what it is.",
+      "Underneath, it's one call to Airwallex.",
+      "It sets the spending controls on the card.",
+      "We decide. Airwallex enforces.",
+      "So the limit is real.",
+      "The next charge over it simply doesn't go through.",
+      "Cardholders, cards, limits, card details, and a webhook for every charge and every decline.",
+      "Allocard is just one example.",
+      "Build the one that fits you."
+    ]
+  }
+]
