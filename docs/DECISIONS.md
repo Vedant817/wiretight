@@ -133,6 +133,41 @@ comparison. Both paths refused the process either way; this only makes the error
 
 ---
 
+## D-B11 — Four floor rows needed a reading the spec does not spell out
+
+FINAL.md §4.15 ships values in a column headed "Shipped value (loosest allowed)", which fixes the
+*direction* only by inference. Four rows were genuinely ambiguous; each is resolved here and each
+has a test asserting the chosen reading, so a later reader sees the decision rather than the guess.
+
+1. **Row 3, callback validity — MAXIMUM 7.** The spec writes "valid ≤ 7 days", so the loosest
+   allowed value is 7 and a policy may only *shorten* it. Read as a minimum it would permit a
+   90-day window, which would let a stale confirmation release brand-new bank details — exactly the
+   attack the lock exists to stop.
+2. **Row 11, T1 band — MINIMUM 10,000.** Rows 11 and 12 both constrain `tiers.t2_threshold_usd`.
+   Left undecided, lowering and raising it would each be "permitted" by a different row, which makes
+   the control unfalsifiable. MINIMUM follows the column header. Consequence worth stating plainly:
+   **raising** the threshold is the *tightening* direction, because more items then need two
+   sign-offs. A test asserts both directions.
+3. **Row 22, settle window — per rail, not one number.** §4.15 says "SEPA 3 TARGET2 days; FPS 3 UK
+   days; ACH 2 US days". Those are not uniform. A single minimum of 3 would have rejected the spec's
+   own shipped ACH value of 2, which is how the bug was found. The floor is now a per-rail table, and
+   SWIFT is required to set `final_by_timer: false` plus a ≥ 10-business-day presumed-settled window.
+4. **Row 29 vs row 25 — `rails.flight_business_days` is a MINIMUM.** Row 29 covers "trip on first
+   occurrence"; the only rail-keyed knob that behaves like it is flight time, which must never be
+   shortened. Row 25's demo-visible value is the SEPA fee *reservation*, a MINIMUM, since reducing it
+   would let the planner promise a reserve the wallet does not hold.
+
+Also recorded: `t0.enabled` must be a **real YAML boolean**. The string `"false"` is truthy, so
+`if policy["t0"]["enabled"]` would enable auto-pay from a value that reads as off. Shape validation
+now rejects it, and the error names r10 rather than saying only "must be a boolean".
+
+## D-B12 — Structural errors name the floor row they offend
+
+`PATH_TO_ROW` maps a policy path to its row number so a shape error reads
+"`t0.enabled` must be a boolean (FINAL.md §4.15 r10)" instead of leaving the operator to guess which
+control they had just attempted to loosen. T-27 asserts each refusal names its row, which is what
+made this necessary.
+
 ## D-B09 — Checkpoints pin a hash, not a position (found by the harder half of T-13)
 
 - **When:** Fri 9 Oct 2026
