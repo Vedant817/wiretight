@@ -38,6 +38,9 @@ dev = [
     "pytest-timeout==2.4.0",
     "time-machine==3.5.1",
     "ruff==0.16.10",
+    # Timezone data for zoneinfo. Without it ZoneInfo("Asia/Kolkata") raises on
+    # Windows and in slim containers, and the IST daily caps crash on day one.
+    "tzdata==2026.2",
     "mypy==2.4.0",
     "types-PyYAML==6.0.12.20250915",
     # Generates the committed calendar YAML. NOT imported at runtime.

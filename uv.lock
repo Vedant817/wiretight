@@ -1052,6 +1052,15 @@ wheels = [
 ]
 
 [[package]]
+name = "tzdata"
+version = "2026.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/19/1b9b0e29f30c6d35cb345486df41110984ea67ae69dddbc0e8a100999493/tzdata-2026.2.tar.gz", hash = "sha256:9173fde7d80d9018e02a662e168e5a2d04f87c41ea174b139fbef642eda62d10", size = 198254, upload-time = "2026-04-24T15:22:08.651Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/e4/dccd7f47c4b64213ac01ef921a1337ee6e30e8c6466046018326977efd95/tzdata-2026.2-py2.py3-none-any.whl", hash = "sha256:bbe9af844f658da81a5f95019480da3a89415801f6cc966806612cc7169bffe7", size = 349321, upload-time = "2026-04-24T15:22:05.876Z" },
+]
+
+[[package]]
 name = "uvicorn"
 version = "0.54.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1113,6 +1122,7 @@ dev = [
     { name = "ruff" },
     { name = "time-machine" },
     { name = "types-pyyaml" },
+    { name = "tzdata" },
 ]
 
 [package.metadata]
@@ -1139,6 +1149,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = "==2.1.4" },
     { name = "time-machine", marker = "extra == 'dev'", specifier = "==3.5.1" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = "==6.0.12.20250915" },
+    { name = "tzdata", marker = "extra == 'dev'", specifier = "==2026.2" },
     { name = "uvicorn", specifier = "==0.54.0" },
     { name = "webauthn", specifier = "==3.0.1" },
 ]

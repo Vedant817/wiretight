@@ -24,7 +24,12 @@ from typing import Any, Final
 import yaml
 
 from app.core import db
-from app.core.policy_floor import FloorResult, check_policy_against_floor, validate_shape
+from app.core.policy_floor import (
+    REQUIRES_SIGNATURES_MARKER,
+    FloorResult,
+    check_policy_against_floor,
+    validate_shape,
+)
 
 #: Floor row 30: clearing the kill switch, and signing a policy, both need two.
 REQUIRED_SIGNATURES = 2
@@ -237,12 +242,18 @@ def load_policy(
                 f"{policy_path}: policy is structurally invalid:\n  - " + "\n  - ".join(structural)
             )
 
+        # Floor first, split into the unconditional breaches and the ones two
+        # valid signatures would clear (§4.15 r10: T0 is Off unless a signed
+        # policy turns it on). The hard breaches can never be signed away, so they
+        # are reported now rather than after the signature check.
         floor: FloorResult = check_policy_against_floor(policy)
         if not floor.ok:
-            raise PolicyError(
-                f"{policy_path}: policy violates the floor and may only tighten:\n  - "
-                + "\n  - ".join(floor.violations)
-            )
+            hard = [v for v in floor.violations if not v.endswith(REQUIRES_SIGNATURES_MARKER)]
+            if hard:
+                raise PolicyError(
+                    f"{policy_path}: policy violates the floor and may only tighten:\n  - "
+                    + "\n  - ".join(hard)
+                )
 
         if signature_path is not None and Path(signature_path).exists():
             data = json.loads(Path(signature_path).read_text(encoding="utf-8"))
@@ -258,6 +269,17 @@ def load_policy(
                 f"{policy_path}: no signature file and allow_unsigned is False. "
                 "A policy must carry two distinct approver signatures (FINAL.md §6.4)."
             )
+
+        # Now that signatures are known, the gated violations can be resolved.
+        if floor.violations and len(signatures) < REQUIRED_SIGNATURES:
+            gated = [v for v in floor.violations if v.endswith(REQUIRES_SIGNATURES_MARKER)]
+            if gated:
+                raise PolicyError(
+                    f"{policy_path}: policy requests a control the floor permits only "
+                    f"under signatures, and only {len(signatures)} valid signature(s) "
+                    f"were supplied (FINAL.md §6.4 needs {REQUIRED_SIGNATURES}):\n  - "
+                    + "\n  - ".join(v[: -len(REQUIRES_SIGNATURES_MARKER)] for v in gated)
+                )
     except PolicyError:
         _record(conn, policy_path, digest, signatures, "REJECTED")
         raise

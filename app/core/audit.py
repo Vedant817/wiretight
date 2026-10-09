@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import sqlite3
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -132,9 +134,18 @@ def append(
     *,
     at: str | None = None,
 ) -> int:
-    """Append one entry and return its sequence number."""
+    """Append one entry and return its sequence number.
+
+    The read-last-seq-then-insert is done inside ``BEGIN IMMEDIATE``, which takes
+    SQLite's single write lock up front. Without it, two web threads appending
+    concurrently both read the same head and the loser hit
+    ``UNIQUE constraint failed: audit_log.seq`` — measured on 100% of concurrent
+    appends. The write lock is held for one row insert and released immediately;
+    it never spans a commit boundary or an API call.
+    """
     stamp = at or now_iso()
-    try:
+
+    def attempt() -> int:
         row = conn.execute(
             "SELECT seq, entry_hash FROM audit_log ORDER BY seq DESC LIMIT 1"
         ).fetchone()
@@ -146,9 +157,27 @@ def append(
             " VALUES (?, ?, ?, ?, ?, ?)",
             (seq, prev, digest, kind, canonical_json(payload), stamp),
         )
-    except Exception as exc:
+        return seq
+
+    try:
+        with db.transaction(conn):
+            return attempt()
+    except db.DatabaseBusyError:
+        # Fail closed and loud. A dropped audit entry is a lost record of intent to
+        # move money, so this must never be swallowed as "just retry later".
+        raise AuditWriteError(
+            f"could not append audit entry {kind!r}: the write lock could not be "
+            "acquired. The executor must halt rather than act without a record "
+            "(FINAL.md §4.16, §14 b)"
+        ) from None
+    except sqlite3.IntegrityError as exc:
+        raise AuditWriteError(
+            f"could not append audit entry {kind!r}: {exc}. A UNIQUE violation on "
+            "audit_log.seq means two writers raced the chain head, which the "
+            "BEGIN IMMEDIATE in append() is meant to prevent."
+        ) from exc
+    except sqlite3.Error as exc:
         raise AuditWriteError(f"could not append audit entry {kind!r}: {exc}") from exc
-    return seq
 
 
 def log_intent(
@@ -272,9 +301,9 @@ def write_checkpoint(
     signature = key.sign(body.encode("utf-8"))
 
     target = directory / f"{seq:012d}.{reason}{CHECKPOINT_SUFFIX}"
-    target.write_text(
+    _write_durable(
+        target,
         json.dumps({"body": body, "signature": signature.hex()}, separators=(",", ":")),
-        encoding="utf-8",
     )
     _advance_anchor(directory, seq, key, at=at)
     return target
@@ -290,13 +319,58 @@ def write_checkpoint(
 ANCHOR_NAME: Final[str] = "head.anchor.json"
 
 
+def _write_durable(path: Path, text: str) -> None:
+    """Write a file so that a crash leaves either the old content or the new.
+
+    ``Path.write_text`` is open-write-close. A power loss between the write and
+    the flush leaves a **truncated** file, and for the anchor that is
+    indistinguishable from tampering: measured, truncating it made
+    ``verify_checkpoints`` report the chain as unverified, which halts the
+    executor (D-B21).
+
+    The sequence is the only one that is crash-safe: write a temporary file in the
+    same directory, ``fsync`` the data, ``os.replace`` (atomic on POSIX and on
+    Windows for same-volume renames), then ``fsync`` the directory so the rename
+    itself is durable.
+    """
+    tmp = path.with_name(f"{path.name}.tmp")
+    fd = os.open(str(tmp), os.O_CREAT | os.O_TRUNC | os.O_WRONLY)
+    try:
+        os.write(fd, text.encode("utf-8"))
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+    tmp.replace(path)
+
+    # fsync the directory so the rename survives. Windows has no directory fd
+    # for this, which is why the guard is silent rather than fatal there.
+    try:
+        dir_fd = os.open(str(path.parent), os.O_RDONLY)
+    except OSError:  # pragma: no cover - not supported on this platform
+        return
+    try:
+        os.fsync(dir_fd)
+    except OSError:  # pragma: no cover - not supported on this platform
+        pass
+    finally:
+        os.close(dir_fd)
+
+
 def _advance_anchor(
     directory: Path, seq: int, key: Ed25519PrivateKey, *, at: str | None = None
 ) -> None:
     """Record the highest seq ever sealed. Only ever moves forward.
 
-    Read-take-max-write, so replaying an older checkpoint cannot roll it back,
-    and a corrupt anchor cannot silently reset it to a lower value.
+    Read-take-max-write, so replaying an older checkpoint cannot roll it back.
+
+    **A corrupt anchor no longer resets the recorded maximum downward.** The
+    ``except`` branch used to set ``highest = seq``, which is precisely the roll
+    back the docstring claims cannot happen: with a 200-entry chain truncated to
+    150, the corrupt anchor made the system believe 150 was the highest seq ever
+    reached, and every truncation check passed (D-B21). The fallback is now the
+    *current* value only when there is nothing to preserve; a damaged anchor
+    raises so the failure is a halt, not a silently lowered bound.
     """
     anchor = directory / ANCHOR_NAME
     highest = seq
@@ -304,29 +378,63 @@ def _advance_anchor(
         try:
             previous = json.loads(anchor.read_text(encoding="utf-8"))
             highest = max(seq, int(json.loads(previous["body"])["seq"]))
-        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
-            highest = seq
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+            raise AnchorCorruptError(
+                f"{anchor} exists but cannot be read ({exc}). Refusing to overwrite "
+                "it: the anchor is the only record of how far this chain ever "
+                "reached, so replacing it would erase the evidence of any "
+                "truncation. Move it aside deliberately if this is expected."
+            ) from exc
 
     body = canonical_json({"seq": highest, "at": at or now_iso()})
-    anchor.write_text(
+    _write_durable(
+        anchor,
         json.dumps(
             {"body": body, "signature": key.sign(body.encode()).hex()},
             separators=(",", ":"),
         ),
-        encoding="utf-8",
     )
 
 
-def read_anchor(dir_path: str | Path) -> int | None:
-    """The highest seq the anchor claims was ever sealed, or ``None``."""
+class AnchorCorruptError(RuntimeError):
+    """The head anchor exists but cannot be read.
+
+    Deliberately fatal rather than recoverable. The anchor is the one artefact
+    that survives an attacker deleting every seal, so "rebuild it from what is
+    left" is exactly the wrong move.
+    """
+
+
+def read_anchor(dir_path: str | Path, *, key: Ed25519PublicKey | None = None) -> int | None:
+    """The highest seq the anchor claims was ever sealed, or ``None``.
+
+    When ``key`` is supplied, the signature is **verified**. It used to be read
+    and discarded, so the anchor was the one signed file in the system whose
+    signature nothing checked: an attacker could rewrite the chain head to any
+    value, delete the seals above it, and every verification path reported a
+    clean, self-consistent, truncated chain (D-B21). Verifying is what makes this
+    file load-bearing instead of decorative.
+    """
     anchor = Path(dir_path) / ANCHOR_NAME
     if not anchor.exists():
         return None
     try:
         data = json.loads(anchor.read_text(encoding="utf-8"))
-        return int(json.loads(data["body"])["seq"])
+        body_text = data["body"]
+        signature_hex = data["signature"]
+        seq = int(json.loads(body_text)["seq"])
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         return None
+
+    if key is not None:
+        try:
+            key.verify(bytes.fromhex(signature_hex), body_text.encode("utf-8"))
+        except (InvalidSignature, ValueError) as exc:
+            raise AnchorCorruptError(
+                f"{anchor}: signature does not verify against the body. The recorded "
+                "chain head has been altered."
+            ) from exc
+    return seq
 
 
 def _checkpoint_seq(data: dict[str, Any]) -> int:
@@ -374,8 +482,14 @@ def verify_checkpoints(
     row = conn.execute("SELECT seq FROM audit_log ORDER BY seq DESC LIMIT 1").fetchone()
     head_seq = int(row["seq"]) if row else 0
 
-    # The anchor first: it is the check that survives deleting seal files.
-    anchor_seq = read_anchor(directory)
+    # The anchor first: it is the check that survives deleting seal files. Its
+    # signature is verified with the same public key as every seal, because an
+    # unverified anchor is just a number someone can edit (D-B21).
+    anchor_seq: int | None
+    try:
+        anchor_seq = read_anchor(directory, key=public_key)
+    except AnchorCorruptError as exc:
+        return VerifyResult(ok=False, checked=chain.checked, reason=str(exc))
     if anchor_seq is None:
         return VerifyResult(
             ok=False,
@@ -520,8 +634,12 @@ def maybe_write_checkpoint(
     :func:`seal_run_end` separately at the end of a run: folding it in here was
     what made the two seals overwrite one another.
     """
-    row = conn.execute("SELECT count(*) AS n FROM audit_log").fetchone()
-    count = int(row["n"])
-    if count == 0 or count % CHECKPOINT_INTERVAL != 0:
+    # Read the head seq, not count(*). `count(*)` is a full scan of a table that
+    # grows without bound: measured 0.173 s at 1M rows, on the hot path of
+    # *every* append, which is a 173-second stall per write once the log is large
+    # (D-B21). `ORDER BY seq DESC LIMIT 1` is the rowid and measures 0.05 ms.
+    row = conn.execute("SELECT seq FROM audit_log ORDER BY seq DESC LIMIT 1").fetchone()
+    head = int(row["seq"]) if row else 0
+    if head == 0 or head % CHECKPOINT_INTERVAL != 0:
         return None
     return write_checkpoint(conn, dir_path, key, at=at, reason="interval")

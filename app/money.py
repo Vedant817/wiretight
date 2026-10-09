@@ -38,27 +38,105 @@ __all__ = [
     "to_money_string",
 ]
 
-#: ISO 4217 minor-unit exponents. Only currencies the demo can actually touch,
-#: plus the three-decimal ones that make the "unknown defaults to 2" rule testable.
-#: §8.5: USD, EUR and GBP wallets only.
+#: ISO 4217 minor-unit exponents.
+#:
+#: Extended to every zero-decimal and three-decimal currency after measurement
+#: showed the previous 12-entry table defaulted them all to 2 (D-B20). For a
+#: zero-decimal currency that is not a safe default in either direction: KRW
+#: 1,000,000 became the string "1000000.00", a **100x overstatement** carried
+#: into every cap comparison, every ledger leg and every tie-out term. The
+#: three-decimal Gulf currencies were wrong the other way.
+#:
+#: A currency absent from this table is now **refused** by `parse_currency`, so
+#: an unlisted code cannot silently inherit an exponent. `exponent_for` still
+#: falls back to `DEFAULT_EXPONENT` for internal arithmetic, but nothing on the
+#: wire path relies on that.
 CURRENCY_EXPONENT: Final[dict[str, int]] = {
+    # 2 decimal places — the overwhelming majority.
+    "AED": 2,
     "AUD": 2,
-    "BHD": 3,
+    "BGN": 2,
+    "BRL": 2,
     "CAD": 2,
     "CHF": 2,
+    "CNY": 2,
+    "COP": 2,
+    "CZK": 2,
+    "DKK": 2,
+    "EGP": 2,
     "EUR": 2,
     "GBP": 2,
     "HKD": 2,
-    "JPY": 0,
-    "KWD": 3,
+    "HUF": 2,
+    "IDR": 2,
+    "ILS": 2,
+    "INR": 2,
+    "KES": 2,
+    "MAD": 2,
+    "MXN": 2,
+    "MYR": 2,
+    "NGN": 2,
+    "NOK": 2,
     "NZD": 2,
+    "PEN": 2,
+    "PHP": 2,
+    "PLN": 2,
+    "QAR": 2,
+    "RON": 2,
+    "RSD": 2,
+    "SAR": 2,
+    "SEK": 2,
     "SGD": 2,
+    "THB": 2,
+    "TRY": 2,
+    "TWD": 2,
+    "UAH": 2,
     "USD": 2,
+    "ZAR": 2,
+    # 0 decimal places. A 1,000,000 KRW bill is 1000000, not 1000000.00.
+    "BIF": 0,
+    "CLP": 0,
+    "DJF": 0,
+    "GNF": 0,
+    "ISK": 0,
+    "JPY": 0,
+    "KMF": 0,
+    "KRW": 0,
+    "PYG": 0,
+    "RWF": 0,
+    "UGX": 0,
+    "UYI": 0,
+    "VND": 0,
+    "VUV": 0,
+    "XAF": 0,
+    "XOF": 0,
+    "XPF": 0,
+    # 3 decimal places.
+    "BHD": 3,
+    "IQD": 3,
+    "JOD": 3,
+    "KWD": 3,
+    "LYD": 3,
+    "OMR": 3,
+    "TND": 3,
 }
 
-#: Used when a currency is not in the table. Two, never zero: extra places are
-#: visible to a human, missing places are not.
+#: Used by :func:`exponent_for` when a currency is not in the table.
+#:
+#: Two, never zero: extra places are visible to a human, missing places are not.
+#: This is the *last resort* for internal arithmetic only. Anything crossing the
+#: wire — a request body, a packet, a UI string — must go through
+#: :func:`parse_currency`, which refuses an unlisted code outright rather than
+#: inventing an exponent for it.
 DEFAULT_EXPONENT: Final[int] = 2
+
+#: Sentinel for "this currency has no known exponent".
+CURRENCY_NOT_LISTED: Final[int] = -1
+
+
+def is_known_currency(currency: str) -> bool:
+    """Is this currency in the pinned ISO 4217 table?"""
+    return currency.strip().upper() in CURRENCY_EXPONENT
 
 
 def exponent_for(currency: str) -> int:

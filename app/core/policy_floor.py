@@ -26,11 +26,16 @@ writes the loosen attempt for it.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from enum import Enum
-from typing import Any
+from typing import Any, Final
+
+#: Appended to a violation that two valid approver signatures would clear.
+#: §4.15 r10 makes T0 legal only under a signed policy, which is not expressible
+#: as a plain bound because the floor cannot see the signature material.
+REQUIRES_SIGNATURES_MARKER: Final[str] = " [requires two approver signatures]"
 
 # ---------------------------------------------------------------------------
 # A recursive description of the policy's shape.
@@ -595,6 +600,62 @@ def _check_settlement(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
     return problems
 
 
+def check_settle_window_conjunction(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
+    """§4.15 r22 requires the window to satisfy **both** bounds.
+
+    FINAL.md reads "≥ 48 h **and** ≥ the rail's business-day window". Checking the
+    two numbers independently lets a policy set ``business_days: 30`` beside
+    ``min_hours: 48``, and ``min_hours`` is the number the poller actually
+    consults via ``wt_next(final_due=...)`` — so the effective window would be
+    two days while the policy *reads* as thirty (measured, D-B20).
+
+    Not modelled as a ``Constraint`` because the two numbers cannot be compared
+    without both being visible, and T-27's parametrisation sets one value at a
+    time. It lives here, beside the per-rail loop, and the shipped example passes
+    because 48 h is under three banking days but the row it belongs to is the
+    *day count*.
+    """
+    settlement = policy.get("settlement")
+    if not isinstance(settlement, Mapping):
+        return []
+
+    problems: list[str] = []
+    for rail, floor in SETTLE_FLOOR.items():
+        spec = settlement.get(rail)
+        if not isinstance(spec, Mapping):
+            continue
+        hours = spec.get("min_hours")
+        days = spec.get("business_days")
+        if (
+            isinstance(hours, bool)
+            or not isinstance(hours, int)
+            or isinstance(days, bool)
+            or not isinstance(days, int)
+        ):
+            continue
+        # Only binds once the policy asks for more days than the shipped floor.
+        if days <= floor["business_days"]:
+            continue
+        if hours < days * _HOURS_PER_BANKING_DAY:
+            problems.append(
+                _violation(
+                    row,
+                    f"{rail}: min_hours {hours} is shorter than the {days} business days "
+                    f"this policy requests (at least {days * _HOURS_PER_BANKING_DAY} h). "
+                    "min_hours is what the poller uses, so the effective window would "
+                    "be {hours} h, not {days} days. FINAL.md §4.15 r22 requires both.",
+                )
+            )
+    return problems
+
+
+#: Assumed length of one banking day for the r22 conjunction. An over-estimate,
+#: deliberately: a TARGET2 day is not 24 h once weekends and TARGET2 closing days
+#: intervene, so this makes the check stricter than reality. The actual FINAL time
+#: comes from the committed calendar, never from this.
+_HOURS_PER_BANKING_DAY: Final[int] = 24
+
+
 def _check_superset(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
     """Row 9: the disqualifier list may only grow."""
     constraint = row.constraints[0]
@@ -608,16 +669,63 @@ def _check_superset(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
 
 
 def _check_exact(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
-    """Row 10: T0 must be a real boolean, and off unless a signed policy says otherwise."""
+    """Row 10: T0 must be a real boolean, and Off unless signatures authorise it.
+
+    The type check was the whole implementation, and ``constraint.value`` — the
+    ``False`` this row ships — was never consulted, so ``t0.enabled: true`` passed
+    a row whose value is ``False`` (measured, D-B20).
+
+    §4.15 r10 makes T0 legal *only* under a two-signature policy, and that is not
+    expressible as a plain bound because it depends on material the floor does not
+    see. So this returns a violation carrying ``requires_signatures=True`` rather
+    than a hard refusal: :func:`check_policy_against_floor` treats it as a
+    violation, and :func:`app.core.policy.load_policy` clears it only when the
+    signature file verified. The result is that ``allow_unsigned=True`` can no
+    longer reach live auto-payout, which it could before.
+    """
     constraint = row.constraints[0]
     value = _get(policy, constraint.path)
     if not isinstance(value, bool):
         return [_violation(row, f"{constraint.where()} is {value!r}, not a boolean")]
+    if value != constraint.value:
+        message = _violation(
+            row,
+            f"{constraint.where()} is {value!r}; the shipped floor is "
+            f"{constraint.value!r}. Turning auto-pay on is permitted only by a "
+            "policy carrying two distinct approver signatures "
+            "(FINAL.md §4.15 r10, §6.4) — see policy.demo.yaml",
+        )
+        # load_policy() looks for this to decide whether signatures clear it.
+        return [f"{message}{REQUIRES_SIGNATURES_MARKER}"]
     return []
 
 
+def _only_signature_gated(violations: Sequence[str]) -> list[str]:
+    """The violations that two valid signatures would clear."""
+    return [v for v in violations if v.endswith(REQUIRES_SIGNATURES_MARKER)]
+
+
+def without_signature_gated(violations: Sequence[str]) -> list[str]:
+    """Drop the signature-gated violations, leaving the hard ones.
+
+    Used by :func:`app.core.policy.load_policy` after signatures have verified.
+    """
+    return [v[: -len(REQUIRES_SIGNATURES_MARKER)] for v in _only_signature_gated(violations)]
+
+
+def has_signature_gated_violation(violations: Sequence[str]) -> bool:
+    """Does this result depend on T0 being turned on without signatures?"""
+    return bool(_only_signature_gated(violations))
+
+
 def check_constraint(row: FloorRow, constraint: Constraint, policy: Mapping[str, Any]) -> list[str]:
-    """Return the violations for one constraint. An empty list means it holds."""
+    """Return the violations for one constraint. An empty list means it holds.
+
+    MONEY floors also reject negative values. Only ``_check_reserve_floor`` had
+    that guard, so ``first_payment_cap_usd: -2500`` — which makes tranche 1 a
+    negative payment — and ``per_approver_day_usd: -30000`` — which stops row 17
+    binding at all — both passed every MONEY row (measured, D-B20).
+    """
     if row.number == 21:
         return _check_reserve_floor(row, policy)
     if row.number == 22:
@@ -642,6 +750,14 @@ def check_constraint(row: FloorRow, constraint: Constraint, policy: Mapping[str,
                 )
             ]
         assert expected is not None
+        if actual < 0:
+            return [
+                _violation(
+                    row,
+                    f"{constraint.where()} is negative ({actual_raw}); a negative "
+                    "limit inverts the control it is meant to bound",
+                )
+            ]
         if constraint.direction is Direction.MINIMUM and actual < expected:
             return [
                 _violation(
@@ -679,6 +795,8 @@ def check_constraint(row: FloorRow, constraint: Constraint, policy: Mapping[str,
 def check_row(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
     """Every violation for one row, across all of its constraints."""
     violations: list[str] = []
+    if row.number == 22:
+        violations.extend(check_settle_window_conjunction(row, policy))
     for constraint in row.constraints:
         violations.extend(check_constraint(row, constraint, policy))
     return violations

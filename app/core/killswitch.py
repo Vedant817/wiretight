@@ -222,34 +222,78 @@ def trip(
     A ``killswitch_state.trip_id`` pointing at a missing trip row is treated as
     **halted**, not as "no trip". The earlier version returned an empty Trip and
     left ``halted`` alone, which fails toward RUNNING.
+
+    **The read, the decision, the trip row, the state update and the audit entry
+    are one transaction.** Three separate defects were measured here (D-B21), and
+    each of them was reachable by one operator:
+
+    * The audit append ran in its *own* transaction after the state was already
+      committed. Forcing it to fail left the switch engaged and durable, with a
+      trip row and a reason, and **zero** rows in the append-only log.
+      ``audit.verify()`` reported ``ok=True, checked=0`` — a halted system whose
+      every audit control reported clean. FINAL.md §14(b) requires the log
+      before the act; that held for transfers and not for the kill switch.
+    * The read-decide-write was not atomic, so four concurrent calls produced six
+      ``trip`` rows and six ``Trip`` objects with six different ids. Five of the
+      six ids the system handed back could never be cleared — an operator who
+      tripped, read the id, and cleared it was refused with "not the active trip",
+      leaving the switch stuck in HALTED with no in-band route out.
+    * ``_write_halt_file`` is deliberately **outside** the transaction: it is
+      filesystem I/O, and holding the single write lock across it would stall
+      every other writer. Ordering here is load-bearing, so it is asserted by
+      :class:`TestTripIsAtomic`.
     """
-    ensure_row(conn)
-    row = conn.execute("SELECT halted, trip_id FROM killswitch_state WHERE id = 1").fetchone()
+    record, needs_file = _trip_locked(conn, reason, origin)
 
-    if row is not None and row["halted"]:
-        if row["trip_id"]:
-            existing = conn.execute("SELECT * FROM trip WHERE id = ?", (row["trip_id"],)).fetchone()
-            if existing is not None:
-                return Trip(**dict(existing))
-
-            # Dangling pointer: the DB was tampered with. Fail toward halted and
-            # record a fresh trip so the state becomes self-consistent again.
-            record = Trip(id=str(uuid.uuid4()), reason=reason, origin="recovery", tripped_at=_now())
-            _insert_trip(conn, record)
-            conn.execute(
-                "UPDATE killswitch_state SET reason = ? WHERE id = 1",
-                (f"{record.reason} (recovered from a dangling trip id)",),
-            )
-            _write_halt_file(halt_file, record)
-            return record
-
-        # Halted with no trip id: nothing to recover, nothing to do.
-        return Trip(id="", reason=str(row["reason"] or reason), origin=origin, tripped_at=_now())
-
-    record = Trip(id=str(uuid.uuid4()), reason=reason, origin=origin, tripped_at=_now())
-    _insert_trip(conn, record)
-    _write_halt_file(halt_file, record)
+    # Outside the transaction, on purpose. See the docstring.
+    if needs_file:
+        _write_halt_file(halt_file, record)
     return record
+
+
+def _trip_locked(conn: db.Connection, reason: str, origin: str) -> tuple[Trip, bool]:
+    """The whole read-decide-write. Returns the trip and whether to write the file."""
+    ensure_row(conn)
+
+    def decide() -> tuple[Trip, bool]:
+        row = conn.execute("SELECT halted, trip_id FROM killswitch_state WHERE id = 1").fetchone()
+
+        if row is not None and row["halted"]:
+            if row["trip_id"]:
+                existing = conn.execute(
+                    "SELECT * FROM trip WHERE id = ?", (row["trip_id"],)
+                ).fetchone()
+                if existing is not None:
+                    return Trip(**dict(existing)), False
+
+                # Dangling pointer: the DB was tampered with. Fail toward halted and
+                # record a fresh trip so the state becomes self-consistent again.
+                recovered = Trip(
+                    id=str(uuid.uuid4()),
+                    reason=f"{reason} (recovered from a dangling trip id)",
+                    origin="recovery",
+                    tripped_at=_now(),
+                )
+                _insert_trip(conn, recovered)
+                conn.execute(
+                    "UPDATE killswitch_state SET reason = ? WHERE id = 1", (recovered.reason,)
+                )
+                return recovered, True
+
+            # Halted with no trip id: nothing to recover, nothing to do.
+            return (
+                Trip(id="", reason=str(row["reason"] or reason), origin=origin, tripped_at=_now()),
+                False,
+            )
+
+        fresh = Trip(id=str(uuid.uuid4()), reason=reason, origin=origin, tripped_at=_now())
+        _insert_trip(conn, fresh)
+        return fresh, True
+
+    # Joins an enclosing transaction if the caller opened one, so an audit entry
+    # written by the caller commits or rolls back with the halt.
+    with db.transaction(conn):
+        return decide()
 
 
 def _as_clear_request(value: ClearRequest | dict[str, Any]) -> ClearRequest:

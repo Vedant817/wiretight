@@ -25,13 +25,20 @@ from __future__ import annotations
 
 import hashlib
 import re
-import unicodedata
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Final
 
 import rfc8785
 
+from app.core.text_normalisation import (
+    bidi_present,
+    describe_invisible,
+    strip_invisible,
+)
 from app.money import (
+    CURRENCY_EXPONENT,
     exponent_for,
     parse_money,
     to_money_string,
@@ -321,10 +328,28 @@ _CURRENCY = re.compile(r"^[A-Z]{3}$")
 
 
 def parse_currency(value: str) -> ParseResult:
-    """Validate an ISO 4217 code and return its exponent."""
-    code = value.strip().upper()
+    """Validate an ISO 4217 code and return its exponent.
+
+    The code must be **known**, not merely three letters. Any three letters used
+    to pass, so a currency with no exponent entry silently inherited the default
+    of 2 — which for a zero-decimal currency like KRW overstates every amount by
+    100x, straight into the cap comparisons, the ledger and the tie-out (D-B20).
+    """
+    if not isinstance(value, str):
+        return ParseResult(
+            valid=False, reason=f"a currency is a string, got {type(value).__name__}"
+        )
+    code = strip_invisible(value).strip().upper()
     if not _CURRENCY.match(code):
         return ParseResult(valid=False, reason="a currency is a 3-letter ISO 4217 code")
+    if code not in CURRENCY_EXPONENT:
+        return ParseResult(
+            valid=False,
+            reason=(
+                f"{code} is not in the pinned ISO 4217 exponent table. Guessing an "
+                "exponent would misstate every amount in this currency."
+            ),
+        )
     return ParseResult(
         valid=True,
         value=code,
@@ -338,20 +363,53 @@ def parse_currency(value: str) -> ParseResult:
 # Invoice number
 # ---------------------------------------------------------------------------
 def normalise_invoice_no(value: str) -> str:
-    """Upper-case, strip spaces, dots, slashes, dashes and leading zeros.
+    """Upper-case, strip invisibles and punctuation, and drop leading zeros.
 
-    This is the whole duplicate-detection strategy for invoices: ``inv 0042`` and
-    ``INV-42`` must normalise identically, or a duplicate pays twice.
+    This produces ``duplicate_lock.obligation_key``, so it is the single control
+    standing between a resubmitted invoice and a second payment. Two properties
+    were measured wrong before (D-B20) and both are fixed here:
+
+    * ``\\s`` does not match Unicode format characters, so ``INV-2291`` and
+      ``INV-2291\\u200b`` produced different keys and the invoice paid twice.
+      Invisible characters are now stripped explicitly.
+    * ``lstrip("0")`` on the whole string collides a vendor's ``0V042`` with a
+      different vendor's ``V42``. Leading zeros are now only dropped from a
+      purely numeric invoice number, which is the §8.5 bill #4 case the spec
+      actually describes.
     """
-    text = unicodedata.normalize("NFKC", value).strip().upper()
-    text = re.sub(r"[\s.\-/\\]+", "", text)
-    return text.lstrip("0")
+    text = strip_invisible(value).strip().upper()
+    text = re.sub(r"[\s.\-/\\:]+", "", text)
+    # Only a wholly numeric number has its leading zeros stripped. "0V042" and
+    # "V42" are two invoices at most vendors; "0042" and "42" are one.
+    if text.isdigit():
+        return text.lstrip("0") or "0"
+    return text
 
 
 def parse_invoice_no(value: str) -> ParseResult:
     normalised = normalise_invoice_no(value)
     if not normalised:
         return ParseResult(valid=False, reason="an invoice number must not be empty")
+
+    # Report rather than silently repair. A bill carrying a zero-width space is
+    # worth flagging: nothing legitimate adds one, and §4.14.5 measures precision
+    # on exactly this class of input.
+    invisible = describe_invisible(value)
+    if invisible:
+        return ParseResult(
+            valid=False,
+            normalised=normalised,
+            reason=(
+                "the invoice number contains characters that render as nothing: "
+                + ", ".join(invisible)
+            ),
+        )
+    if bidi_present(value):
+        return ParseResult(
+            valid=False,
+            normalised=normalised,
+            reason="the invoice number contains a bidirectional override (text reordering attack)",
+        )
     return ParseResult(valid=True, value=value.strip(), normalised=normalised)
 
 
@@ -496,6 +554,21 @@ FAILURE_REASON_CODES: Final[dict[str, str]] = {
 }
 
 
+def normalise_failure_type(value: str | None) -> str | None:
+    """Upper-case and strip a ``failure_type`` before any lookup.
+
+    Airwallex returns these as enum values, so they should already be canonical.
+    But a trailing space or a differently-cased string would otherwise fall to
+    the DEFAULT handler — and for the *compliance* group that is the difference
+    between "halt everything and escalate to the founder" (§4.15 r29) and "carry
+    on". Normalising means a near-miss still reaches its real playbook, and a
+    genuinely unknown type still reaches H (D-B20).
+    """
+    if value is None:
+        return None
+    return strip_invisible(value).strip().upper()
+
+
 def playbook_for(failure_type: str | None) -> str:
     """Which playbook group handles ``failure_type``. Anything unknown is ``H``.
 
@@ -504,7 +577,7 @@ def playbook_for(failure_type: str | None) -> str:
     """
     if not failure_type:
         return "H"
-    return FAILURE_TYPES.get(failure_type, "H")
+    return FAILURE_TYPES.get(normalise_failure_type(failure_type) or "", "H")
 
 
 # ---------------------------------------------------------------------------
@@ -517,22 +590,42 @@ class AmountResult:
     reason: str | None = None
 
 
-def parse_amount(value: object, currency: str) -> AmountResult:
+def parse_amount(value: object, currency: str | None) -> AmountResult:
     """Parse an amount at ``currency``'s exponent. A float is refused.
 
     Refunds and reversals are negative, so a negative amount is valid here; it is
     the caller that decides whether a negative *obligation* makes sense.
+
+    Three defects fixed here (D-B20), all of which turned a guard that exists into
+    a guard that did not:
+
+    * the quantise step sat **outside** the ``try``, so a 27-digit amount escaped
+      as an uncaught ``decimal.InvalidOperation``;
+    * at JPY's exponent of 0 the same amount *succeeded*, rounding 1e27 to a
+      completely different number, because the fractional part simply disappeared;
+    * ``currency=None`` — which a valid IBAN with no currency mapping returns —
+      raised ``TypeError`` instead of routing the item to REVIEW.
     """
     if isinstance(value, float):
         return AmountResult(
             valid=False,
             reason="a float is not an amount; pass a decimal string (FINAL.md §7.3)",
         )
+    if not currency or not isinstance(currency, str):
+        return AmountResult(
+            valid=False,
+            reason=f"no currency for this amount (got {currency!r}); cannot pick an exponent",
+        )
     try:
         amount = parse_money(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError) as exc:
-        return AmountResult(valid=False, reason=str(exc))
-    return AmountResult(valid=True, value=to_money_string(amount, currency))
+        return AmountResult(valid=True, value=to_money_string(amount, currency))
+    except (TypeError, ValueError, ArithmeticError) as exc:
+        # ArithmeticError covers decimal.InvalidOperation, which is not a
+        # ValueError and so was never caught by the original except clause.
+        return AmountResult(
+            valid=False,
+            reason=f"{exc} (an amount this large cannot be represented exactly)",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -545,6 +638,10 @@ class PayeeDetails:
     Note what is *absent*: the payee's name. The fingerprint is about the
     destination account, so renaming a supplier does not read as a bank change,
     and changing an account always does.
+
+    ``extra`` is wrapped in a read-only mapping. ``frozen=True`` on a dataclass
+    only stops attribute rebinding, so a plain ``dict`` field let the fingerprint
+    of a "frozen" object change underneath its holder (measured, D-B20).
     """
 
     country: str
@@ -552,30 +649,63 @@ class PayeeDetails:
     method: str
     account: str
     bic: str | None = None
-    #: Any other corridor-specific identifiers, already normalised.
-    extra: dict[str, str] = field(default_factory=dict)
+    #: Other corridor-specific identifiers. Read-only; keys may not shadow
+    #: ``account`` or ``bic``.
+    extra: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.extra, MappingProxyType):
+            object.__setattr__(self, "extra", MappingProxyType(dict(self.extra)))
 
 
 def _normalise_identifier(value: str) -> str:
-    """Strip formatting so spacing and case never read as a bank change."""
-    return re.sub(r"[\s\-]", "", value).strip().upper()
+    """Strip formatting so spacing and case never read as a bank change.
+
+    Invisible characters are stripped too. A soft hyphen in an IBAN is a
+    formatting artefact of some upstream systems, so treating it as a change
+    produces a ``HOLD: BANK_CHANGE`` and a 72-hour cooling-off on a supplier whose
+    bank details did not move — which is exactly the false positive §4.14.5's
+    ``bank_change_flag_precision`` is measured against.
+    """
+    return re.sub(r"[\s\-]", "", strip_invisible(value)).strip().upper()
+
+
+#: Keys ``PayeeDetails.extra`` may not use. ``extra`` exists for
+#: *other* corridor identifiers, and the fingerprint dict is built with ``account``
+#: first, so an injected ``account`` key would shadow the real one (D-B20).
+RESERVED_FINGERPRINT_KEYS: frozenset[str] = frozenset({"account", "bic"})
+
+
+class FingerprintKeyError(ValueError):
+    """An identifier was placed under a key the fingerprint already owns."""
 
 
 def fingerprint(details: PayeeDetails) -> str:
     """``sha256(rfc8785({country, currency, method, identifiers, bic}))``.
 
     RFC 8785 is what makes this safe: the same details hashed from two different
-    code paths produce the same digest, so a fingerprint comparison compares
-    data rather than serialisation choices.
+    code paths produce the same digest, so a fingerprint comparison compares data
+    rather than serialisation choices.
+
+    ``extra`` is copied into the identifiers mapping and a key that shadows
+    ``account`` is refused. Before that check, an attacker-supplied corridor
+    field made two *different* bank accounts fingerprint identically, so a real
+    bank change never fired the lock.
     """
+    identifiers: dict[str, str] = {"account": _normalise_identifier(details.account)}
+    for key, value in sorted(details.extra.items()):
+        if key in RESERVED_FINGERPRINT_KEYS:
+            raise FingerprintKeyError(
+                f"extra[{key!r}] would shadow the {key} being fingerprinted; "
+                f"reserved keys are {sorted(RESERVED_FINGERPRINT_KEYS)}"
+            )
+        identifiers[key] = _normalise_identifier(value)
+
     payload = {
-        "country": details.country.strip().upper(),
-        "currency": details.currency.strip().upper(),
-        "method": details.method.strip().upper(),
-        "identifiers": {
-            "account": _normalise_identifier(details.account),
-            **{key: _normalise_identifier(value) for key, value in sorted(details.extra.items())},
-        },
+        "country": strip_invisible(details.country).strip().upper(),
+        "currency": strip_invisible(details.currency).strip().upper(),
+        "method": strip_invisible(details.method).strip().upper(),
+        "identifiers": identifiers,
         "bic": _normalise_identifier(details.bic) if details.bic else None,
     }
     return hashlib.sha256(rfc8785.dumps(payload)).hexdigest()
@@ -592,12 +722,28 @@ def last4(details: PayeeDetails) -> str:
 
 
 def mask_account(value: str) -> str:
-    """``DE•• •••• 3000``. The form shown in every UI and every log line."""
-    compact = re.sub(r"[\s\-]", "", value).strip()
+    """``DE•• •••• 3000``. The form shown in every UI and every log line.
+
+    The mask must never disclose the whole account. A 5-character account used to
+    render as ``AB•• •••• B123``, where the 2-character prefix and the 4-character
+    tail overlap and every character is visible — in every UI row and every log
+    line (D-B20).
+    """
+    compact = re.sub(r"[\s\-]", "", strip_invisible(value)).strip()
     if len(compact) <= 4:
         return "•" * len(compact)
     prefix = compact[:2] if compact[:2].isalpha() else ""
-    return f"{prefix}{'•' * 2} {'•' * 4} {compact[-4:]}"
+    tail = compact[-4:]
+
+    # Overlap check: if the prefix would appear inside the tail, mask more.
+    if prefix and prefix in tail:
+        prefix = ""
+
+    body = len(compact) - len(prefix) - 4
+    if body <= 0:
+        # Too short to show a prefix and a tail without revealing everything.
+        return f"{prefix}{'•' * 4} {tail}" if prefix else f"{'•' * 4} {tail}"
+    return f"{prefix}{'•' * 2} {'•' * 4} {tail}"
 
 
 # ---------------------------------------------------------------------------
@@ -606,7 +752,45 @@ def mask_account(value: str) -> str:
 #: Body text below this size is treated as hidden regardless of colour.
 MIN_VISIBLE_PT: Final[float] = 8.0
 
-_WHITE = re.compile(r"^(#fff|#ffffff|white|1,1,1|255,255,255)$", re.IGNORECASE)
+#: Light colours, matched numerically rather than by exact spelling.
+#:
+#: The previous pattern listed literal strings, so ``rgb(255,255,255)`` — the
+#: notation every HTML-to-PDF renderer and every browser emits, and therefore the
+#: one an attacker would use — was missed entirely while ``#fff`` was caught
+#: (measured, D-B20).
+_RGB = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", re.IGNORECASE)
+_HEX = re.compile(r"^#?([0-9a-f]{3}|[0-9a-f]{6})$", re.IGNORECASE)
+_NAMED_LIGHT = frozenset({"white", "ghostwhite", "snow", "ivory", "azure"})
+
+#: Above this luminance, text is treated as invisible on a white page.
+LIGHT_LUMINANCE_THRESHOLD: float = 0.85
+
+
+def _is_light(colour: str) -> bool:
+    """Is this colour light enough to be invisible on white paper?"""
+    text = colour.strip().lower()
+    if not text:
+        return False
+    if text in _NAMED_LIGHT:
+        return True
+
+    match = _RGB.match(text)
+    if match:
+        r, g, b = (int(group) / 255 for group in match.groups())
+        # Relative luminance, the standard formula.
+        luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        return luminance >= LIGHT_LUMINANCE_THRESHOLD
+
+    hex_match = _HEX.match(text)
+    if hex_match:
+        digits = hex_match.group(1)
+        if len(digits) == 3:
+            digits = "".join(char * 2 for char in digits)
+        r, g, b = (int(digits[i : i + 2], 16) / 255 for i in (0, 2, 4))
+        luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        return luminance >= LIGHT_LUMINANCE_THRESHOLD
+
+    return False
 
 
 def detect_hidden_text(chars: list[tuple[str, float] | tuple[str, float, str]]) -> bool:
@@ -618,19 +802,23 @@ def detect_hidden_text(chars: list[tuple[str, float] | tuple[str, float, str]]) 
 
     A one-point white line under an 11-point invoice is the T-01 attack: the
     human reads the IBAN on the page, the model reads the whole text layer.
+    Three further evasions closed here (D-B20): ``rgb()`` notation, a ``NaN``
+    font size, and an empty-text run at 0.5 pt, all of which previously returned
+    ``False``.
     """
     for entry in chars:
-        text = str(entry[0]).strip()
-        if not text:
-            continue
         try:
             size = float(entry[1])
         except (IndexError, TypeError, ValueError):
             continue
-        colour = str(entry[2]) if len(entry) > 2 else ""
 
+        # A NaN size fails every comparison, so an unparseable or NaN measurement
+        # must not read as "visible".
+        if size != size:
+            return True
         if size < MIN_VISIBLE_PT:
             return True
-        if colour and _WHITE.match(colour.strip()):
+
+        if len(entry) > 2 and _is_light(str(entry[2])):
             return True
     return False

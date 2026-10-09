@@ -18,7 +18,7 @@ from decimal import Decimal
 from typing import Any
 
 from app.core import db
-from app.money import parse_money, to_money_string
+from app.money import is_known_currency, parse_money, to_money_string
 
 
 class UnbalancedError(ValueError):
@@ -45,6 +45,16 @@ class Leg:
             raise ValueError(f"leg for {self.account} is both debit and credit")
         if self.debit is None and self.credit is None:
             raise ValueError(f"leg for {self.account} is neither debit nor credit")
+        # The currency must be a real one. It used to be unchecked, so a leg in a
+        # currency that does not exist posted cleanly and balanced within its own
+        # invented bucket, which a USD-scoped tie-out then never saw: money left
+        # the ledger's line of sight with no error anywhere (D-B21).
+        if not is_known_currency(self.currency):
+            raise ValueError(
+                f"leg for {self.account} uses currency {self.currency!r}, which is not "
+                "in the pinned ISO 4217 exponent table. A posting in an unknown "
+                "currency would balance inside a bucket no reconciliation reads."
+            )
 
 
 def _now_iso() -> str:
@@ -83,34 +93,54 @@ def post(conn: db.Connection, run_id: str, legs: Sequence[Leg]) -> int:
     """Write one balanced posting to ``journal_line``. Returns the first line number.
 
     Validation happens before any write, so a rejected posting leaves no rows.
+
+    **All legs commit together or none do.** The read of ``MAX(line_no)`` and the
+    inserts that depend on it run inside one ``BEGIN IMMEDIATE``, which takes the
+    write lock up front. Without that, two concurrent postings read the same head,
+    the loser hit the primary key on the second leg, and the first leg stayed
+    committed — measured in 2 of 8 trials of 8 threads x 20 postings, each leaving
+    the ledger **unbalanced by 10.00** with an orphaned debit that reads as money
+    leaving the business (D-B21).
+
+    A half-posting is worse than a failed posting: ``assert_ledger_balances``
+    catches it, but only after the ledger is already wrong, and it cannot tell
+    which leg to reverse.
     """
     check_balanced(legs)
 
-    row = conn.execute(
-        "SELECT COALESCE(MAX(line_no), 0) AS n FROM journal_line WHERE run_id = ?", (run_id,)
-    ).fetchone()
-    first_line = int(row["n"]) + 1
-
     at = _now_iso()
-    for offset, leg in enumerate(legs):
-        conn.execute(
-            "INSERT INTO journal_line"
-            " (id, run_id, line_no, occurred_at, account, debit, credit, currency, source_id, memo)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                f"{run_id}:{first_line + offset}",
-                run_id,
-                first_line + offset,
-                at,
-                leg.account,
-                leg.debit,
-                leg.credit,
-                leg.currency,
-                leg.source_id,
-                leg.memo,
-            ),
-        )
-    return first_line
+
+    def write() -> int:
+        row = conn.execute(
+            "SELECT COALESCE(MAX(line_no), 0) AS n FROM journal_line WHERE run_id = ?", (run_id,)
+        ).fetchone()
+        first_line = int(row["n"]) + 1
+
+        for offset, leg in enumerate(legs):
+            conn.execute(
+                "INSERT INTO journal_line"
+                " (id, run_id, line_no, occurred_at, account, debit, credit, currency,"
+                "  source_id, memo)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    f"{run_id}:{first_line + offset}",
+                    run_id,
+                    first_line + offset,
+                    at,
+                    leg.account,
+                    leg.debit,
+                    leg.credit,
+                    leg.currency,
+                    leg.source_id,
+                    leg.memo,
+                ),
+            )
+        return first_line
+
+    # Joins an enclosing transaction when the caller already opened one, so a
+    # posting and its audit entry share a single commit.
+    with db.transaction(conn):
+        return write()
 
 
 def balances(conn: db.Connection) -> dict[str, dict[str, Decimal]]:
@@ -141,11 +171,23 @@ def account_prefix_totals(conn: db.Connection, prefix: str) -> dict[str, Decimal
 
     Used by reconciliation, which reasons about families like ``Wallet:`` and
     ``AP-clearing:`` rather than individual accounts.
+
+    The prefix is a **literal**, not a pattern. It used to be concatenated into a
+    ``LIKE`` pattern with no ``ESCAPE`` clause, so ``%`` and ``_`` in the prefix
+    acted as wildcards: ``"AP_clearing"`` matched ``APXclearing`` too, and ``"%"``
+    matched the whole ledger. A single underscore typo in an account family
+    silently doubled the population and the tie-out still produced a number, a
+    wrong one, with no error (D-B21).
+
+    ``ESCAPE`` is kept even though nothing now escapes, so that a future caller
+    adding a backslash cannot silently reintroduce a pattern.
     """
+    pattern = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     totals: dict[str, Decimal] = {}
     rows = conn.execute(
-        "SELECT account, currency, debit, credit FROM journal_line WHERE account LIKE ? || '%'",
-        (prefix,),
+        "SELECT account, currency, debit, credit FROM journal_line"
+        " WHERE account LIKE ? ESCAPE '\\'",
+        (pattern,),
     )
     for row in rows:
         currency = str(row["currency"])

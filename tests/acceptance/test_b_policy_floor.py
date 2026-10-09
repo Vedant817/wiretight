@@ -32,10 +32,13 @@ from app.core.policy import (
 )
 from app.core.policy_floor import (
     FLOOR_ROWS,
+    REQUIRES_SIGNATURES_MARKER,
     Constraint,
     Direction,
     all_constraints,
     check_policy_against_floor,
+    has_signature_gated_violation,
+    without_signature_gated,
 )
 
 #: The shipped default, exactly as §4.17 writes it. T-27 mutates a copy of this.
@@ -248,6 +251,8 @@ def _loosen(constraint: Constraint, policy: dict[str, Any]) -> Any:
             else format(number + Decimal("1000000"), "f")
         )
     elif isinstance(value, int):
+        # One unit below the floor for a MINIMUM, one above it for a MAXIMUM.
+        # Row 22's min_hours is bounded at 48, so 47 is the loosening value.
         written = value - 1 if constraint.direction is Direction.MINIMUM else value + 1
     else:  # pragma: no cover - every constraint has an int, str or special value
         raise AssertionError(f"constraint {constraint.where()} has value {value!r}")
@@ -496,12 +501,51 @@ class TestShippedPolicyIsValid:
         assert result.ok, result.violations
         assert path.exists()
 
-    def test_the_demo_policy_passes_the_floor(
+    def test_the_demo_policy_has_only_the_signature_gated_violation(
         self, tmp_path: Path, policy_copy: dict[str, Any]
     ) -> None:
+        """policy.demo.yaml turns T0 on. The floor permits that only under two
+        signatures, so `check_policy_against_floor` reports it as gated and
+        `load_policy` is what clears it once the signature file verifies.
+
+        Before this, `_check_exact` consulted only the *type*, so `t0.enabled:
+        true` passed unconditionally and `allow_unsigned=True` was a live path to
+        live auto-payout (D-B20).
+        """
         policy_copy["t0"]["enabled"] = True
         policy_copy["demo_timing"] = True
-        assert check_policy_against_floor(policy_copy).ok
+        result = check_policy_against_floor(policy_copy)
+
+        assert has_signature_gated_violation(result.violations), (
+            "the demo policy's only floor issue should be the signature-gated T0 one"
+        )
+        # Every violation must be the gated one; nothing else may be in the list.
+        assert all(v.endswith(REQUIRES_SIGNATURES_MARKER) for v in result.violations), (
+            f"the demo policy has an unconditional floor breach: {result.violations}"
+        )
+        assert len(without_signature_gated(result.violations)) == len(result.violations)
+
+    def test_the_demo_policy_loads_when_signed(
+        self, tmp_path: Path, policy_copy: dict[str, Any]
+    ) -> None:
+        """The signature-gated path must still permit the documented demo policy."""
+        policy_copy["t0"]["enabled"] = True
+        policy_copy["demo_timing"] = True
+        path = signed(tmp_path, policy_copy)
+        loaded = load_policy(
+            path, signature_path=tmp_path / "policy.sig.json", allow_unsigned=False
+        )
+        assert loaded.t0_enabled is True
+        assert loaded.demo_timing is True
+
+    def test_t0_on_without_signatures_is_refused_by_the_loader(
+        self, tmp_path: Path, policy_copy: dict[str, Any]
+    ) -> None:
+        """`allow_unsigned=True` must not be a route to live auto-payout."""
+        policy_copy["t0"]["enabled"] = True
+        path = write_policy(tmp_path / "policy.yaml", policy_copy)
+        with pytest.raises(PolicyError, match=r"r10|two distinct"):
+            load_policy(path, signature_path=None, allow_unsigned=True)
 
     def test_the_roster_is_the_d6_cast(self, policy_copy: dict[str, Any]) -> None:
         roster = policy_copy["roster"]
