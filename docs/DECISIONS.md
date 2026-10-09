@@ -91,6 +91,79 @@ Neither of these changed what the guard *does*; both were wrong test data.
 comparison. Both paths refused the process either way; this only makes the error message accurate
 ("is not set" instead of "expected exactly"). It tightens nothing and loosens nothing.
 
+## D-B07 — Build autonomy granted; the agent decides, the human supplies credentials only
+
+- **When:** Fri 9 Oct 2026
+- **What:** Vedant delegated day-to-day build decisions to the agent: architecture choices, naming,
+  module boundaries, library selections within the §6.1 pins, scope sequencing, and any judgement
+  call the spec leaves open. The agent proceeds without asking.
+- **Still human-only** (unchanged, and these are not delegable):
+  - writing Airwallex sandbox credentials into `.env`;
+  - the four passkey gestures (`make passkeys`) and `make sign-policy`;
+  - reading the login-gated HackerEarth rules tab;
+  - recording the video and submitting on HackerEarth;
+  - any account sign-up, purchase, or contact with an outside party.
+- **How to get a second opinion:** the agent may spawn sub-agents to act as reviewers and advisers,
+  and may build on their advice. It is not obliged to follow it.
+- **Why:** the build is long and mostly unattended. Stopping to ask about a module boundary would
+  stall it, and the spec already fixes the parts that are genuinely load-bearing (the lock, the
+  policy floor, the executor sequence, the honesty rules).
+- **Supersedes:** nothing. It widens how the agent may decide *how* to build; it cannot widen *what*
+  the system does. Every deviation from FINAL.md still needs its own entry here.
+
+---
+
+## D-B08 — Endpoint layer, model, and the `awx_status` transition table are built ahead of fixtures
+
+- **When:** Fri 9 Oct 2026
+- **What:** Milestone (a) is being built offline per §9.1 Plan B: the client, transport, error classes
+  and response models are written against FINAL.md §7.2/§7.3 and marked **⚠ unverified** at every
+  point where the sandbox has not yet answered. Contract tests that need a recorded response are
+  written as `pending-fixture` and live in `tests/contract`, never in `tests/acceptance`.
+- **Why:** §7.2 says explicitly "Nothing here has been called live", and §9.4 requires the code to
+  follow the *recorded* behaviour. Writing the client now and rewriting it later wastes the milestone;
+  writing it against docs and treating docs as truth would violate §9.4. The compromise is to build
+  the structure, isolate every unverified assumption behind a named constant, and make the day-1
+  spike able to contradict any of them cheaply.
+- **Consequence, recorded so it cannot be forgotten:** every field read off these models carries an
+  unverified tag. If the spike contradicts one, the model changes and the affected tests change with
+  it — the *test expectations* never move to match a surprising sandbox response without a
+  `DECISIONS.md` entry naming the old expectation and why it was wrong (§10.1 rule 11).
+- **Supersedes:** nothing.
+
+---
+
+## D-B09 — Checkpoints pin a hash, not a position (found by the harder half of T-13)
+
+- **When:** Fri 9 Oct 2026
+- **What:** `verify_checkpoints` originally checked each checkpoint's Ed25519 signature and that no
+  checkpoint sat ahead of the chain head. It did **not** compare the sealed `entry_hash` against the
+  chain's hash at that sequence number.
+- **Why it mattered:** that left a real hole in T-13's harder half. An attacker who drops the
+  `audit_log` triggers, edits a payload **and recomputes every downstream hash** produces a
+  self-consistent chain that `verify()` passes. The signature still covers the *old* hash, so the
+  signature check alone passes too. Only the value comparison catches it.
+- **Fix:** `verify_checkpoints` now looks up the chain's `entry_hash` at the checkpoint's `seq` and
+  requires it to equal the sealed hash. `tests/acceptance/test_b_trust_substrate.py` asserts the
+  tampered-but-rehashed chain verifies internally (`verify().ok` is True) and *still* fails
+  `verify_checkpoints` — the exact shape of the attack.
+- **Lesson recorded deliberately:** a hash chain plus an external signature is not tamper-evident on
+  its own. The checkpoint has to bind the value, not just the height.
+- **Supersedes:** nothing. Tightens a check; loosens nothing.
+
+## D-B10 — `awx_status` moves PAID → FAILED; the overlay is what stays provisional
+
+- **When:** Fri 9 Oct 2026
+- **What:** The test for §8.3's `PAID → FAILED` originally asserted the state stayed `PAID`. The
+  implementation moves it to `FAILED`, and that is correct.
+- **Why:** `awx_status` mirrors Airwallex and follows documented transitions; §8.3 lists
+  `PAID→FAILED` explicitly, because a bank return can arrive after a transfer is paid. What stays
+  provisional is the *other* column, our overlay `wt_state`, which is what `PAID_PROVISIONAL` and
+  `FINAL` live in. Conflating the two is the mistake the two-column design exists to prevent.
+- **Consequence:** recorded here because a reader of the old test could reasonably have thought the
+  state machine was suppressing a real return. It is not.
+- **Supersedes:** the assertion in `tests/acceptance/test_b_trust_substrate.py::test_paid_to_failed_is_allowed`.
+
 ## D-B05 — Real bug found by a test: the socket block was uncatchable
 
 - **When:** Fri 9 Oct 2026, 23:10 IST
