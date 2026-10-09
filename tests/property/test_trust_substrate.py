@@ -293,9 +293,16 @@ def test_a_blank_failure_type_is_absent_not_present(blank: str) -> None:
 def db_root(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
     """A module-scoped directory, so Hypothesis's health check is satisfied.
 
-    Each example still gets its own database file; only the directory is shared,
-    which is the part the health check objects to. Sharing a *file* would leak
-    balances between examples and make the property untestable.
+    Each example gets its own database file in its own subdirectory, so no two
+    examples share a directory. Only the directory is shared, which is the part the
+    health check objects to.
+
+    The subdirectory is not decoration. Sharing one directory between many
+    independently-opened SQLite files produced one intermittent
+    ``sqlite3.OperationalError: database is locked`` across a full-suite run and not
+    in isolation, and it could not be reproduced afterwards (D-B25). It was not
+    diagnosed; the sharing was removed so the specific cause cannot recur, and the
+    failure is recorded rather than claimed fixed.
     """
     yield tmp_path_factory.mktemp("ledger-properties")
 
@@ -303,9 +310,21 @@ def db_root(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
 _counter: Iterator[int] = itertools.count(1)
 
 
-def _fresh_database(db_root: Path, run_id: str) -> tuple[db_module.Database, str]:
-    """A database containing one run row, so journal rows can reference it."""
-    database = db_module.Database(db_root / f"prop-{next(_counter)}.sqlite")
+def _fresh_database(db_root: Path, run_id: str = "r") -> tuple[db_module.Database, str]:
+    """A database, alone in its own directory, with the one run row needed.
+
+    ``run_id`` defaults to ``"r"`` for the tests that post under a fixed run. The
+    one that draws its own run id passes it in, and the FK constraint then holds.
+
+    That parameter exists because a first version hardcoded ``"r"`` and the drawn
+    run id produced ``FOREIGN KEY constraint failed``. Two full-suite runs failed on
+    it intermittently before it was diagnosed, because Hypothesis picks a different
+    example when the database file differs - so the failure appeared only when the
+    counter and the example lined up (D-B25).
+    """
+    directory = db_root / f"ex{next(_counter)}"
+    directory.mkdir(parents=True, exist_ok=True)
+    database = db_module.Database(directory / "app.sqlite")
     conn = database.connection()
     conn.execute(
         "INSERT INTO run (id, started_at, shadow, state) VALUES (?, 't', 0, 'OPEN')",
