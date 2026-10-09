@@ -133,7 +133,165 @@ comparison. Both paths refused the process either way; this only makes the error
 
 ---
 
+## D-B13 — Red-team review of milestone (b): every P0 finding reproduced and fixed
+
+- **When:** Sat 10 Oct 2026
+- **Who:** an independent review agent with no stake in the implementation, asked to find ways a
+  floor row could be bypassed, the audit chain could verify OK after tampering, and the kill switch
+  could read RUNNING when it should read HALTED. 30 findings; **every P0 was reproduced locally
+  before any code changed**, which is recorded here because the fixes below are only trustworthy
+  to the extent the reproductions were.
+
+### The floor was porous in ways the tests could not see
+
+The floor checked **one value per row**, while §4.15 names several. A row that names five caps and
+bounds one of them reads as covered and is not. Nine values were accepted that should not have been:
+
+| Value | Was accepted | Consequence |
+|---|---|---|
+| `t0.bank_details_unchanged_days: 0` | yes | a payee whose bank details changed **yesterday** qualified for T0 — auto-pay, no callback, no cooling-off. The single worst finding. |
+| `t0.min_payment_fraction_of_limit: "0.00"` | yes | T0 history requirement voided |
+| `limits.per_day.max_runs: 999` | yes | §4.15 r14 exists to cap daily runs |
+| `limits.per_day.max_new_beneficiaries`, `max_payments` | yes | r14 unbounded |
+| `limits.per_run.all_usd`, `max_payments` | yes | r13 unbounded |
+| `limits.per_payee_24h.max_t0: 100000` | yes | r16 velocity cap voided |
+| `approvals.challenge_ttl_seconds: 31536000` | yes | a sign-off challenge valid for a year |
+| `bank_change.contact_provenance_min_invoice_age_days: 0` | yes | §4.5.2's 90-day provenance bar gone; the constant existed in the file and nothing read it |
+
+**Fix.** A row now carries one `Constraint` per value §4.15 names: 30 rows, **51 constraints**. T-27
+is parametrised over *constraints*, and each assertion requires the violated **path** to appear in
+the error — the old row-level assertion was satisfied by any one of a row's values, which is exactly
+how four of them could have been deleted with the suite still green.
+
+### Three more floor holes
+
+1. **`Infinity` and `NaN` defeated every numeric bound.** `Decimal("Infinity")` parses, and
+   `Infinity < 10000` is False, so a MINIMUM row accepted it. With
+   `tiers.t2_threshold_usd: "Infinity"` no payment ever exceeds the threshold, so **nothing ever
+   escalated to T2 and one signature moved any amount**. `-Infinity` did the same to every MAXIMUM
+   row. `NaN` was worse than accepted: the comparison sat outside the `try`, so an uncaught
+   `decimal.InvalidOperation` escaped `load_policy` as a **crash** — skipping the `policy_load`
+   REJECTED row and the kill-switch trip, in place of the documented load error.
+2. **`settlement` could omit a rail.** `_check_settlement` iterated only the rails present, so a
+   policy containing just `SWIFT` passed and SEPA transfers were left with no return window — i.e.
+   `PAID` could become `FINAL` immediately. Fail-open on the row that stops us declaring money
+   settled when it is not. All four rails are now required and an unknown rail is refused.
+3. **Missing keys were silently defaulted.** `validate_shape` reported unknown keys but no missing
+   ones, and `_check_shape_at` skipped absent keys entirely. **Nine of ten deleted keys loaded
+   without error**, each falling through to a downstream `.get()` default. A missing key is now an
+   error at every level, naming its row.
+
+### Row 11 was inverted, and my earlier reasoning was backwards — see D-B16.
+
+## D-B14 — The kill switch could read RUNNING four different ways
+
+All four reproduced. §4.9's kill switch is the control that is supposed to stop everything, and
+every one of these holes ran in the *safe* direction:
+
+1. **`Haltswitch` snapshotted the DB flag at load time.** `guard()` — documented as "called before
+   every mutating API call (§4.8 step 1)" — re-read the file but not the database, so an executor
+   holding one switch object for a run never saw a trip raised mid-run. The switch now re-reads
+   both sources on every call.
+2. **`clear()` accepted any caller-supplied `trip_id`** and set `halted = 0` unconditionally.
+   Trip A, cleared; trip B raised; `clear(A.id, …)` again → switch reads RUNNING while **trip B is
+   still open**. One approver pair could wave through an unresolved incident by replaying an old
+   id. Now the id must match the *active* trip.
+3. **`clear()` was not atomic.** It wrote `halted = 0` in autocommit before inserting the signature
+   rows. A failure midway left `killswitch_state = {halted: 0, …}` with the incident still open —
+   and the code comment *invited* a human to delete the now-stale HALT file, which would have
+   completed the failure. Now one transaction, verification before any write.
+4. **`clear()` verified no signatures.** It counted distinct approver *strings*; two entries with no
+   `signature` field and no nonce cleared the switch. §4.9 requires each approver to sign
+   `sha256("clear|" + trip_id + "|" + reason)`, and `clear_signature_payload` had **no caller in
+   `app/`** — only its own three tests. Signatures are now verified in constant time.
+
+Plus: a `killswitch_state.trip_id` pointing at a deleted row returned an empty `Trip` and left
+`halted` alone. A dangling pointer is now treated as **halted** and repaired.
+
+## D-B15 — Checkpoints could be deleted wholesale and the chain still verified
+
+- **Tail truncation.** With seals at 50/100/110, deleting entries 101..110 *and* the 110 seal
+  verified **clean**: the surviving seal at 100 pins entry 100's hash, and a chain truncated to 100
+  has that same hash. Nothing checked that newer entries had ever existed.
+- **Seals overwrote each other.** Files were named `{seq}.checkpoint.json`, so the run-end seal
+  silently replaced the interval seal whenever the chain length was already a multiple of 50. The
+  seal count was not evidence of anything.
+- **A malformed seal crashed instead of failing closed.** `data["body"]` was inside a `try` whose
+  `except` did not include `KeyError`. `verify_checkpoints` runs *before the executor starts*, so a
+  traceback there looks like "verification did not run" rather than "verification failed".
+
+**Fixes.** A monotone signed **anchor** (`head.anchor.json`) records the highest seq ever sealed and
+only ever moves forward; truncation leaves it pointing past the end of the chain. Seal filenames
+carry a reason discriminator so interval and run-end seals coexist. Malformed seals are a
+verification failure.
+
+**Consequence, recorded because it cut both ways.** Requiring "the newest seal covers the head"
+inside the integrity check produced a **false failure every few runs** — an unsealed tail is the
+normal mid-run state (entries 101–110 exist, the next interval seal is at 150). Integrity now asks
+"is this history what it claims to be"; the separate `head_is_sealed()` asks "was the last run
+finished and sealed", and that is what the executor calls before starting. A test asserts the
+mid-run state verifies.
+
+## D-B16 — Row 11 was inverted, and my first reading was backwards
+
+**Correction to D-B11 item 2.** I read `tiers.t2_threshold_usd` as a MINIMUM, reasoning that "raising
+the threshold sends more items to two sign-offs, which is stricter". **That is wrong.** Raising the
+T2 threshold means a USD 400,000 payment no longer *exceeds* it, so it gets T1 — one signature. The
+T1 band is a **ceiling** and may only fall. `t2_threshold_usd: "900000000.00"` was accepted, leaving
+the one-sign-off band unbounded.
+
+Consequence worth stating plainly, because it is counter-intuitive: for this control **lowering** is
+the tightening direction. Lowering to 5,000 sends more items to two sign-offs and is permitted.
+`test_a_higher_t2_threshold_is_accepted` encoded the wrong behaviour and is replaced by
+`test_a_higher_t2_threshold_is_refused`, with both directions tested (§10.1 rule 11).
+
+## D-B17 — Test-honesty defects that would have let CI stay green
+
+§10.1 makes test honesty non-negotiable, so these matter as much as the production bugs:
+
+- **T-19's "unsigned" test never exercised signature verification.** `load_policy` checks shape →
+  floor → signature, so `pytest.raises(PolicyError)` was satisfied by the **floor** rejection.
+  **Deleting `verify_signatures` entirely would have left that test green** while its docstring
+  claimed to cover signatures.
+- **`test_a_missing_required_key_is_a_load_error` passed for the wrong reason.** Its regex was
+  `match="missing"`, which matched the pytest **`tmp_path` directory name**, which embeds the test
+  name. Run from a neutral directory, the message contained no "missing" at all.
+- **T-27's loosen cases masked the unchecked keys** — the mechanism behind the nine unbounded values
+  above. A row-level assertion cannot detect a missing constraint; a path-level one can.
+- **`test_a_yaml_anchor_is_refused` covered nothing.** Its fixture had a top-level `base:` key that
+  `validate_shape` rejects regardless of the merge key.
+- **`test_clearing_resumes_nothing` was tautological** — it asserted two counts were zero on a
+  fresh database, and its docstring conceded it.
+- **Source-text greps presented as behavioural tests**, including one asserting
+  `"import anthropic" not in source` on a single file, where §10.3 T-R4a asks for an **import-graph**
+  test that a different import spelling or a different file would pass.
+- **An autouse fixture inspected `Path("var")` relative to the developer's CWD**, so a stray
+  `policy*.yaml` there would fail 30 unrelated tests. Now scoped to `tmp_path` with a `chdir`.
+- **A dead `WT_STATES` constant** sat next to a working `awx_status` machine, reading as if the
+  overlay existed. It now exists: `wt_next()` implements §4.10's overlay, with `PAID_PROVISIONAL`
+  never reaching `FINAL` without the return window, and `FINAL → REOPENED` on a late failure.
+- **`failure_reason` first-sight was gated on `current_failure_type`**, so a stored reason could be
+  overwritten by a later poll that supplied a type while the type column was still empty. That is
+  precisely §4.11 group H's "a bare cancel returns only `failure_reason: 'simulation'`". The two are
+  now captured independently.
+- **`is_regression` fired on every poll of a terminal transfer**, since re-observing `CANCELLED` was
+  treated as a regression. Poll noise; a real anomaly now stands out.
+
+## D-B18 — `tests/acceptance/test_compliance_index.py` now exists, and what it reports
+
+Required by §10.1 by name. The §10.3 index is transcribed into the file rather than imported, so a
+row dropped from the implementation cannot shrink the index with it. **7 of 41 ids are implemented**
+(T-03, T-07, T-13, T-17, T-19, T-27, T-R4e, plus T-09a/b); the other 34 are declared `PENDING` with
+the milestone they belong to, so a failure names the missing work instead of dumping unexplained ids.
+
+Two bookkeeping invariants, both enforced: an id that has a marker must not remain `PENDING`, and an
+id with no marker must be `PENDING` — otherwise a skipped test is silently absent rather than
+declared. §10.1 rule 8 requires every one of those skips to have a README known-gaps line before the
+freeze; `docs/PROGRESS.md` carries the list.
+
 ## D-B11 — Four floor rows needed a reading the spec does not spell out
+
+*(Items 1, 3 and 4 stand. Item 2, row 11, was wrong and is corrected in D-B16.)*
 
 FINAL.md §4.15 ships values in a column headed "Shipped value (loosest allowed)", which fixes the
 *direction* only by inference. Four rows were genuinely ambiguous; each is resolved here and each
@@ -142,20 +300,19 @@ has a test asserting the chosen reading, so a later reader sees the decision rat
 1. **Row 3, callback validity — MAXIMUM 7.** The spec writes "valid ≤ 7 days", so the loosest
    allowed value is 7 and a policy may only *shorten* it. Read as a minimum it would permit a
    90-day window, which would let a stale confirmation release brand-new bank details — exactly the
-   attack the lock exists to stop.
-2. **Row 11, T1 band — MINIMUM 10,000.** Rows 11 and 12 both constrain `tiers.t2_threshold_usd`.
-   Left undecided, lowering and raising it would each be "permitted" by a different row, which makes
-   the control unfalsifiable. MINIMUM follows the column header. Consequence worth stating plainly:
-   **raising** the threshold is the *tightening* direction, because more items then need two
-   sign-offs. A test asserts both directions.
+   attack the lock exists to stop. Row 3 also bounds
+   `contact_provenance_min_invoice_age_days` at 90, which §4.5.2 requires and which nothing
+   previously read (D-B13).
+2. **Row 11 — see D-B16. My first reading here was backwards and is corrected there.**
 3. **Row 22, settle window — per rail, not one number.** §4.15 says "SEPA 3 TARGET2 days; FPS 3 UK
    days; ACH 2 US days". Those are not uniform. A single minimum of 3 would have rejected the spec's
    own shipped ACH value of 2, which is how the bug was found. The floor is now a per-rail table, and
    SWIFT is required to set `final_by_timer: false` plus a ≥ 10-business-day presumed-settled window.
+   All four rails must be **present** (D-B13).
 4. **Row 29 vs row 25 — `rails.flight_business_days` is a MINIMUM.** Row 29 covers "trip on first
    occurrence"; the only rail-keyed knob that behaves like it is flight time, which must never be
-   shortened. Row 25's demo-visible value is the SEPA fee *reservation*, a MINIMUM, since reducing it
-   would let the planner promise a reserve the wallet does not hold.
+   shortened. Row 25's demo-visible value is the per-rail fee *reservation*, a MINIMUM, since
+   reducing it would let the planner promise a reserve the wallet does not hold.
 
 Also recorded: `t0.enabled` must be a **real YAML boolean**. The string `"false"` is truthy, so
 `if policy["t0"]["enabled"]` would enable auto-pay from a value that reads as off. Shape validation

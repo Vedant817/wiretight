@@ -248,12 +248,18 @@ def write_checkpoint(
     key: Ed25519PrivateKey,
     *,
     at: str | None = None,
+    reason: str = "interval",
 ) -> Path:
-    """Sign the current chain head and write the checkpoint file.
+    """Sign the current chain head and write a checkpoint file.
 
     The file lives outside the SQLite file on purpose: an attacker (or a bug)
     with write access to the database cannot forge it, because the key is
     elsewhere.
+
+    The filename carries the seq **and** a reason discriminator. Naming files
+    ``{seq}.checkpoint.json`` meant a run-end seal silently overwrote the
+    interval seal whenever the chain length was already a multiple of 50, so the
+    number of seal files was not evidence of anything.
     """
     directory = Path(dir_path)
     directory.mkdir(parents=True, exist_ok=True)
@@ -262,25 +268,96 @@ def write_checkpoint(
     seq = int(row["seq"]) if row else 0
     head = row["entry_hash"] if row else GENESIS_PREV_HASH
 
-    body = canonical_json({"seq": seq, "entry_hash": head, "at": at or now_iso()})
+    body = canonical_json({"seq": seq, "entry_hash": head, "at": at or now_iso(), "reason": reason})
     signature = key.sign(body.encode("utf-8"))
 
-    target = directory / f"{seq:012d}{CHECKPOINT_SUFFIX}"
+    target = directory / f"{seq:012d}.{reason}{CHECKPOINT_SUFFIX}"
     target.write_text(
         json.dumps({"body": body, "signature": signature.hex()}, separators=(",", ":")),
         encoding="utf-8",
     )
+    _advance_anchor(directory, seq, key, at=at)
     return target
+
+
+#: The monotone head record. Its only job is to make tail truncation detectable.
+#:
+#: Every checkpoint file can be deleted along with the entries it covers, and the
+#: surviving seals still verify: a seal at seq 100 pins entry 100's hash, and a
+#: chain truncated to 100 has that same hash. So the highest seq ever sealed is
+#: recorded in its own signed file, and truncation leaves the anchor pointing
+#: past the end of the chain.
+ANCHOR_NAME: Final[str] = "head.anchor.json"
+
+
+def _advance_anchor(
+    directory: Path, seq: int, key: Ed25519PrivateKey, *, at: str | None = None
+) -> None:
+    """Record the highest seq ever sealed. Only ever moves forward.
+
+    Read-take-max-write, so replaying an older checkpoint cannot roll it back,
+    and a corrupt anchor cannot silently reset it to a lower value.
+    """
+    anchor = directory / ANCHOR_NAME
+    highest = seq
+    if anchor.exists():
+        try:
+            previous = json.loads(anchor.read_text(encoding="utf-8"))
+            highest = max(seq, int(json.loads(previous["body"])["seq"]))
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            highest = seq
+
+    body = canonical_json({"seq": highest, "at": at or now_iso()})
+    anchor.write_text(
+        json.dumps(
+            {"body": body, "signature": key.sign(body.encode()).hex()},
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+
+
+def read_anchor(dir_path: str | Path) -> int | None:
+    """The highest seq the anchor claims was ever sealed, or ``None``."""
+    anchor = Path(dir_path) / ANCHOR_NAME
+    if not anchor.exists():
+        return None
+    try:
+        data = json.loads(anchor.read_text(encoding="utf-8"))
+        return int(json.loads(data["body"])["seq"])
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return None
+
+
+def _checkpoint_seq(data: dict[str, Any]) -> int:
+    """The seq a checkpoint claims, tolerating a malformed file.
+
+    A corrupt checkpoint must produce a *verification failure*, never a
+    traceback: this runs before the executor starts, and a crash here would look
+    like "verification did not run" rather than "verification failed".
+    """
+    try:
+        return int(json.loads(data["body"])["seq"])
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return -1
 
 
 def verify_checkpoints(
     conn: db.Connection, dir_path: str | Path, public_key: Ed25519PublicKey
 ) -> VerifyResult:
-    """Check the chain and confirm each checkpoint's signature over its head.
+    """Check the chain, every checkpoint's signature, and the monotone anchor.
 
-    This is what ``make verify-audit`` runs and what the executor calls before
-    it starts. A missing checkpoint is a failure: it means entries were appended
-    without ever being sealed.
+    This is what ``make verify-audit`` runs and what the executor calls before it
+    starts. Three independent things must hold:
+
+    1. the chain hashes and links correctly (``verify``);
+    2. every checkpoint's signature is valid **and** the hash it pins matches the
+       chain at that seq;
+    3. the anchor's highest-ever-sealed seq does not exceed the chain head, and
+       a seal exists at or past the head.
+
+    (3) is what catches tail truncation. Without it, deleting entries and their
+    matching seals leaves a self-consistent chain that verifies.
     """
     chain = verify(conn)
     if not chain.ok:
@@ -297,18 +374,50 @@ def verify_checkpoints(
     row = conn.execute("SELECT seq FROM audit_log ORDER BY seq DESC LIMIT 1").fetchone()
     head_seq = int(row["seq"]) if row else 0
 
+    # The anchor first: it is the check that survives deleting seal files.
+    anchor_seq = read_anchor(directory)
+    if anchor_seq is None:
+        return VerifyResult(
+            ok=False,
+            checked=chain.checked,
+            reason="no head anchor: the highest seq ever sealed is unknown",
+        )
+    if anchor_seq > head_seq:
+        return VerifyResult(
+            ok=False,
+            checked=chain.checked,
+            broken_at=anchor_seq,
+            reason=(
+                f"the head anchor records seq {anchor_seq} as sealed, but the chain "
+                f"ends at {head_seq}: {anchor_seq - head_seq} entries and their seals "
+                "were removed (FINAL.md §14 b, T-13)"
+            ),
+        )
+
     for path in checkpoints:
-        data = json.loads(path.read_text(encoding="utf-8"))
         try:
-            public_key.verify(bytes.fromhex(data["signature"]), data["body"].encode("utf-8"))
+            data = json.loads(path.read_text(encoding="utf-8"))
+            body_text = data["body"]
+            signature_hex = data["signature"]
+            sealed = json.loads(body_text)
+        except (json.JSONDecodeError, KeyError, TypeError):
+            return VerifyResult(
+                ok=False,
+                checked=chain.checked,
+                broken_at=-1,
+                reason=f"checkpoint {path.name} is malformed",
+            )
+
+        try:
+            public_key.verify(bytes.fromhex(signature_hex), body_text.encode("utf-8"))
         except (InvalidSignature, ValueError):
             return VerifyResult(
                 ok=False,
                 checked=chain.checked,
-                broken_at=int(data.get("body", "{}") and json.loads(data["body"]).get("seq", 0)),
+                broken_at=_checkpoint_seq(data),
                 reason=f"checkpoint {path.name} has an invalid signature",
             )
-        sealed = json.loads(data["body"])
+
         sealed_seq = int(sealed.get("seq", 0))
         if sealed_seq > head_seq:
             return VerifyResult(
@@ -338,19 +447,64 @@ def verify_checkpoints(
                 ),
             )
 
-    # The newest checkpoint must cover the current head, or entries were
-    # appended after the last seal.
-    newest = json.loads(checkpoints[-1].read_text(encoding="utf-8"))["body"]
-    sealed_seq = int(json.loads(newest).get("seq", 0))
-    if sealed_seq < head_seq:
+    return VerifyResult(ok=True, checked=chain.checked)
+
+
+def head_is_sealed(conn: db.Connection, dir_path: str | Path) -> VerifyResult:
+    """Is the current chain head covered by a seal?
+
+    Deliberately separate from :func:`verify_checkpoints`. An unsealed tail is a
+    normal *mid-run* state — entries 101..110 exist, the next interval seal lands
+    at 150 — so folding "the newest seal must cover the head" into the integrity
+    check reported a false failure every few runs.
+
+    Integrity asks "is this history what it claims to be". This asks "was the
+    last run finished and sealed", and it is what the executor calls before it
+    starts, because resuming a run from an unsealed chain is precisely what
+    T-15's crash recovery relies on.
+    """
+    chain = verify(conn)
+    if not chain.ok:
+        return chain
+
+    directory = Path(dir_path)
+    row = conn.execute("SELECT seq FROM audit_log ORDER BY seq DESC LIMIT 1").fetchone()
+    head_seq = int(row["seq"]) if row else 0
+
+    sealed = 0
+    if directory.is_dir():
+        for path in sorted(directory.glob(f"*{CHECKPOINT_SUFFIX}")):
+            try:
+                sealed = max(sealed, _checkpoint_seq(json.loads(path.read_text(encoding="utf-8"))))
+            except (json.JSONDecodeError, OSError):
+                continue
+
+    if sealed < head_seq:
         return VerifyResult(
             ok=False,
             checked=chain.checked,
-            broken_at=sealed_seq,
-            reason=f"chain head is at {head_seq} but the newest checkpoint seals {sealed_seq}",
+            broken_at=sealed,
+            reason=(
+                f"chain head is at {head_seq} but the newest checkpoint seals {sealed}; "
+                "the last run was not sealed"
+            ),
         )
-
     return VerifyResult(ok=True, checked=chain.checked)
+
+
+def seal_run_end(
+    conn: db.Connection,
+    dir_path: str | Path,
+    key: Ed25519PrivateKey,
+    *,
+    at: str | None = None,
+) -> Path:
+    """Seal at the end of a run, whatever the chain length (§14 b).
+
+    Written with its own ``reason`` so it never collides with the interval seal
+    at the same seq.
+    """
+    return write_checkpoint(conn, dir_path, key, at=at, reason="run-end")
 
 
 def maybe_write_checkpoint(
@@ -360,12 +514,14 @@ def maybe_write_checkpoint(
     *,
     at: str | None = None,
 ) -> Path | None:
-    """Seal every :data:`CHECKPOINT_INTERVAL` entries, and at run end.
+    """Seal every :data:`CHECKPOINT_INTERVAL` entries.
 
-    Returns the path written, or ``None`` if it was not yet time.
+    Returns the path written, or ``None`` if it was not yet time. Call
+    :func:`seal_run_end` separately at the end of a run: folding it in here was
+    what made the two seals overwrite one another.
     """
     row = conn.execute("SELECT count(*) AS n FROM audit_log").fetchone()
     count = int(row["n"])
     if count == 0 or count % CHECKPOINT_INTERVAL != 0:
         return None
-    return write_checkpoint(conn, dir_path, key, at=at)
+    return write_checkpoint(conn, dir_path, key, at=at, reason="interval")

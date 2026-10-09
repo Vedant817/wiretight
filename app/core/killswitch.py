@@ -1,12 +1,28 @@
-"""The kill switch: two places, fail closed, cleared by two people.
+"""The kill switch: two sources, fail closed, cleared by two signed people.
 
-FINAL.md §4.9. Halted is the default-reading failure: if the HALT file exists, or
-its path cannot be read, the executor is halted. There is no flag that makes an
+FINAL.md §4.9, §4.15 rows 24-30.
+
+Halted is the default-reading failure. If the HALT file exists, **or its path
+cannot be read**, the executor is halted. There is no flag that makes an
 unreadable file mean "not halted".
 
 Reads never stop when halted. Polling, AMBIGUOUS lookups, RFI polling and
-reconciliation all continue, because a transfer we already sent still needs
+reconciliation all continue, because a transfer already sent still needs
 watching and a residual still needs explaining. Only the three create calls stop.
+
+Four properties were wrong in the first version and are the reason this module
+re-reads rather than snapshots. Each was found by review, not by the spec:
+
+1. ``guard()`` used a DB flag captured at load time, so a switch object held for
+   the length of a run never saw a later trip. §4.8 step 1 is called before
+   *every* mutating call.
+2. ``clear()`` accepted any caller-supplied ``trip_id``, so replaying an old
+   trip's id cleared a newer, unrelated incident.
+3. ``clear()`` ran outside a transaction and wrote ``halted = 0`` first, so a
+   failure midway left the switch reading RUNNING with the incident still open.
+4. ``clear()`` counted distinct approver *strings* and never verified a single
+   signature, though §4.9 requires each approver to sign
+   ``sha256("clear|" + trip_id + "|" + reason)``.
 
 Honest limits, repeated in the README: in-flight transfers are not recalled,
 there is no transfer-cancellation endpoint in this design, and the ultimate stop
@@ -16,21 +32,27 @@ is a human revoking the API key in the Airwallex web app.
 from __future__ import annotations
 
 import contextlib
+import hashlib
+import hmac
 import uuid
-from collections.abc import Callable
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Final
 
 from app.core import audit, db
 
+RUNNING: Final[str] = "RUNNING"
+HALTED: Final[str] = "HALTED"
 
-class KillswitchState(str):
-    """String enum: ``RUNNING`` or ``HALTED`` (§8.4)."""
+_HALT_UPDATE: Final[str] = (
+    "UPDATE killswitch_state SET halted = 1, halted_at = ?, reason = ?, trip_id = ? WHERE id = 1"
+)
 
-    RUNNING = "RUNNING"
-    HALTED = "HALTED"
+
+class HaltedError(RuntimeError):
+    """The kill switch is engaged. No mutating call may proceed."""
 
 
 @dataclass
@@ -44,23 +66,85 @@ class Trip:
 
 
 @dataclass
+class ClearRequest:
+    """One approver's signed agreement to clear the switch."""
+
+    approver_id: str
+    signature: bytes
+    nonce: str
+    method: str = "HMAC_FALLBACK"
+    signed_via: str = "cli_hmac"
+
+    def expected_signature(self, trip_id: str, reason: str) -> bytes:
+        """HMAC over the §4.9 payload. Compared in constant time by the caller."""
+        payload = clear_signature_payload(trip_id, reason).encode("ascii")
+        return hmac.new(_approver_key(self.approver_id), payload, hashlib.sha256).digest()
+
+
+#: Test key material. Real clearing is a passkey gesture through
+#: ``app.core.signing``; this exists so the suite can sign without a human. It is
+#: public by design and must never be used for anything but tests.
+TEST_KEY_SEED: Final[bytes] = b"wiretight-killswitch-test-seed"
+
+
+def _approver_key(approver_id: str) -> bytes:
+    return hashlib.sha256(TEST_KEY_SEED + approver_id.encode("utf-8")).digest()
+
+
+def clear_signature_payload(trip_id: str, reason: str) -> str:
+    """The exact bytes each approver signs to clear the switch (§4.9).
+
+    ``sha256("clear|" + trip_id + "|" + reason)``. The delimiters matter: without
+    them ``("ab", "c")`` and ``("a", "bc")`` would produce the same preimage.
+    """
+    return hashlib.sha256(f"clear|{trip_id}|{reason}".encode()).hexdigest()
+
+
+def sign_clear(
+    trip_id: str, reason: str, approver_id: str, *, nonce: str | None = None
+) -> ClearRequest:
+    """Produce a valid :class:`ClearRequest`. For tests and the CLI fallback."""
+    request = ClearRequest(approver_id=approver_id, signature=b"", nonce=nonce or str(uuid.uuid4()))
+    request.signature = request.expected_signature(trip_id, reason)
+    return request
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat()
+
+
 class Haltswitch:
     """The kill switch as the executor sees it.
 
-    Two sources, both authoritative:
+    Two authoritative sources: a DB row (survives a restart) and a ``HALT`` file
+    (a human can halt without the database). Either says halt, and so does an
+    unreadable file path.
 
-    * a DB row in ``killswitch_state``, so the halt survives a restart;
-    * a ``HALT`` file, so a human can halt without the database being reachable.
-
-    ``is_halted`` is true if **either** says halt, and also true if the file's
-    path cannot be read. Failing toward halted is the whole design.
+    Neither source is cached. :meth:`is_halted` re-reads both on every call,
+    because ``guard()`` runs before *every* mutating API call: a snapshot taken at
+    executor start would miss a trip raised mid-run, which is exactly when the
+    switch matters most.
     """
 
-    halt_file: Path
-    halted: bool = False
-    reason: str | None = None
-    trip: Trip | None = None
-    clears: list[dict[str, Any]] = field(default_factory=list)
+    def __init__(self, conn: db.Connection, halt_file: str | Path) -> None:
+        self._conn = conn
+        self.halt_file = Path(halt_file)
+
+    def _db_row(self) -> Any:
+        return self._conn.execute(
+            "SELECT halted, reason, trip_id FROM killswitch_state WHERE id = 1"
+        ).fetchone()
+
+    def _db_halted(self) -> bool:
+        row = self._db_row()
+        return bool(row["halted"]) if row is not None else False
+
+    def _file_halted(self) -> bool:
+        try:
+            return self.halt_file.exists()
+        except OSError:
+            # Unreadable path == halted. Fail closed, always.
+            return True
 
     def is_halted(self) -> bool:
         return self._db_halted() or self._file_halted()
@@ -68,40 +152,29 @@ class Haltswitch:
     def reason_text(self) -> str:
         if self._file_halted() and not self._db_halted():
             return "HALT file present"
-        return self.reason or "no reason recorded"
+        row = self._db_row()
+        if row is not None and row["reason"]:
+            return str(row["reason"])
+        return "no reason recorded"
 
-    def _db_halted(self) -> bool:
-        return bool(self.halted)
-
-    def _file_halted(self) -> bool:
-        try:
-            return self.halt_file.exists()
-        except OSError:
-            # Unreadable path == halted. Fail closed.
-            return True
+    def active_trip_id(self) -> str | None:
+        row = self._db_row()
+        return row["trip_id"] if row is not None else None
 
     def guard(self) -> None:
         """Raise if halted. Called before every mutating API call (§4.8 step 1)."""
         if self.is_halted():
             raise HaltedError(f"kill switch is halted: {self.reason_text()}")
 
-
-class HaltedError(RuntimeError):
-    """The kill switch is engaged. No mutating call may proceed."""
-
-
-class Tripswitch(Protocol):  # pragma: no cover - documentation only
-    """What the automatic trip rules (§4.15 rows 24-29) need to call."""
-
-    def trip(self, conn: db.Connection, reason: str, origin: str) -> Trip: ...
+    def assert_may_mutate(self) -> None:
+        """Explicit alias for :meth:`guard`, for call sites that read better."""
+        self.guard()
 
 
-def _now() -> str:
-    return datetime.now(UTC).isoformat()
-
-
+# ---------------------------------------------------------------------------
+# State
+# ---------------------------------------------------------------------------
 def ensure_row(conn: db.Connection) -> None:
-    """Create the single ``killswitch_state`` row if it is absent."""
     conn.execute(
         "INSERT OR IGNORE INTO killswitch_state (id, halted, halted_at, reason, trip_id)"
         " VALUES (1, 0, NULL, NULL, NULL)"
@@ -109,25 +182,32 @@ def ensure_row(conn: db.Connection) -> None:
 
 
 def load(conn: db.Connection, halt_file: str | Path) -> Haltswitch:
-    """Read the current state. Does not create the HALT file."""
+    """A switch bound to the connection. Reads state fresh on every call."""
     ensure_row(conn)
-    row = conn.execute(
-        "SELECT halted, reason, trip_id FROM killswitch_state WHERE id = 1"
-    ).fetchone()
+    return Haltswitch(conn, halt_file)
 
-    switch = Haltswitch(halt_file=Path(halt_file))
-    if row is not None:
-        switch.halted = bool(row["halted"])
-        switch.reason = row["reason"]
-        if row["trip_id"]:
-            trip_row = conn.execute(
-                "SELECT id, reason, origin, tripped_at, cleared_at, cleared_by"
-                " FROM trip WHERE id = ?",
-                (row["trip_id"],),
-            ).fetchone()
-            if trip_row is not None:
-                switch.trip = Trip(**dict(trip_row))
-    return switch
+
+def _write_halt_file(halt_file: str | Path | None, record: Trip) -> None:
+    if halt_file is None:
+        return
+    Path(halt_file).parent.mkdir(parents=True, exist_ok=True)
+    Path(halt_file).write_text(
+        f"tripped {record.tripped_at}\nreason: {record.reason}\norigin: {record.origin}\n",
+        encoding="utf-8",
+    )
+
+
+def _insert_trip(conn: db.Connection, record: Trip) -> None:
+    conn.execute(
+        "INSERT INTO trip (id, reason, origin, tripped_at) VALUES (?, ?, ?, ?)",
+        (record.id, record.reason, record.origin, record.tripped_at),
+    )
+    conn.execute(_HALT_UPDATE, (record.tripped_at, record.reason, record.id))
+    audit.log_intent(
+        conn,
+        kind="KILLSWITCH_TRIP",
+        payload={"trip_id": record.id, "reason": record.reason, "origin": record.origin},
+    )
 
 
 def trip(
@@ -139,152 +219,185 @@ def trip(
 ) -> Trip:
     """Engage the kill switch. Idempotent: tripping twice keeps the first trip.
 
-    Audited, because "the switch went off" is a fact someone will ask about
-    later, and the reason has to survive the restart that follows.
+    A ``killswitch_state.trip_id`` pointing at a missing trip row is treated as
+    **halted**, not as "no trip". The earlier version returned an empty Trip and
+    left ``halted`` alone, which fails toward RUNNING.
     """
     ensure_row(conn)
-    existing = conn.execute(
-        "SELECT trip_id FROM killswitch_state WHERE id = 1 AND halted = 1"
-    ).fetchone()
-    if existing is not None:
-        row = conn.execute("SELECT * FROM trip WHERE id = ?", (existing["trip_id"],)).fetchone()
-        return Trip(**dict(row)) if row is not None else Trip("", reason, origin, _now())
+    row = conn.execute("SELECT halted, trip_id FROM killswitch_state WHERE id = 1").fetchone()
+
+    if row is not None and row["halted"]:
+        if row["trip_id"]:
+            existing = conn.execute("SELECT * FROM trip WHERE id = ?", (row["trip_id"],)).fetchone()
+            if existing is not None:
+                return Trip(**dict(existing))
+
+            # Dangling pointer: the DB was tampered with. Fail toward halted and
+            # record a fresh trip so the state becomes self-consistent again.
+            record = Trip(id=str(uuid.uuid4()), reason=reason, origin="recovery", tripped_at=_now())
+            _insert_trip(conn, record)
+            conn.execute(
+                "UPDATE killswitch_state SET reason = ? WHERE id = 1",
+                (f"{record.reason} (recovered from a dangling trip id)",),
+            )
+            _write_halt_file(halt_file, record)
+            return record
+
+        # Halted with no trip id: nothing to recover, nothing to do.
+        return Trip(id="", reason=str(row["reason"] or reason), origin=origin, tripped_at=_now())
 
     record = Trip(id=str(uuid.uuid4()), reason=reason, origin=origin, tripped_at=_now())
-    conn.execute(
-        "INSERT INTO trip (id, reason, origin, tripped_at) VALUES (?, ?, ?, ?)",
-        (record.id, record.reason, record.origin, record.tripped_at),
-    )
-    conn.execute(
-        "UPDATE killswitch_state"
-        " SET halted = 1, halted_at = ?, reason = ?, trip_id = ? WHERE id = 1",
-        (record.tripped_at, record.reason, record.id),
-    )
-    audit.log_intent(
-        conn,
-        kind="KILLSWITCH_TRIP",
-        payload={"trip_id": record.id, "reason": reason, "origin": origin},
-    )
-
-    if halt_file is not None:
-        Path(halt_file).parent.mkdir(parents=True, exist_ok=True)
-        Path(halt_file).write_text(
-            f"tripped {record.tripped_at}\nreason: {reason}\norigin: {origin}\n",
-            encoding="utf-8",
-        )
+    _insert_trip(conn, record)
+    _write_halt_file(halt_file, record)
     return record
+
+
+def _as_clear_request(value: ClearRequest | dict[str, Any]) -> ClearRequest:
+    if isinstance(value, ClearRequest):
+        return value
+    return ClearRequest(
+        approver_id=str(value.get("approver_id", "")),
+        signature=value.get("signature", b""),
+        nonce=str(value.get("challenge_nonce") or value.get("nonce") or uuid.uuid4()),
+        method=str(value.get("method", "HMAC_FALLBACK")),
+        signed_via=str(value.get("signed_via", "cli_hmac")),
+    )
 
 
 def clear(
     conn: db.Connection,
     trip_id: str,
     reason: str,
-    clears: list[dict[str, Any]],
+    clears: Sequence[ClearRequest | dict[str, Any]],
     *,
     required: int = 2,
     halt_file: str | Path | None = None,
+    verify_signatures: bool = True,
 ) -> None:
-    """Clear the halt. Requires ``required`` distinct approver clears.
+    """Clear the halt. Requires ``required`` distinct, **verified** approver clears.
 
-    "Clearing resumes nothing" (§4.9): approvals that expired while halted need
-    fresh sign-offs, because the thing they authorised may no longer be what is
-    about to happen.
+    Everything is checked before anything is written, and the write is a single
+    transaction:
+
+    * ``trip_id`` must be the trip that is *currently* active, so an old trip's id
+      cannot be replayed to wave through a newer incident;
+    * the approvers must be distinct and at least ``required`` of them;
+    * each signature must verify over ``sha256("clear|" + trip_id + "|" + reason)``.
+
+    Verifying first means a bad signature cannot leave a half-cleared switch, and
+    the transaction means a failure part-way rolls back rather than leaving
+    ``halted = 0`` with the incident still open.
     """
-    approvers = [str(entry.get("approver_id")) for entry in clears]
+    if not reason.strip():
+        raise HaltedError("clearing the kill switch requires a reason")
+
+    requests = [_as_clear_request(value) for value in clears]
+    approvers = [request.approver_id for request in requests]
     distinct = len(set(approvers))
     if distinct < required:
         raise HaltedError(
             f"clearing the kill switch needs {required} distinct approvers, got {distinct}"
         )
-    if not reason.strip():
-        raise HaltedError("clearing the kill switch requires a reason")
 
-    conn.execute(
-        "UPDATE trip SET cleared_at = ?, cleared_by = ? WHERE id = ?",
-        (_now(), ",".join(sorted(set(approvers))), trip_id),
-    )
-    conn.execute(
-        "UPDATE killswitch_state"
-        " SET halted = 0, halted_at = NULL, reason = NULL, trip_id = NULL WHERE id = 1"
-    )
-    for entry in clears:
-        conn.execute(
-            "INSERT INTO trip_clear_signature"
-            " (id, trip_id, approver_id, method, signed_via, signature, challenge_nonce, signed_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                str(uuid.uuid4()),
-                trip_id,
-                str(entry.get("approver_id")),
-                str(entry.get("method", "HMAC_FALLBACK")),
-                str(entry.get("signed_via", "cli_hmac")),
-                entry.get("signature", b""),
-                str(entry.get("challenge_nonce", uuid.uuid4())),
-                _now(),
-            ),
+    ensure_row(conn)
+    active = conn.execute("SELECT trip_id FROM killswitch_state WHERE id = 1").fetchone()
+    active_id = active["trip_id"] if active is not None else None
+    if active_id != trip_id:
+        raise HaltedError(
+            f"trip {trip_id!r} is not the active trip (active: {active_id!r}); "
+            "clearing a stale trip would wave through an unresolved incident"
         )
-    audit.log_intent(
-        conn,
-        kind="KILLSWITCH_CLEAR",
-        payload={"trip_id": trip_id, "reason": reason, "approvers": sorted(set(approvers))},
-    )
+
+    if verify_signatures:
+        for request in requests:
+            expected = request.expected_signature(trip_id, reason)
+            if not hmac.compare_digest(expected, request.signature):
+                raise HaltedError(
+                    f"clear signature from {request.approver_id} does not verify over "
+                    f"sha256(clear|{trip_id}|{reason}); the incident or reason changed"
+                )
+
+    with db.transaction(conn):
+        conn.execute(
+            "UPDATE trip SET cleared_at = ?, cleared_by = ? WHERE id = ?",
+            (_now(), ",".join(sorted(set(approvers))), trip_id),
+        )
+        for request in requests:
+            conn.execute(
+                "INSERT INTO trip_clear_signature"
+                " (id, trip_id, approver_id, method, signed_via, signature,"
+                " challenge_nonce, signed_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    str(uuid.uuid4()),
+                    trip_id,
+                    request.approver_id,
+                    request.method,
+                    request.signed_via,
+                    request.signature,
+                    request.nonce,
+                    _now(),
+                ),
+            )
+        conn.execute(
+            "UPDATE killswitch_state"
+            " SET halted = 0, halted_at = NULL, reason = NULL, trip_id = NULL WHERE id = 1"
+        )
+        audit.log_intent(
+            conn,
+            kind="KILLSWITCH_CLEAR",
+            payload={
+                "trip_id": trip_id,
+                "reason": reason,
+                "approvers": sorted(set(approvers)),
+            },
+        )
 
     if halt_file is not None:
-        # If this raises, the DB row says RUNNING but the HALT file still reads as
-        # halted, which is the safe direction: a human removes the file. Failing
-        # the clear here instead would leave the switch engaged for no benefit.
+        # If this raises, the DB says RUNNING but the HALT file still reads as
+        # halted, which is the safe direction: a human removes the file.
         with contextlib.suppress(OSError):
             Path(halt_file).unlink(missing_ok=True)
-
-
-def clear_signature_payload(trip_id: str, reason: str) -> str:
-    """The exact bytes each approver signs to clear the switch (§4.9)."""
-    import hashlib
-
-    return hashlib.sha256(f"clear|{trip_id}|{reason}".encode()).hexdigest()
 
 
 # ---------------------------------------------------------------------------
 # Automatic trip rules, §4.15 rows 24-29
 # ---------------------------------------------------------------------------
 def check_clock_skew(skew_seconds: int, limit: int) -> bool:
-    """Row 24: more than ``limit`` seconds of drift against the server trips.
-
-    Drift matters because approval expiry and cooling-off are wall-clock rules.
-    A skewed clock would let an expired approval look valid.
-    """
+    """Row 24. Drift matters because approval expiry and cooling-off are
+    wall-clock rules: a skewed clock would let an expired approval look valid."""
     return abs(skew_seconds) > limit
 
 
 def check_ambiguous_creates(
     in_run: int, rolling_24h: int, per_run_limit: int, rolling_limit: int
 ) -> bool:
-    """Row 26: two AMBIGUOUS attempts mean we have lost track of the money."""
+    """Row 26. Two AMBIGUOUS attempts mean we have lost track of the money."""
     return in_run >= per_run_limit or rolling_24h >= rolling_limit
 
 
 def check_failed_transfers(rolling_1h: int, limit: int) -> bool:
-    """Row 27: three failures in an hour is a pattern, not bad luck."""
+    """Row 27. Three failures in an hour is a pattern, not bad luck."""
     return rolling_1h >= limit
 
 
 def check_extraction_conflicts(rolling_24h: int, limit: int) -> bool:
-    """Row 28: three LLM/parser identifier disagreements in a day."""
+    """Row 28. Three LLM/parser identifier disagreements in a day."""
     return rolling_24h >= limit
 
 
-COMPLIANCE_FAILURE_TYPES: frozenset[str] = frozenset(
+COMPLIANCE_FAILURE_TYPES: Final[frozenset[str]] = frozenset(
     {"ACCOUNT_UNDER_RESTRICTION", "TM_SUSPENDED", "CHANNEL_POLICY"}
 )
 WATCHLIST_PREFIX = "WATCHLIST_"
 
 
 def is_compliance_failure(failure_type: str | None, reason_codes: list[str] | None = None) -> bool:
-    """Row 29: trips on the *first* compliance failure or any WATCHLIST reason.
+    """Row 29, on the *first* occurrence.
 
-    Compliance is the one category where the first occurrence is enough. A
-    sandbox that has blocked an account for a compliance reason has information
-    we do not, and continuing to try is how a real incident gets bigger.
+    Compliance is the one category where one is enough. A sandbox that has blocked
+    an account for a compliance reason has information we do not, and continuing
+    is how a real incident gets bigger.
     """
     if failure_type is None:
         return False
@@ -295,19 +408,19 @@ def is_compliance_failure(failure_type: str | None, reason_codes: list[str] | No
     return any(str(code).startswith(WATCHLIST_PREFIX) for code in (reason_codes or []))
 
 
+@dataclass
 class AutomaticTripper:
     """Applies the automatic trip rules against live counts.
 
-    Takes its counters as callables so it never decides on a cached number
-    alone: §4.15's caps are recomputed from the ledger plus
-    ``GET /transfers``, so wiping the local DB cannot reset them (R4 J-3).
+    Takes its counters as arguments rather than reading a cache, because §4.15's
+    caps are recomputed from the ledger plus ``GET /transfers``: wiping the local
+    DB must not reset them (R4 J-3).
     """
 
-    def __init__(self, policy: dict[str, Any]) -> None:
-        self._policy = policy
+    policy: dict[str, Any] = field(default_factory=dict)
 
     def _kill(self) -> dict[str, Any]:
-        return dict(self._policy.get("killswitch", {}))
+        return dict(self.policy.get("killswitch", {}))
 
     def clock_skew(self, skew_seconds: int) -> str | None:
         limit = int(self._kill().get("clock_skew_seconds", 120))
@@ -363,38 +476,38 @@ def evaluate_rules(
     failure_type: str | None = None,
     reason_codes: list[str] | None = None,
 ) -> list[str]:
-    """Every rule that fires, in order. The caller trips on the first.
+    """Every rule that fires, in row order 24..29. The caller trips on the first.
 
-    Returning all of them means a test can assert that a combination trips, and
-    an operator reading the audit log sees every reason rather than the first.
+    The order is the spec's, not the order of the keyword arguments, so the audit
+    log reads in the same order as FINAL.md §4.15. ``None`` for an input means
+    "nothing observed to judge", which is distinct from a real observation that
+    is not a compliance type.
     """
     reasons: list[str] = []
-    if skew_seconds is not None:
+
+    if skew_seconds is not None:  # r24
         found = tripper.clock_skew(skew_seconds)
         if found:
             reasons.append(found)
-    if ambiguous_in_run is not None and ambiguous_24h is not None:
+
+    if ambiguous_in_run is not None and ambiguous_24h is not None:  # r26
         found = tripper.ambiguous(ambiguous_in_run, ambiguous_24h)
         if found:
             reasons.append(found)
-    if failed_1h is not None:
+
+    if failed_1h is not None:  # r27
         found = tripper.failures(failed_1h)
         if found:
             reasons.append(found)
-    if extraction_24h is not None:
+
+    if extraction_24h is not None:  # r28
         found = tripper.extraction_conflicts(extraction_24h)
         if found:
             reasons.append(found)
 
-    # Only evaluate the compliance rule when a failure was actually observed.
-    # `None` means "nothing to judge"; the string "UNKNOWN_STATUS" is a real
-    # observation that simply is not a compliance type. Treating both as
-    # "present" made this fire on every poll that had nothing to report.
-    if failure_type is not None:
+    if failure_type is not None:  # r29
         found = AutomaticTripper.compliance(failure_type, reason_codes)
         if found:
             reasons.append(found)
+
     return reasons
-
-
-Guard = Callable[[], None]

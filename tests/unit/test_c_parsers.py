@@ -210,6 +210,7 @@ class TestInvoiceNumber:
         assert not parsers.parse_invoice_no("").valid
 
 
+@pytest.mark.compliance("T-03")
 class TestTransferReference:
     """§4.3 and §7.4: ``^[A-Za-z0-9 ./-]{1,35}$``, hyphen last (R4 S-2)."""
 

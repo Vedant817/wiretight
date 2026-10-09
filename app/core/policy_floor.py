@@ -6,15 +6,22 @@ bounds.
 
 Three properties make the floor a control rather than a suggestion:
 
-1. **Direction is explicit per row.** A minimum (cooling-off) may only go up; a
-   maximum (a cap) may only go down; a set (disqualifiers) may only grow. There
-   is no row whose direction is inferred.
-2. **Unknown keys are errors.** ``duplicates.enabled`` and ``skip_callback``
-   are named in §4.15 precisely because an unknown key is how a floor gets
-   quietly bypassed by an option nobody audited.
-3. **The rows are data, not code paths.** A 31st control is a new
-   :class:`FloorRow`, and T-27's parametrised test then *fails* until someone
-   writes the loosen attempt for it.
+1. **Direction is explicit per constraint.** A minimum (cooling-off) may only
+   increase; a maximum (a cap, a band ceiling) may only decrease; a set
+   (disqualifiers) may only grow. There is no row whose direction is inferred,
+   and no row whose meaning depends on a comment.
+2. **Every value §4.15 names is bounded.** Row 7 names three values, row 14
+   names five. A row that checked only one of them was a hole: a red-team pass
+   found ``t0.bank_details_unchanged_days: 0`` accepted, which would have let a
+   payee whose bank details changed *yesterday* qualify for auto-pay. One
+   :class:`Constraint` per named value, and T-27 is parametrised over
+   constraints rather than rows.
+3. **Unknown *and* missing keys are errors.** An unknown key is how a floor
+   gets bypassed by an option nobody audited; a missing key is how a floor
+   silently stops applying.
+
+Adding a 31st control means adding a row, which makes T-27 fail until someone
+writes the loosen attempt for it.
 """
 
 from __future__ import annotations
@@ -28,11 +35,8 @@ from typing import Any
 # ---------------------------------------------------------------------------
 # A recursive description of the policy's shape.
 # ---------------------------------------------------------------------------
-#: Leaves. Anything not reachable in this tree is an unknown key, and an unknown
-#: key is a load error (§4.15). That is the whole point: an unaudited option is
-#: a way to bypass a floor row nobody looked at.
-MONEY = "money"  # a decimal string, never a YAML number
-NUM = "num"  # an int
+MONEY = "money"  # a finite decimal string, never a YAML number
+NUM = "num"  # a non-negative int
 BOOL = "bool"  # a real YAML boolean
 STR = "str"
 FREEMAP = "freemap"  # a mapping whose keys are not enumerated (rail names, categories)
@@ -46,12 +50,7 @@ SCHEMA: dict[str, Any] = {
     "base_currency": STR,
     "reserve_floor": FREEMAP,
     "roster": [
-        {
-            "id": STR,
-            "name": STR,
-            "role": STR,
-            "email": STR,
-        }
+        {"id": STR, "name": STR, "role": STR, "email": STR},
     ],
     "bank_change": {
         "cooling_off_hours": NUM,
@@ -115,12 +114,12 @@ SCHEMA: dict[str, Any] = {
     "demo_timing": BOOL,
 }
 
-#: §4.15 row 3: contact provenance must be at least this old, in days.
+#: §4.15 row 3: contact provenance must come from an invoice at least this old.
 MIN_CONTACT_PROVENANCE_INVOICE_AGE_DAYS = 90
 
-#: Row 22, per rail. §4.15 states these three windows explicitly and they are
-#: NOT uniform: SEPA 3 TARGET2 days, FPS 3 UK days, ACH 2 US days. A single
-#: minimum of 3 would reject the spec's own shipped ACH value.
+#: Row 22, per rail. §4.15 states these three windows explicitly and they are NOT
+#: uniform: SEPA 3 TARGET2 days, FPS 3 UK days, ACH 2 US days. A single minimum
+#: of 3 rejected the spec's own shipped ACH value of 2.
 SETTLE_FLOOR: dict[str, dict[str, int]] = {
     "SEPA": {"business_days": 3, "min_hours": 48},
     "FPS": {"business_days": 3, "min_hours": 48},
@@ -130,9 +129,13 @@ SETTLE_FLOOR: dict[str, dict[str, int]] = {
 #: Row 22: the 48 h absolute minimum applies to every rail that settles on a timer.
 MIN_SETTLE_HOURS = 48
 
+#: Every rail that must appear in ``settlement``. Omitting one means a transfer
+#: on that rail has no settle window at all, which is fail-open (D-B14).
+REQUIRED_SETTLEMENT_RAILS: frozenset[str] = frozenset({"SEPA", "FPS", "ACH", "SWIFT"})
+
 
 class Direction(Enum):
-    """How a row may move. Explicit per row; never inferred."""
+    """How a value may move. Explicit per constraint; never inferred."""
 
     #: The value is a floor: it may only increase.
     MINIMUM = "minimum"
@@ -140,318 +143,327 @@ class Direction(Enum):
     MAXIMUM = "maximum"
     #: A set of flags: it may only grow.
     SUPERSET = "superset"
+    #: An exact value that may not be changed at all.
+    EXACT = "exact"
+
+
+@dataclass(frozen=True)
+class Constraint:
+    """One bounded value.
+
+    ``path`` is dotted. A path of ``""`` means "the whole section", used by rows
+    whose check is structural (row 21's reserve floor, row 9's flag list).
+    """
+
+    path: str
+    direction: Direction
+    value: Any = None
+    #: Rail name, for the per-rail rows.
+    rail: str | None = None
+
+    def where(self) -> str:
+        base = f"{self.path}.{self.rail}" if self.rail else self.path
+        return base or "<policy>"
 
 
 @dataclass(frozen=True)
 class FloorRow:
     """One of the 30 controls in §4.15.
 
-    ``path`` is the dotted key into the policy mapping. ``check`` is the actual
-    comparison, so a row can express rules that are not a plain bound (row 9's
-    disqualifier list, row 21's "must be set").
+    A row has as many constraints as §4.15 names values. Row 14 names five caps;
+    checking one of them and calling the row covered was a hole found by review.
     """
 
     number: int
     control: str
     source: str
-    direction: Direction
-    floor_value: Any = None
-    path: str | None = None
+    constraints: tuple[Constraint, ...] = ()
     demo_override: str = "None"
 
     def describe(self) -> str:
-        return f"r{self.number} ({self.control})"
+        return f"r{self.number} ({self.control}) in FINAL.md {self.source}"
 
 
-#: The floor. Shipped values are the loosest allowed (§4.15).
+def _min(path: str, value: Any, rail: str | None = None) -> Constraint:
+    return Constraint(path, Direction.MINIMUM, value, rail)
+
+
+def _max(path: str, value: Any, rail: str | None = None) -> Constraint:
+    return Constraint(path, Direction.MAXIMUM, value, rail)
+
+
+def _exact(path: str, value: Any, rail: str | None = None) -> Constraint:
+    return Constraint(path, Direction.EXACT, value, rail)
+
+
+#: The floor. Shipped values are the loosest allowed (§4.15's column header).
 FLOOR_ROWS: tuple[FloorRow, ...] = (
     FloorRow(
         1,
         "Cooling-off for new or changed details",
         "§4.15 r1 / §4.5.3",
-        Direction.MINIMUM,
-        72,
-        "bank_change.cooling_off_hours",
+        (_min("bank_change.cooling_off_hours", 72),),
         "2 min, only if AWX_ENV=sandbox + host pin + APP_DEMO_TIMING=true; labelled",
     ),
     FloorRow(
         2,
         "Callback contact age",
         "§4.15 r2 / §4.5.2",
-        Direction.MINIMUM,
-        30,
-        "bank_change.callback_contact_min_age_days",
+        (_min("bank_change.callback_contact_min_age_days", 30),),
         "None (seed the fixture contact as old)",
     ),
-    # A callback is only evidence if it happened recently, so r3 is a MAXIMUM:
-    # a 90-day window would let a stale confirmation release a new bank detail.
+    # Row 3 names three things: the validity window, the recorder rule (structural,
+    # enforced in validate_shape) and the contact provenance age.
     FloorRow(
         3,
-        "Callback validity and recorder",
+        "Callback validity, recorder and contact provenance",
         "§4.15 r3 / §4.5.2",
-        Direction.MAXIMUM,
-        7,
-        "bank_change.callback_validity_days",
+        (
+            _max("bank_change.callback_validity_days", 7),
+            _min(
+                "bank_change.contact_provenance_min_invoice_age_days",
+                MIN_CONTACT_PROVENANCE_INVOICE_AGE_DAYS,
+            ),
+        ),
         "None",
     ),
     FloorRow(
         4,
         "First-payment cap",
         "§4.15 r4 / §4.5.4",
-        Direction.MAXIMUM,
-        "2500.00",
-        "bank_change.first_payment_cap_usd",
+        (
+            _max("bank_change.first_payment_cap_usd", "2500.00"),
+            _max("bank_change.first_payment_cap_median_fraction", "0.50"),
+        ),
         "None",
     ),
-    FloorRow(
-        5,
-        "Cap lift",
-        "§4.15 r5",
-        Direction.MINIMUM,
-        2,
-        "bank_change.cap_lift_final_payments",
-        "None",
-    ),
+    FloorRow(5, "Cap lift", "§4.15 r5", (_min("bank_change.cap_lift_final_payments", 2),), "None"),
     FloorRow(
         6,
         "T0 per-payment limit",
         "§4.15 r6",
-        Direction.MAXIMUM,
-        "2000.00",
-        "t0.per_payment_limit_usd",
+        (_max("t0.per_payment_limit_usd", "2000.00"),),
         "None",
     ),
+    # Row 7 names three: the count, the fraction of the limit, and how long the
+    # bank details must be unchanged. Only the count was checked before.
     FloorRow(
         7,
         "T0 history",
         "§4.15 r7",
-        Direction.MINIMUM,
-        3,
-        "t0.min_final_payments",
+        (
+            _min("t0.min_final_payments", 3),
+            _min("t0.min_payment_fraction_of_limit", "0.25"),
+            _min("t0.bank_details_unchanged_days", 60),
+        ),
         "None (history seeded and labelled)",
     ),
     FloorRow(
-        8,
-        "T0 amount band",
-        "§4.15 r8",
-        Direction.MAXIMUM,
-        "1.5",
-        "t0.max_multiple_of_payee_median",
-        "None",
+        8, "T0 amount band", "§4.15 r8", (_max("t0.max_multiple_of_payee_median", "1.5"),), "None"
     ),
     FloorRow(
         9,
         "T0 disqualifiers",
         "§4.15 r9",
-        Direction.SUPERSET,
-        [
-            "duplicate_suspicion",
-            "EXTRACTION_CONFLICT",
-            "HIDDEN_TEXT",
-            "new_country",
-            "contact_lt_30d",
-            "unknown_sender",
-            "SWIFT",
-            "degraded_check",
-            "cap_headroom",
-        ],
-        "t0.disqualifiers",
+        (
+            Constraint(
+                "t0.disqualifiers",
+                Direction.SUPERSET,
+                [
+                    "duplicate_suspicion",
+                    "EXTRACTION_CONFLICT",
+                    "HIDDEN_TEXT",
+                    "new_country",
+                    "contact_lt_30d",
+                    "unknown_sender",
+                    "SWIFT",
+                    "degraded_check",
+                    "cap_headroom",
+                ],
+            ),
+        ),
         "None",
     ),
     FloorRow(
         10,
         "T0 enabled by default",
         "§4.15 r10",
-        Direction.MINIMUM,
-        False,
-        "t0.enabled",
+        (_exact("t0.enabled", False),),
         "policy.demo.yaml turns it on, signed, labelled",
     ),
-    # Rows 11 and 12 both constrain `tiers.t2_threshold_usd`, which §4.15 lists as
-    # ">= USD 10,000" in a column headed "Shipped value (loosest allowed)". The
-    # direction is therefore MINIMUM: 10,000 is the loosest permitted value and a
-    # policy may only raise it.
-    #
-    # Note this is the opposite of what intuition suggests: raising the threshold
-    # sends *more* items to two sign-offs, which is stricter. The shipped policy
-    # already uses 10000 for both rows 11 and 12, so one row's direction must
-    # give; MINIMUM is the reading §4.15's own column header supports.
+    # Rows 11 and 12. Both name the boundary below which ONE sign-off is enough.
+    # That boundary is a CEILING: raising it would let a USD 400,000 payment
+    # fall under it and get T1 instead of T2. (D-B11, corrected.)
     FloorRow(
         11,
-        "T1 band (T1/T2 boundary; may only be raised)",
+        "T1 band ceiling (below which one sign-off suffices)",
         "§4.15 r11",
-        Direction.MINIMUM,
-        "10000.00",
-        "tiers.t2_threshold_usd",
+        (_max("tiers.t2_threshold_usd", "10000.00"),),
         "None",
     ),
     FloorRow(
         12,
         "T2 payee 7-day aggregate threshold",
         "§4.15 r12",
-        Direction.MINIMUM,
-        "10000.00",
-        "tiers.t2_payee_7d_aggregate_usd",
+        (_max("tiers.t2_payee_7d_aggregate_usd", "10000.00"),),
         "None",
     ),
     FloorRow(
         13,
         "Per-run caps",
         "§4.15 r13",
-        Direction.MAXIMUM,
-        "6000.00",
-        "limits.per_run.t0_usd",
+        (
+            _max("limits.per_run.t0_usd", "6000.00"),
+            _max("limits.per_run.all_usd", "50000.00"),
+            _max("limits.per_run.max_payments", 40),
+        ),
         "None",
     ),
     FloorRow(
         14,
         "Per-day caps",
         "§4.15 r14",
-        Direction.MAXIMUM,
-        "75000.00",
-        "limits.per_day.all_usd",
+        (
+            _max("limits.per_day.t0_usd", "6000.00"),
+            _max("limits.per_day.all_usd", "75000.00"),
+            _max("limits.per_day.max_payments", 60),
+            _max("limits.per_day.max_runs", 2),
+            _max("limits.per_day.max_new_beneficiaries", 5),
+        ),
         "None",
     ),
     FloorRow(
         15,
         "Per-payee rolling 7 days",
         "§4.15 r15",
-        Direction.MAXIMUM,
-        "2000.00",
-        "limits.per_payee_7d.t0_usd",
+        (_max("limits.per_payee_7d.t0_usd", "2000.00"),),
         "None",
     ),
     FloorRow(
         16,
         "Per-payee 24 h velocity",
         "§4.15 r16",
-        Direction.MAXIMUM,
-        3,
-        "limits.per_payee_24h.max_payments",
+        (
+            _max("limits.per_payee_24h.max_t0", 1),
+            _max("limits.per_payee_24h.max_payments", 3),
+        ),
         "None",
     ),
     FloorRow(
         17,
         "Per-approver daily total",
         "§4.15 r17",
-        Direction.MAXIMUM,
-        "30000.00",
-        "limits.per_approver_day_usd",
+        (_max("limits.per_approver_day_usd", "30000.00"),),
         "None",
     ),
     FloorRow(
         18,
         "Approval expiry and challenge",
         "§4.15 r18",
-        Direction.MAXIMUM,
-        4,
-        "approvals.max_validity_hours",
+        (
+            _max("approvals.max_validity_hours", 4),
+            _max("approvals.challenge_ttl_seconds", 300),
+        ),
         "None",
     ),
     FloorRow(
         19,
         "Quote safety margin",
         "§4.15 r19",
-        Direction.MINIMUM,
-        120,
-        "fx.quote_safety_margin_seconds",
+        (_min("fx.quote_safety_margin_seconds", 120),),
         "None",
     ),
-    FloorRow(20, "FX drift tolerance", "§4.15 r20", Direction.MAXIMUM, 25, "fx.drift_bp", "None"),
+    FloorRow(20, "FX drift tolerance", "§4.15 r20", (_max("fx.drift_bp", 25),), "None"),
     FloorRow(
         21,
         "Reserve floor",
         "§4.15 r21",
-        Direction.MINIMUM,
-        {"USD": "8000.00"},
-        "reserve_floor",
+        (Constraint("reserve_floor", Direction.MINIMUM, {"USD": "8000.00"}),),
         "missing -> executor refuses to start",
     ),
     FloorRow(
         22,
         "Settle window (PAID to FINAL)",
         "§4.15 r22",
-        Direction.MINIMUM,
-        SETTLE_FLOOR,
-        "settlement",
+        tuple(
+            _min(f"settlement.{rail}.min_hours", MIN_SETTLE_HOURS)
+            # SWIFT is excluded on purpose: it is never FINAL by timer, so
+            # it has no min_hours. It is bounded instead by requiring
+            # final_by_timer: false and a >= 10-business-day presumed window,
+            # checked in _check_settlement.
+            for rail in sorted(set(SETTLE_FLOOR))
+        ),
         "not used (FINAL is never shortened)",
     ),
     FloorRow(
-        23,
-        "AMBIGUOUS escalation",
-        "§4.15 r23",
-        Direction.MINIMUM,
-        6,
-        "ambiguous.escalate_after_days",
-        "None",
+        23, "AMBIGUOUS escalation", "§4.15 r23", (_min("ambiguous.escalate_after_days", 6),), "None"
     ),
     FloorRow(
-        24,
-        "Trip: clock skew",
-        "§4.15 r24",
-        Direction.MAXIMUM,
-        120,
-        "killswitch.clock_skew_seconds",
-        "None",
+        24, "Trip: clock skew", "§4.15 r24", (_max("killswitch.clock_skew_seconds", 120),), "None"
     ),
+    # Row 25's demo-visible knob is the SEPA fee *reservation*, a MINIMUM: reducing
+    # it would let the planner promise a reserve the wallet does not hold.
     FloorRow(
         25,
         "Trip on first occurrence",
         "§4.15 r25",
-        Direction.MINIMUM,
-        "5.00",
-        "rails.fee_reservation_usd.SEPA",
+        tuple(
+            _min(f"rails.fee_reservation_usd.{rail}", value)
+            for rail, value in (
+                ("SEPA", "5.00"),
+                ("FPS", "5.00"),
+                ("ACH", "5.00"),
+                ("SWIFT", "30.00"),
+            )
+        ),
         "None",
     ),
     FloorRow(
         26,
         "Trip: AMBIGUOUS creates",
         "§4.15 r26",
-        Direction.MAXIMUM,
-        2,
-        "killswitch.ambiguous_creates_per_run",
+        (
+            _max("killswitch.ambiguous_creates_per_run", 2),
+            _max("killswitch.ambiguous_creates_rolling_24h", 2),
+        ),
         "None",
     ),
     FloorRow(
         27,
         "Trip: FAILED transfers",
         "§4.15 r27",
-        Direction.MAXIMUM,
-        3,
-        "killswitch.failed_transfers_rolling_1h",
+        (_max("killswitch.failed_transfers_rolling_1h", 3),),
         "None",
     ),
     FloorRow(
         28,
         "LLM vs parser identifier mismatch",
         "§4.15 r28",
-        Direction.MAXIMUM,
-        3,
-        "killswitch.extraction_conflicts_rolling_24h",
+        (_max("killswitch.extraction_conflicts_rolling_24h", 3),),
         "None",
     ),
+    # Row 29: never shorten a rail's flight time.
     FloorRow(
         29,
         "Trip on first occurrence (added)",
         "§4.15 r29",
-        Direction.MINIMUM,
-        1,
-        "rails.flight_business_days.SEPA",
+        tuple(
+            _min(f"rails.flight_business_days.{rail}", value)
+            for rail, value in (("SEPA", 2), ("FPS", 1), ("ACH", 2), ("SWIFT", 3))
+        ),
         "None",
     ),
     FloorRow(
         30,
         "Clearing the kill switch",
         "§4.15 r30",
-        Direction.MINIMUM,
-        2,
-        "killswitch.clear_signatures",
+        (_min("killswitch.clear_signatures", 2),),
         "None",
     ),
 )
 
-#: Rows whose check is not expressible as a single dotted path, handled by name.
-SPECIAL_ROWS: frozenset[int] = frozenset({9, 10, 21, 22})
+#: Every rail whose flight time row 29 protects.
+ALL_RAILS: tuple[str, ...] = ("SEPA", "FPS", "ACH", "SWIFT")
 
 
 @dataclass
@@ -474,45 +486,87 @@ def _get(policy: Mapping[str, Any], dotted: str) -> Any:
     return current
 
 
-def _as_decimal(value: Any) -> Decimal:
-    if isinstance(value, bool):
-        raise InvalidOperation("bool is not a number")
-    if isinstance(value, (int, float)):
-        # A bare YAML number in a money field is refused upstream. Reaching here
-        # with one would mean the type check was skipped.
-        raise InvalidOperation(f"number where a decimal string is required: {value!r}")
-    return Decimal(str(value))
-
-
 def _violation(row: FloorRow, detail: str) -> str:
-    return f"{row.describe()} in FINAL.md {row.source}: {detail}"
+    return f"{row.describe()}: {detail}"
+
+
+def to_decimal(value: Any) -> Decimal | None:
+    """Parse a policy money value, refusing anything not finite.
+
+    ``Decimal("Infinity")`` and ``Decimal("NaN")`` both parse, and both defeat a
+    naive bound: ``Infinity < 10000`` is False, so a MINIMUM row would accept it
+    and no payment would ever escalate to T2. Returns ``None`` instead of raising
+    so the caller reports a violation rather than crashing the loader.
+    """
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        number = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
+    if not number.is_finite():
+        return None
+    return number
 
 
 # ---------------------------------------------------------------------------
-# Individual row checks
+# Per-constraint checks
 # ---------------------------------------------------------------------------
-def _check_settlement(policy: Mapping[str, Any]) -> list[str]:
+def _check_reserve_floor(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
+    """Row 21: the floor must be set at all, and never below the shipped value."""
+    floor = policy.get("reserve_floor")
+    if not isinstance(floor, Mapping) or not floor:
+        return [_violation(row, "reserve_floor is missing; the executor would refuse to start")]
+
+    shipped = row.constraints[0].value or {}
+    problems: list[str] = []
+    for currency, value in floor.items():
+        actual = to_decimal(value)
+        if actual is None:
+            problems.append(
+                _violation(row, f"{currency} floor {value!r} is not a finite decimal string")
+            )
+            continue
+        if actual < 0:
+            problems.append(_violation(row, f"{currency} floor is negative"))
+            continue
+        reference = to_decimal(shipped.get(currency)) if isinstance(shipped, Mapping) else None
+        if reference is not None and actual < reference:
+            problems.append(
+                _violation(row, f"{currency} floor {value} is below the floor {shipped[currency]}")
+            )
+    return problems
+
+
+def _check_settlement(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
     """Row 22: PAID -> FINAL must be at least 48 h and at least the rail's window.
 
-    SWIFT is never FINAL by timer, so ``final_by_timer: false`` is *required*,
-    not merely permitted, and it has no day window to check.
+    Every required rail must be *present*. A policy that omitted SEPA used to
+    pass, which left SEPA transfers with no settle window at all — fail-open on
+    the row that stops us declaring money settled when it is not.
     """
-    problems: list[str] = []
     settlement = policy.get("settlement")
-    row = next(r for r in FLOOR_ROWS if r.number == 22)
     if not isinstance(settlement, Mapping):
         return [_violation(row, "settlement block is missing")]
 
-    for rail, spec in settlement.items():
-        if not isinstance(spec, Mapping):
-            problems.append(_violation(row, f"{rail} is not a mapping"))
-            continue
+    problems: list[str] = []
+    for rail in sorted(REQUIRED_SETTLEMENT_RAILS):
+        if rail not in settlement:
+            problems.append(
+                _violation(row, f"settlement.{rail} is missing; that rail would have no window")
+            )
+    for rail in sorted(set(settlement) - REQUIRED_SETTLEMENT_RAILS):
+        problems.append(_violation(row, f"settlement.{rail} is not a rail Wiretight pays on"))
 
+    for rail in sorted(REQUIRED_SETTLEMENT_RAILS):
+        spec = settlement.get(rail)
+        if not isinstance(spec, Mapping):
+            continue
         if rail == "SWIFT":
             if spec.get("final_by_timer") is not False:
                 problems.append(_violation(row, "SWIFT must set final_by_timer: false"))
             days = spec.get("presumed_settled_business_days")
-            if not isinstance(days, int) or days < 10:
+            if isinstance(days, bool) or not isinstance(days, int) or days < 10:
                 problems.append(
                     _violation(
                         row, f"SWIFT.presumed_settled_business_days is {days!r}, floor is 10"
@@ -520,17 +574,13 @@ def _check_settlement(policy: Mapping[str, Any]) -> list[str]:
                 )
             continue
 
-        floor = SETTLE_FLOOR.get(rail)
-        if floor is None:
-            problems.append(_violation(row, f"unknown rail {rail!r}"))
-            continue
-
-        min_hours = spec.get("min_hours")
-        if isinstance(min_hours, bool) or not isinstance(min_hours, int):
-            problems.append(_violation(row, f"{rail}.min_hours is {min_hours!r}, not an integer"))
-        elif min_hours < MIN_SETTLE_HOURS:
+        floor = SETTLE_FLOOR[rail]
+        hours = spec.get("min_hours")
+        if isinstance(hours, bool) or not isinstance(hours, int):
+            problems.append(_violation(row, f"{rail}.min_hours is {hours!r}, not an integer"))
+        elif hours < MIN_SETTLE_HOURS:
             problems.append(
-                _violation(row, f"{rail}.min_hours is {min_hours}, floor is {MIN_SETTLE_HOURS}")
+                _violation(row, f"{rail}.min_hours is {hours}, floor is {MIN_SETTLE_HOURS}")
             )
 
         days = spec.get("business_days")
@@ -545,141 +595,139 @@ def _check_settlement(policy: Mapping[str, Any]) -> list[str]:
     return problems
 
 
-def _check_reserve_floor(policy: Mapping[str, Any]) -> list[str]:
-    """Row 21: the floor must be set at all, and never below the shipped value."""
-    row = next(r for r in FLOOR_ROWS if r.number == 21)
-    floor = policy.get("reserve_floor")
-    if not isinstance(floor, Mapping) or not floor:
-        return [_violation(row, "reserve_floor is missing; the executor would refuse to start")]
-
-    problems: list[str] = []
-    for currency, value in floor.items():
-        if not isinstance(value, str):
-            problems.append(_violation(row, f"{currency} floor is not a decimal string"))
-            continue
-        try:
-            actual = Decimal(value)
-        except InvalidOperation:
-            problems.append(_violation(row, f"{currency} floor {value!r} is not a number"))
-            continue
-        if actual < 0:
-            problems.append(_violation(row, f"{currency} floor is negative"))
-            continue
-        shipped = row.floor_value if isinstance(row.floor_value, Mapping) else {}
-        reference = shipped.get(currency)
-        if reference is None:
-            continue
-        try:
-            minimum = Decimal(reference)
-        except InvalidOperation:  # pragma: no cover - floor table is static
-            continue
-        if actual < minimum:
-            problems.append(
-                _violation(row, f"{currency} floor {value} is below the floor {reference}")
-            )
-    return problems
+def _check_superset(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
+    """Row 9: the disqualifier list may only grow."""
+    constraint = row.constraints[0]
+    actual = _get(policy, constraint.path)
+    if not isinstance(actual, list):
+        return [_violation(row, f"{constraint.where()} is {type(actual).__name__}, not a list")]
+    required = [flag for flag in (constraint.value or []) if flag not in actual]
+    if required:
+        return [_violation(row, f"{constraint.where()} dropped {', '.join(required)}")]
+    return []
 
 
-def _check_t0_enabled(policy: Mapping[str, Any]) -> list[str]:
-    """Row 10: T0 must be a real boolean, and off unless a signed policy says otherwise.
-
-    The loader separately requires two signatures whenever it is on, so all this
-    row does is refuse a non-boolean, which would coerce.
-    """
-    row = next(r for r in FLOOR_ROWS if r.number == 10)
-    value = _get(policy, "t0.enabled")
+def _check_exact(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
+    """Row 10: T0 must be a real boolean, and off unless a signed policy says otherwise."""
+    constraint = row.constraints[0]
+    value = _get(policy, constraint.path)
     if not isinstance(value, bool):
-        return [_violation(row, f"t0.enabled is {value!r}, not a boolean")]
+        return [_violation(row, f"{constraint.where()} is {value!r}, not a boolean")]
+    return []
+
+
+def check_constraint(row: FloorRow, constraint: Constraint, policy: Mapping[str, Any]) -> list[str]:
+    """Return the violations for one constraint. An empty list means it holds."""
+    if row.number == 21:
+        return _check_reserve_floor(row, policy)
+    if row.number == 22:
+        return _check_settlement(row, policy)
+    if constraint.direction is Direction.SUPERSET:
+        return _check_superset(row, policy)
+    if constraint.direction is Direction.EXACT:
+        return _check_exact(row, policy)
+
+    actual_raw = _get(policy, constraint.where())
+
+    # Money-shaped floors compare as Decimal.
+    if isinstance(constraint.value, str):
+        expected = to_decimal(constraint.value)
+        actual = to_decimal(actual_raw)
+        if actual is None:
+            return [
+                _violation(
+                    row,
+                    f"{constraint.where()} is {actual_raw!r}, not a finite decimal string"
+                    " (a float, NaN or Infinity would defeat this bound)",
+                )
+            ]
+        assert expected is not None
+        if constraint.direction is Direction.MINIMUM and actual < expected:
+            return [
+                _violation(
+                    row, f"{constraint.where()} is {actual_raw}, floor is {constraint.value}"
+                )
+            ]
+        if constraint.direction is Direction.MAXIMUM and actual > expected:
+            return [
+                _violation(
+                    row, f"{constraint.where()} is {actual_raw}, ceiling is {constraint.value}"
+                )
+            ]
+        return []
+
+    if isinstance(constraint.value, int) and not isinstance(constraint.value, bool):
+        if isinstance(actual_raw, bool) or not isinstance(actual_raw, int):
+            return [_violation(row, f"{constraint.where()} is {actual_raw!r}, not an integer")]
+        if constraint.direction is Direction.MINIMUM and actual_raw < constraint.value:
+            return [
+                _violation(
+                    row, f"{constraint.where()} is {actual_raw}, floor is {constraint.value}"
+                )
+            ]
+        if constraint.direction is Direction.MAXIMUM and actual_raw > constraint.value:
+            return [
+                _violation(
+                    row, f"{constraint.where()} is {actual_raw}, ceiling is {constraint.value}"
+                )
+            ]
+        return []
+
     return []
 
 
 def check_row(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
-    """Return the violations for one row. An empty list means the row holds."""
-    if row.number == 21:
-        return _check_reserve_floor(policy)
-    if row.number == 22:
-        return _check_settlement(policy)
-    if row.number == 10:
-        return _check_t0_enabled(policy)
-
-    if row.number == 9:
-        actual = _get(policy, "t0.disqualifiers")
-        if not isinstance(actual, list):
-            return [_violation(row, f"t0.disqualifiers is {type(actual).__name__}, not a list")]
-        missing = [flag for flag in row.floor_value if flag not in actual]
-        if missing:
-            return [_violation(row, f"t0.disqualifiers dropped {', '.join(missing)}")]
-        return []
-
-    if row.direction is Direction.SUPERSET:  # pragma: no cover - row 9 handled above
-        return [_violation(row, "superset rows need a bespoke check")]
-
-    actual = _get(policy, row.path or "")
-
-    if row.number == 25:
-        # The fee reservation is a floor: reducing it would let the planner
-        # promise a reserve the wallet does not hold.
-        try:
-            if actual is None or _as_decimal(actual) < _as_decimal(row.floor_value):
-                return [_violation(row, f"{row.path} is {actual!r}, floor is {row.floor_value}")]
-        except InvalidOperation:
-            return [_violation(row, f"{row.path} is not a decimal string")]
-        return []
-
-    if row.number == 29:
-        # Never shorten a rail's flight time.
-        if not isinstance(actual, int) or actual < int(row.floor_value):
-            return [_violation(row, f"{row.path} is {actual!r}, minimum is {row.floor_value}")]
-        return []
-
-    if row.number in {6, 7, 8}:
-        # T0 band rows. A tighter policy is allowed; looser is not.
-        pass
-
-    if isinstance(row.floor_value, str):
-        try:
-            actual_decimal = _as_decimal(actual)
-            floor_decimal = Decimal(row.floor_value)
-        except (InvalidOperation, TypeError):
-            return [_violation(row, f"{row.path} is {actual!r}, not a decimal string")]
-        if row.direction is Direction.MINIMUM and actual_decimal < floor_decimal:
-            return [_violation(row, f"{row.path} is {actual}, floor is {row.floor_value}")]
-        if row.direction is Direction.MAXIMUM and actual_decimal > floor_decimal:
-            return [_violation(row, f"{row.path} is {actual}, ceiling is {row.floor_value}")]
-        return []
-
-    if isinstance(row.floor_value, int) and not isinstance(row.floor_value, bool):
-        if not isinstance(actual, int) or isinstance(actual, bool):
-            return [_violation(row, f"{row.path} is {actual!r}, not an integer")]
-        if row.direction is Direction.MINIMUM and actual < row.floor_value:
-            return [_violation(row, f"{row.path} is {actual}, floor is {row.floor_value}")]
-        if row.direction is Direction.MAXIMUM and actual > row.floor_value:
-            return [_violation(row, f"{row.path} is {actual}, ceiling is {row.floor_value}")]
-        return []
-
-    return []
+    """Every violation for one row, across all of its constraints."""
+    violations: list[str] = []
+    for constraint in row.constraints:
+        violations.extend(check_constraint(row, constraint, policy))
+    return violations
 
 
 def check_policy_against_floor(policy: Mapping[str, Any]) -> FloorResult:
-    """Check every row. Returns all violations, not just the first.
-
-    Reporting them together matters: an operator fixing a policy needs the whole
-    list, and a test asserting one row at a time still gets a precise message.
-    """
+    """Check every row. Returns all violations, not just the first."""
     violations: list[str] = []
     for row in FLOOR_ROWS:
         violations.extend(check_row(row, policy))
     return FloorResult(ok=not violations, violations=violations)
 
 
+def all_constraints() -> list[tuple[FloorRow, Constraint]]:
+    """Every (row, constraint) pair, for T-27's parametrisation."""
+    return [(row, constraint) for row in FLOOR_ROWS for constraint in row.constraints]
+
+
 # ---------------------------------------------------------------------------
-# Shape validation: unknown and missing keys
+# Shape validation: unknown keys, missing keys, wrong types
 # ---------------------------------------------------------------------------
+def _row_for(path: str) -> int | None:
+    """The floor row a path belongs to, matched on the longest known prefix.
+
+    Needed because the per-rail constraints live at paths like
+    ``settlement.SEPA.min_hours``, and an exact-match lookup would leave the
+    operator with no indication which row they had just attempted to loosen.
+    """
+    if path in PATH_TO_ROW:
+        return PATH_TO_ROW[path]
+    parts = path.split(".")
+    for length in range(len(parts) - 1, 0, -1):
+        prefix = ".".join(parts[:length])
+        if prefix in PATH_TO_ROW:
+            return PATH_TO_ROW[prefix]
+    return None
+
+
+def _missing_key(path: str) -> str:
+    row = _row_for(path)
+    suffix = f" (FINAL.md §4.15 r{row})" if row else ""
+    return f"missing key {path} (FINAL.md §4.15){suffix}"
+
+
 def _check_shape_at(value: Any, shape: Shape, path: str, problems: list[str]) -> None:
     """Recursively compare one value against its declared shape.
 
-    Reports every unknown key and every type mismatch rather than stopping at
-    the first, because an operator fixing a policy file needs the whole list.
+    Reports every unknown key, missing key and type mismatch rather than
+    stopping at the first: an operator fixing a policy file needs the whole list.
     """
     if shape is FREEMAP:
         if not isinstance(value, Mapping):
@@ -688,7 +736,7 @@ def _check_shape_at(value: Any, shape: Shape, path: str, problems: list[str]) ->
         for key, item in value.items():
             if not isinstance(key, str):
                 problems.append(f"{path} has a non-string key {key!r}")
-            elif shape_is_money_leaf(item) is False and isinstance(item, bool):
+            elif isinstance(item, bool):
                 problems.append(f"{path}.{key} must be a decimal string, not a bool")
         return
 
@@ -707,32 +755,34 @@ def _check_shape_at(value: Any, shape: Shape, path: str, problems: list[str]) ->
             return
         for key in value:
             if key not in shape:
-                problems.append(f"unknown key {path + '.' if path else ''}{key!r} (FINAL.md §4.15)")
+                problems.append(f"unknown key {f'{path}.' if path else ''}{key!r} (FINAL.md §4.15)")
         for key, child in shape.items():
-            if key not in value:
-                continue
             child_path = f"{path}.{key}" if path else key
+            if key not in value:
+                problems.append(_missing_key(child_path))
+                continue
             _check_shape_at(value[key], child, child_path, problems)
         return
 
-    # Leaf.
     if shape == MONEY:
+        row = _row_for(path)
+        suffix = f" (FINAL.md §4.15 r{row})" if row else ""
         if isinstance(value, bool):
-            problems.append(f"{path} must be a decimal string, not a bool")
+            problems.append(f"{path} must be a decimal string, not a bool{suffix}")
         elif isinstance(value, (int, float)):
             problems.append(
-                f"{path} must be a decimal string, not a {type(value).__name__}: "
+                f"{path} must be a decimal string, not a {type(value).__name__}{suffix}: "
                 "a float is not a signed amount (FINAL.md §7.3)"
             )
         elif not isinstance(value, str):
-            problems.append(f"{path} must be a decimal string, got {type(value).__name__}")
+            problems.append(f"{path} must be a decimal string, got {type(value).__name__}{suffix}")
         elif value.strip() != value or not value:
-            problems.append(f"{path} is not a clean decimal string: {value!r}")
-        else:
-            try:
-                Decimal(value)
-            except InvalidOperation:
-                problems.append(f"{path} is not a number: {value!r}")
+            problems.append(f"{path} is not a clean decimal string: {value!r}{suffix}")
+        elif to_decimal(value) is None:
+            problems.append(
+                f"{path} is not a finite decimal: {value!r}{suffix} "
+                "(NaN and Infinity defeat every numeric bound)"
+            )
         return
 
     if shape == NUM:
@@ -744,7 +794,7 @@ def _check_shape_at(value: Any, shape: Shape, path: str, problems: list[str]) ->
 
     if shape == BOOL:
         if not isinstance(value, bool):
-            row = PATH_TO_ROW.get(path)
+            row = _row_for(path)
             suffix = f" (FINAL.md §4.15 r{row})" if row else ""
             problems.append(f"{path} must be a boolean, got {value!r}{suffix}")
         return
@@ -753,66 +803,54 @@ def _check_shape_at(value: Any, shape: Shape, path: str, problems: list[str]) ->
         problems.append(f"{path} must be a string, got {type(value).__name__}")
 
 
-#: Reverse index, so a structural error can name the floor row it offends.
-#: Without this, "t0.enabled must be a boolean" is a confusing way to learn that
-#: you have just attempted to loosen r10.
+#: Reverse index, so a structural error names the floor row it offends. Without
+#: it, "t0.enabled must be a boolean" is a confusing way to learn you have just
+#: attempted to loosen r10.
 PATH_TO_ROW: dict[str, int] = {
-    "t0.enabled": 10,
-    "t0.disqualifiers": 9,
-    "t0.per_payment_limit_usd": 6,
-    "t0.min_final_payments": 7,
-    "t0.max_multiple_of_payee_median": 8,
     "bank_change.cooling_off_hours": 1,
     "bank_change.callback_contact_min_age_days": 2,
     "bank_change.callback_validity_days": 3,
+    "bank_change.contact_provenance_min_invoice_age_days": 3,
     "bank_change.first_payment_cap_usd": 4,
+    "bank_change.first_payment_cap_median_fraction": 4,
     "bank_change.cap_lift_final_payments": 5,
+    "t0.per_payment_limit_usd": 6,
+    "t0.min_final_payments": 7,
+    "t0.min_payment_fraction_of_limit": 7,
+    "t0.bank_details_unchanged_days": 7,
+    "t0.max_multiple_of_payee_median": 8,
+    "t0.disqualifiers": 9,
+    "t0.enabled": 10,
     "tiers.t2_threshold_usd": 11,
     "tiers.t2_payee_7d_aggregate_usd": 12,
-    "reserve_floor": 21,
-    "settlement": 22,
-    "ambiguous.escalate_after_days": 23,
-    "killswitch.clock_skew_seconds": 24,
-    "killswitch.ambiguous_creates_per_run": 26,
-    "killswitch.failed_transfers_rolling_1h": 27,
-    "killswitch.extraction_conflicts_rolling_24h": 28,
-    "killswitch.clear_signatures": 30,
-    "approvals.max_validity_hours": 18,
-    "fx.quote_safety_margin_seconds": 19,
-    "fx.drift_bp": 20,
     "limits.per_run": 13,
     "limits.per_day": 14,
     "limits.per_payee_7d": 15,
     "limits.per_payee_24h": 16,
     "limits.per_approver_day_usd": 17,
+    "approvals": 18,
+    "fx.quote_safety_margin_seconds": 19,
+    "fx.drift_bp": 20,
+    "reserve_floor": 21,
+    "settlement": 22,
+    "ambiguous.escalate_after_days": 23,
+    "killswitch.clock_skew_seconds": 24,
+    "killswitch.ambiguous_creates_per_run": 26,
+    "killswitch.ambiguous_creates_rolling_24h": 26,
+    "killswitch.failed_transfers_rolling_1h": 27,
+    "killswitch.extraction_conflicts_rolling_24h": 28,
+    "killswitch.clear_signatures": 30,
 }
 
 
-def shape_is_money_leaf(value: Any) -> bool | None:
-    """True when ``value`` can never be a valid money string.
-
-    Used by the FREEMAP branch, where the leaf type is not declared per key:
-    a boolean in a free mapping is always wrong, a number usually is.
-    """
-    return not isinstance(value, bool)
-
-
-def _check_shape(policy: Mapping[str, Any]) -> list[str]:
-    """Unknown keys and wrong types, walked recursively against :data:`SCHEMA`."""
-    problems: list[str] = []
-    for key in policy:
-        if key not in SCHEMA:
-            problems.append(
-                f"unknown top-level key {key!r} (FINAL.md §4.15: an unknown key is a load error)"
-            )
-    for key, shape in SCHEMA.items():
-        if key in policy:
-            _check_shape_at(policy[key], shape, key, problems)
-    return problems
-
-
 def _check_roster(policy: Mapping[str, Any]) -> list[str]:
-    """Unique emails, and a role of approver or ops only (§4.8, D6)."""
+    """Unique emails, a known role, and enough approvers for T2 (D6, §4.8).
+
+    A roster with fewer than three approvers is not a load error: §4.4 makes
+    every T2 item ``INSUFFICIENT_APPROVERS`` while the kill switch can still be
+    cleared by two. That is a runtime HOLD, not a bad configuration, so it is
+    deliberately not refused here.
+    """
     problems: list[str] = []
     roster = policy.get("roster")
     if not isinstance(roster, list) or not roster:
@@ -837,5 +875,16 @@ def _check_roster(policy: Mapping[str, Any]) -> list[str]:
 
 
 def validate_shape(policy: Mapping[str, Any]) -> list[str]:
-    """All structural problems, independent of any floor bound."""
-    return [*_check_shape(policy), *_check_roster(policy)]
+    """All structural problems: unknown keys, missing keys, wrong types, roster."""
+    problems: list[str] = []
+    for key in policy:
+        if key not in SCHEMA:
+            problems.append(
+                f"unknown top-level key {key!r} (FINAL.md §4.15: an unknown key is a load error)"
+            )
+    for key, shape in SCHEMA.items():
+        if key not in policy:
+            problems.append(_missing_key(key))
+            continue
+        _check_shape_at(policy[key], shape, key, problems)
+    return [*problems, *_check_roster(policy)]

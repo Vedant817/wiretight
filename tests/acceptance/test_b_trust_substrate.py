@@ -14,6 +14,7 @@ import sqlite3
 from collections.abc import Iterator
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -182,6 +183,7 @@ class TestAuditChain:
         with pytest.raises(Exception, match="append-only"):
             conn.execute("DELETE FROM audit_log")
 
+    @pytest.mark.compliance("T-13")
     def test_a_chain_with_a_deleted_middle_entry_is_detected(self, conn: db.Connection) -> None:
         for i in range(6):
             audit.log_intent(conn, kind="STEP", payload={"i": i})
@@ -260,16 +262,22 @@ class TestSignedCheckpoints:
         result = audit.verify_checkpoints(conn, tmp_path / "cp", key.public_key())
         assert not result.ok
 
-    def test_entries_appended_after_the_last_seal_are_a_failure(
+    def test_entries_appended_after_the_last_seal_leave_the_head_unsealed(
         self, conn: db.Connection, tmp_path: Path
     ) -> None:
+        """Integrity still holds; what fails is the seal, not the history.
+
+        The distinction matters: an unsealed tail is how every mid-run chain
+        looks, so `verify_checkpoints` must not call it corruption.
+        """
         key = audit.generate_key()
         checkpoints = tmp_path / "cp"
         audit.log_intent(conn, kind="STEP", payload={"i": 1})
         audit.write_checkpoint(conn, checkpoints, key)
         audit.log_intent(conn, kind="STEP", payload={"i": 2})
 
-        assert not audit.verify_checkpoints(conn, checkpoints, key.public_key()).ok
+        assert audit.verify_checkpoints(conn, checkpoints, key.public_key()).ok
+        assert not audit.head_is_sealed(conn, checkpoints).ok
 
     def test_a_checkpoint_signed_by_another_key_does_not_verify(
         self, conn: db.Connection, tmp_path: Path
@@ -290,6 +298,199 @@ class TestSignedCheckpoints:
             assert audit.maybe_write_checkpoint(conn, tmp_path / "cp", key) is None
         audit.log_intent(conn, kind="STEP", payload={"i": audit.CHECKPOINT_INTERVAL})
         assert audit.maybe_write_checkpoint(conn, tmp_path / "cp", key) is not None
+
+    def test_seal_files_accumulate_rather_than_overwriting(
+        self, conn: db.Connection, tmp_path: Path
+    ) -> None:
+        """A run-end seal at an interval boundary must not eat the interval seal.
+
+        Both were named ``{seq}.checkpoint.json``, so the second silently
+        replaced the first and the seal count proved nothing.
+        """
+        key = audit.generate_key()
+        cps = tmp_path / "cp"
+        for i in range(audit.CHECKPOINT_INTERVAL):
+            audit.log_intent(conn, kind="STEP", payload={"i": i})
+
+        interval = audit.maybe_write_checkpoint(conn, cps, key)
+        run_end = audit.seal_run_end(conn, cps, key)
+
+        assert interval is not None
+        assert interval != run_end
+        assert interval.exists(), "the interval seal was overwritten"
+        assert run_end.exists()
+        assert len(list(cps.glob(f"*{audit.CHECKPOINT_SUFFIX}"))) == 2
+
+    def test_a_malformed_checkpoint_fails_closed(self, conn: db.Connection, tmp_path: Path) -> None:
+        """A corrupt seal file must be a verification failure, not a traceback.
+
+        ``verify_checkpoints`` runs before the executor starts; a crash there
+        looks like "verification did not run" rather than "verification failed".
+        """
+        key = audit.generate_key()
+        cps = tmp_path / "cp"
+        audit.log_intent(conn, kind="STEP", payload={"i": 1})
+        audit.write_checkpoint(conn, cps, key)
+
+        (cps / f"000000000001.interval{audit.CHECKPOINT_SUFFIX}").write_text(
+            "{not json", encoding="utf-8"
+        )
+        result = audit.verify_checkpoints(conn, cps, key.public_key())
+        assert not result.ok
+        assert "malformed" in (result.reason or "")
+
+    def test_a_checkpoint_missing_its_body_field_fails_closed(
+        self, conn: db.Connection, tmp_path: Path
+    ) -> None:
+        key = audit.generate_key()
+        cps = tmp_path / "cp"
+        audit.log_intent(conn, kind="STEP", payload={"i": 1})
+        audit.write_checkpoint(conn, cps, key)
+        (cps / f"000000000001.interval{audit.CHECKPOINT_SUFFIX}").write_text(
+            '{"signature": "ab"}', encoding="utf-8"
+        )
+        assert not audit.verify_checkpoints(conn, cps, key.public_key()).ok
+
+
+class TestAnchorDetectsTailTruncation:
+    """Every checkpoint file can be deleted along with the entries it covers.
+
+    Without an external monotone record, truncating a chain to a sealed seq and
+    removing the newer seals leaves a self-consistent chain that verifies: the
+    surviving seal pins entry 100's hash, and a chain truncated to 100 still has
+    that hash. The anchor is what makes the removal detectable.
+    """
+
+    def _chain(
+        self, tmp_path: Path, total: int, seal_every: int = 50, seal_run_end: bool = False
+    ) -> tuple[Any, Any, Path]:
+        """A chain sealed every ``seal_every`` entries.
+
+        ``seal_run_end=True`` writes a final seal at ``total``, which is what a
+        finished run looks like. Without it the anchor records the last *interval*
+        seal, so a 110-entry chain ends anchored at 100 — which is correct: those
+        ten entries were never sealed.
+        """
+        conn = db.connect(tmp_path / "app.sqlite")
+        key = audit.generate_key()
+        cps = tmp_path / "cp"
+        for i in range(1, total + 1):
+            audit.log_intent(conn, kind="S", payload={"i": i})
+            if i % seal_every == 0:
+                audit.write_checkpoint(conn, cps, key)
+        if seal_run_end:
+            audit.seal_run_end(conn, cps, key)
+        return conn, key, cps
+
+    def test_an_untouched_chain_verifies(self, tmp_path: Path) -> None:
+        conn, key, cps = self._chain(tmp_path, 110)
+        try:
+            assert audit.verify_checkpoints(conn, cps, key.public_key()).ok
+        finally:
+            conn.close()
+
+    def test_a_sealed_run_reports_the_head_as_sealed(self, tmp_path: Path) -> None:
+        conn, _key, cps = self._chain(tmp_path, 100)
+        try:
+            assert audit.head_is_sealed(conn, cps).ok
+        finally:
+            conn.close()
+
+    def test_an_unsealed_tail_is_a_mid_run_state_not_an_integrity_failure(
+        self, tmp_path: Path
+    ) -> None:
+        """Entries 101..110 exist, the next seal lands at 150. That is normal.
+
+        This is why "the newest seal must cover the head" lives in
+        `head_is_sealed` and not in `verify_checkpoints`: folding it in reported
+        a false failure every few runs.
+        """
+        conn, key, cps = self._chain(tmp_path, 110)
+        try:
+            assert audit.verify_checkpoints(conn, cps, key.public_key()).ok
+            unsealed = audit.head_is_sealed(conn, cps)
+            assert not unsealed.ok
+            assert "was not sealed" in (unsealed.reason or "")
+        finally:
+            conn.close()
+
+    def test_sealing_the_run_end_clears_the_unsealed_tail(self, tmp_path: Path) -> None:
+        conn, key, cps = self._chain(tmp_path, 110)
+        try:
+            assert not audit.head_is_sealed(conn, cps).ok
+            audit.seal_run_end(conn, cps, key)
+            assert audit.head_is_sealed(conn, cps).ok
+            assert audit.verify_checkpoints(conn, cps, key.public_key()).ok
+        finally:
+            conn.close()
+
+    def test_truncating_the_tail_with_its_seals_is_detected(self, tmp_path: Path) -> None:
+        """The attack: drop entries 101..110 and their seals. Seal at 100 survives."""
+        conn, key, cps = self._chain(tmp_path, 110, seal_run_end=True)
+        try:
+            assert audit.read_anchor(cps) == 110
+
+            conn.execute("DROP TRIGGER audit_log_no_delete")
+            conn.execute("DELETE FROM audit_log WHERE seq > 100")
+            conn.commit()
+            for stale in list(cps.glob(f"*{audit.CHECKPOINT_SUFFIX}")):
+                if stale.name.startswith("000000000110"):
+                    stale.unlink()
+
+            # The internal chain is self-consistent after the delete...
+            assert audit.verify(conn).ok
+            # ...and the anchor is what catches it.
+            result = audit.verify_checkpoints(conn, cps, key.public_key())
+            assert not result.ok
+            assert "anchor" in (result.reason or "")
+        finally:
+            conn.close()
+
+    def test_deleting_an_interior_seal_is_not_itself_a_failure(self, tmp_path: Path) -> None:
+        """Losing a seal leaves the chain verifiable; only the anchor is binding.
+
+        Recorded because the previous implementation's behaviour here was an
+        accident of iteration order rather than a decision.
+        """
+        conn, key, cps = self._chain(tmp_path, 100)
+        try:
+            (cps / f"000000000050.interval{audit.CHECKPOINT_SUFFIX}").unlink()
+            assert audit.verify_checkpoints(conn, cps, key.public_key()).ok
+        finally:
+            conn.close()
+
+    def test_the_anchor_never_moves_backwards(self, tmp_path: Path) -> None:
+        conn, key, cps = self._chain(tmp_path, 100)
+        try:
+            assert audit.read_anchor(cps) == 100
+            # Re-sealing an older head must not roll the anchor back.
+            assert (
+                conn.execute("SELECT count(*) FROM audit_log WHERE seq = 60").fetchone()[0] == 1
+            ), "expected entry 60 to exist"
+            audit._advance_anchor(cps, 60, key)
+            assert audit.read_anchor(cps) == 100
+        finally:
+            conn.close()
+
+    def test_a_missing_anchor_is_a_failure(self, tmp_path: Path) -> None:
+        """Without it, the highest seq ever sealed is simply unknown."""
+        conn, key, cps = self._chain(tmp_path, 60)
+        try:
+            (cps / audit.ANCHOR_NAME).unlink()
+            result = audit.verify_checkpoints(conn, cps, key.public_key())
+            assert not result.ok
+            assert "anchor" in (result.reason or "")
+        finally:
+            conn.close()
+
+    def test_a_corrupt_anchor_is_a_failure_not_a_silent_reset(self, tmp_path: Path) -> None:
+        conn, key, cps = self._chain(tmp_path, 60)
+        try:
+            (cps / audit.ANCHOR_NAME).write_text("{not json", encoding="utf-8")
+            assert audit.read_anchor(cps) is None
+            assert not audit.verify_checkpoints(conn, cps, key.public_key()).ok
+        finally:
+            conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -515,6 +716,122 @@ class TestFailureCapture:
             current_failure_type=None,
         )
         assert result.unknown_status_incident
+
+
+class TestFailureReasonIsIndependentOfType:
+    """§4.11 group H: a bare cancel carries only ``failure_reason: "simulation"``.
+
+    ``failure_type`` and ``failure_reason`` are captured independently on first
+    sight. Gating the reason's capture on whether a type was already recorded let
+    a stored reason be overwritten by a later poll that supplied a type while the
+    type column was still empty.
+    """
+
+    def test_a_reason_seen_first_is_not_replaced_by_a_later_type(self) -> None:
+        result = statemachine.apply_transfer_observation(
+            awx_status="CANCELLED",
+            failure_type=None,
+            failure_reason="simulation",
+            current_failure_type=None,
+            current_failure_reason="simulation",
+        )
+        assert result.failure_type is None
+        assert result.failure_reason == "simulation"
+
+        later = statemachine.apply_transfer_observation(
+            awx_status="CANCELLED",
+            failure_type="ACCOUNT_CLOSED",
+            failure_reason="90701: Account closed",
+            current_failure_type=None,
+            current_failure_reason="simulation",
+        )
+        assert later.failure_type == "ACCOUNT_CLOSED"
+        assert later.failure_reason == "simulation", "the original reason was overwritten"
+
+    def test_a_reason_is_not_replaced_by_a_different_reason(self) -> None:
+        result = statemachine.apply_transfer_observation(
+            awx_status="CANCELLED",
+            failure_type=None,
+            failure_reason="91402: System error",
+            current_failure_type="ACCOUNT_CLOSED",
+            current_failure_reason="90701: Account closed",
+        )
+        assert result.failure_reason == "90701: Account closed"
+
+
+class TestRegressionDetection:
+    def test_re_seeing_the_same_status_is_not_a_regression(self) -> None:
+        """The poller reads the same object repeatedly; flagging that is noise."""
+        assert not statemachine.is_regression("SENT", "SENT")
+        assert not statemachine.is_regression("CANCELLED", "CANCELLED")
+
+    def test_a_real_backwards_move_is_a_regression(self) -> None:
+        assert statemachine.is_regression("SENT", "PROCESSING")
+        assert statemachine.is_regression("CANCELLED", "PAID")
+
+    def test_a_forward_move_is_not_a_regression(self) -> None:
+        assert not statemachine.is_regression("PROCESSING", "SENT")
+
+    def test_an_unknown_status_is_not_a_regression(self) -> None:
+        assert not statemachine.is_regression("SENT", "WARP")
+
+
+class TestWtStateOverlay:
+    """§4.10. The overlay is ours, and PAID never becomes FINAL on its own."""
+
+    def test_a_new_transfer_is_submitting(self) -> None:
+        assert statemachine.wt_next(None, awx_status="SCHEDULED") == "SUBMITTING"
+
+    def test_paid_is_provisional(self) -> None:
+        """The whole premise: PAID is not final."""
+        assert statemachine.wt_next("SUBMITTING", awx_status="PAID") == "PAID_PROVISIONAL"
+
+    def test_paid_does_not_become_final_until_the_window_elapses(self) -> None:
+        assert statemachine.wt_next("PAID_PROVISIONAL", awx_status="PAID") == "PAID_PROVISIONAL"
+        assert (
+            statemachine.wt_next("PAID_PROVISIONAL", awx_status="PAID", final_due=True) == "FINAL"
+        )
+
+    def test_a_late_failure_after_final_reopens(self) -> None:
+        assert statemachine.wt_next("FINAL", awx_status="FAILED") == "REOPENED"
+
+    def test_ambiguous_outranks_paid(self) -> None:
+        """We do not know whether the create landed; that dominates everything."""
+        assert (
+            statemachine.wt_next("PAID_PROVISIONAL", awx_status="PAID", ambiguous=True)
+            == "AMBIGUOUS"
+        )
+
+    def test_rfi_open_outranks_ambiguous(self) -> None:
+        state = statemachine.wt_next("AMBIGUOUS", awx_status="SENT", ambiguous=True, rfi_open=True)
+        assert state == "RFI_OPEN"
+
+    def test_auto_cancel_after_a_failure(self) -> None:
+        assert statemachine.wt_next("SUBMITTING", awx_status="CANCELLED") == "CANCELLED_FAILED"
+
+    def test_swift_can_reach_presumed_settled_but_never_final_by_timer(self) -> None:
+        assert (
+            statemachine.wt_next("PAID_PROVISIONAL", awx_status="PAID", presumed_settled=True)
+            == "PRESUMED_SETTLED"
+        )
+
+    def test_a_terminal_overlay_does_not_move(self) -> None:
+        for terminal in ("FINAL", "PRESUMED_SETTLED", "CANCELLED_FAILED", "REJECTED"):
+            assert statemachine.wt_next(terminal, awx_status="SENT") == terminal
+
+    def test_every_overlay_state_is_declared(self) -> None:
+        """No dead vocabulary: every value wt_next can return is in WT_STATES."""
+        produced = {
+            statemachine.wt_next(None, awx_status="SCHEDULED"),
+            statemachine.wt_next("SUBMITTING", awx_status="PAID"),
+            statemachine.wt_next("SUBMITTING", awx_status="CANCELLED"),
+            statemachine.wt_next("PAID_PROVISIONAL", awx_status="PAID", final_due=True),
+            statemachine.wt_next("PAID_PROVISIONAL", awx_status="PAID", presumed_settled=True),
+            statemachine.wt_next("SUBMITTING", awx_status="SENT", ambiguous=True),
+            statemachine.wt_next("SUBMITTING", awx_status="SENT", rfi_open=True),
+            statemachine.wt_next("FINAL", awx_status="FAILED"),
+        }
+        assert produced <= statemachine.WT_STATES
 
 
 class TestPayeeVersionMachine:

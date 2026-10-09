@@ -87,14 +87,19 @@ def transfer_next_awx(current: str | None, observed: str) -> str:
 
 
 def is_regression(current: str | None, observed: str) -> bool:
-    """True when ``observed`` moves a known status backwards."""
+    """True when ``observed`` moves a known status backwards.
+
+    Re-observing the same status, or observing a terminal one we already hold,
+    is not a regression. The poller reads the same object repeatedly, and
+    flagging every one of those as an anomaly would bury a real one in noise.
+    """
     if current is None or observed not in AWX_STATUSES:
+        return False
+    if observed == current:
         return False
     if current in TERMINAL_AWX:
         return True
-    return observed in AWX_STATUSES and observed not in DOCUMENTED_TRANSITIONS.get(
-        current, frozenset()
-    )
+    return observed not in DOCUMENTED_TRANSITIONS.get(current, frozenset())
 
 
 # ---------------------------------------------------------------------------
@@ -139,22 +144,24 @@ def apply_transfer_observation(
 ) -> TransferObservation:
     """Fold one observation in. The heart of §4.11's "first sight" rule.
 
-    ``failure_type`` and ``failure_reason`` are captured the first time they are
-    seen and never overwritten. A later observation without them, or with
-    different ones, leaves the originals intact: the evidence of what actually
-    went wrong is not something a subsequent poll gets to edit.
+    ``failure_type`` and ``failure_reason`` are captured independently, the first
+    time each is seen, and neither is ever overwritten afterwards.
+
+    The two are independent on purpose. §4.11's group H covers the case where a
+    bare cancel returns only ``failure_reason: "simulation"`` and no
+    ``failure_type``: gating the reason's first-sight on whether a *type* was
+    already recorded let a stored reason be replaced whenever a later poll
+    supplied a type and the type column happened to be empty.
     """
     unknown = awx_status not in AWX_STATUSES
     regression = is_regression(current_awx_status, awx_status)
     next_awx = transfer_next_awx(current_awx_status, awx_status)
 
-    # First sight wins. Either the FAILED object or the auto-cancelled one.
-    # A later observation never overwrites what we already recorded.
     kept_type: str | None = (
         current_failure_type if current_failure_type is not None else failure_type
     )
     kept_reason: str | None = (
-        current_failure_reason if current_failure_type is not None else failure_reason
+        current_failure_reason if current_failure_reason is not None else failure_reason
     )
 
     # A FAILED seen after we already declared FINAL is never ignored (§4.10).
@@ -168,6 +175,78 @@ def apply_transfer_observation(
         unknown_status_incident=unknown,
         late_failure_after_final=late_failure,
     )
+
+
+# ---------------------------------------------------------------------------
+# The wt_state overlay (§4.10)
+# ---------------------------------------------------------------------------
+#: §4.10: "PAID is provisional; FINAL is our label after the rail's business-day
+#: return window." The overlay is never Airwallex's vocabulary, and PAID never
+#: becomes FINAL on its own — it needs the return window to elapse.
+WT_TERMINAL: Final[frozenset[str]] = frozenset(
+    {"FINAL", "PRESUMED_SETTLED", "CANCELLED_FAILED", "REJECTED"}
+)
+
+
+def is_terminal_wt(state: str | None) -> bool:
+    return state in WT_TERMINAL
+
+
+def wt_next(
+    current: str | None,
+    *,
+    awx_status: str | None,
+    ambiguous: bool = False,
+    rfi_open: bool = False,
+    final_due: bool = False,
+    presumed_settled: bool = False,
+) -> str:
+    """Advance our overlay from the sandbox's status.
+
+    Precedence, highest first, because these are not independent:
+
+    1. ``REJECTED`` — a definitive validation refusal. The create never landed.
+    2. ``CANCELLED_FAILED`` — the auto-cancel after a failure.
+    3. ``RFI_OPEN`` — Airwallex wants information; holds new payments.
+    4. ``AMBIGUOUS`` — we do not know whether the create landed. §4.8 step 8:
+       resolved only by lookup with the same key.
+    5. ``REOPENED`` — a FAILED after FINAL. Never ignored (§4.10).
+    6. ``FINAL`` / ``PRESUMED_SETTLED`` — only when the window has actually
+       elapsed. SWIFT never reaches FINAL by timer.
+    7. ``PAID_PROVISIONAL`` — PAID, still inside the return window.
+    8. ``SUBMITTING`` — anything else in flight.
+
+    A late failure outranks FINAL because that is the whole point of treating
+    PAID as provisional.
+    """
+    if current in WT_TERMINAL and not (current == "FINAL" and awx_status == "FAILED"):
+        return current
+
+    if awx_status == "CANCELLED":
+        return "CANCELLED_FAILED"
+    if rfi_open:
+        return "RFI_OPEN"
+    if ambiguous:
+        return "AMBIGUOUS"
+    if current == "FINAL" and awx_status == "FAILED":
+        return "REOPENED"
+    if final_due:
+        return "FINAL"
+    if presumed_settled:
+        return "PRESUMED_SETTLED"
+    if awx_status == "PAID":
+        return "PAID_PROVISIONAL"
+    if awx_status in {
+        "FAILED",
+        "CANCELLED",
+        "SCHEDULED",
+        "OVERDUE",
+        "PROCESSING",
+        "SENT",
+        "IN_APPROVAL",
+    }:
+        return current or "SUBMITTING"
+    return current or "SUBMITTING"
 
 
 # ---------------------------------------------------------------------------

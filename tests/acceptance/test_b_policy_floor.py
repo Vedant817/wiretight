@@ -16,9 +16,9 @@ to loosen it.
 from __future__ import annotations
 
 import copy
-from collections.abc import Iterator
+from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 import yaml
@@ -32,8 +32,9 @@ from app.core.policy import (
 )
 from app.core.policy_floor import (
     FLOOR_ROWS,
+    Constraint,
     Direction,
-    FloorRow,
+    all_constraints,
     check_policy_against_floor,
 )
 
@@ -178,117 +179,309 @@ class TestFloorTable:
         for row in FLOOR_ROWS:
             assert row.source, f"row {row.number} does not cite a FINAL.md section"
 
-    def test_every_row_declares_a_direction(self) -> None:
+    def test_every_constraint_declares_a_direction(self) -> None:
         for row in FLOOR_ROWS:
-            assert row.direction in {Direction.MINIMUM, Direction.MAXIMUM, Direction.SUPERSET}
+            for constraint in row.constraints:
+                assert constraint.direction in {
+                    Direction.MINIMUM,
+                    Direction.MAXIMUM,
+                    Direction.SUPERSET,
+                    Direction.EXACT,
+                }, f"r{row.number} {constraint.where()} has no direction"
+
+    def test_every_row_has_at_least_one_constraint(self) -> None:
+        """A row with no constraints checks nothing, which is worse than no row."""
+        empty = [row.number for row in FLOOR_ROWS if not row.constraints]
+        assert not empty, f"rows with nothing to check: {empty}"
+
+    def test_every_row_cites_the_spec_section_it_comes_from(self) -> None:
+        for row in FLOOR_ROWS:
+            assert "§4.15" in row.source or "§4.5" in row.source
 
 
 # ---------------------------------------------------------------------------
-# T-27: parametrised over all 30 rows. This is what makes a new row mandatory.
+# T-27, parametrised over every CONSTRAINT rather than every row.
+#
+# This granularity is the point. A row that names five values (r14) used to have
+# one loosen case that set all five, and the assertion only checked that the row
+# number appeared. Four of the five could have been deleted from the floor table
+# and the row's test would still have passed. Asserting the violated *path* makes
+# that impossible.
 # ---------------------------------------------------------------------------
-def _loosen(row: FloorRow, policy: dict[str, Any]) -> None:
-    """Apply a deliberate violation of ``row`` to ``policy``, in place."""
-    if row.number == 1:
-        policy["bank_change"]["cooling_off_hours"] = 1
-    elif row.number == 2:
-        policy["bank_change"]["callback_contact_min_age_days"] = 0
-    elif row.number == 3:
-        policy["bank_change"]["callback_validity_days"] = 90
-        policy["bank_change"]["contact_provenance_min_invoice_age_days"] = 1
-    elif row.number == 4:
-        policy["bank_change"]["first_payment_cap_usd"] = "999999.00"
-    elif row.number == 5:
-        policy["bank_change"]["cap_lift_final_payments"] = 1
-    elif row.number == 6:
-        policy["t0"]["per_payment_limit_usd"] = "5000.00"
-    elif row.number == 7:
-        policy["t0"]["min_final_payments"] = 1
-        policy["t0"]["min_payment_fraction_of_limit"] = "0.01"
-        policy["t0"]["bank_details_unchanged_days"] = 1
-    elif row.number == 8:
-        policy["t0"]["max_multiple_of_payee_median"] = "99.0"
-    elif row.number == 9:
-        policy["t0"]["disqualifiers"] = []
-    elif row.number == 10:
-        # A string that YAML reads as truthy. T0 must be a real boolean, and the
-        # floor check is what refuses this: `if str(policy["t0"]["enabled"])` would
-        # happily enable auto-pay from the string "no".
-        policy["t0"]["enabled"] = "false-but-written-as-a-string"
-    elif row.number == 11:
-        policy["tiers"]["t2_threshold_usd"] = "0.01"
-    elif row.number == 12:
-        policy["tiers"]["t2_payee_7d_aggregate_usd"] = "0.01"
-    elif row.number == 13:
-        policy["limits"]["per_run"]["t0_usd"] = "999999.00"
-        policy["limits"]["per_run"]["all_usd"] = "999999.00"
-        policy["limits"]["per_run"]["max_payments"] = 500
-    elif row.number == 14:
-        policy["limits"]["per_day"]["all_usd"] = "999999.00"
-        policy["limits"]["per_day"]["max_payments"] = 500
-        policy["limits"]["per_day"]["max_runs"] = 99
-        policy["limits"]["per_day"]["max_new_beneficiaries"] = 500
-    elif row.number == 15:
-        policy["limits"]["per_payee_7d"]["t0_usd"] = "999999.00"
-    elif row.number == 16:
-        policy["limits"]["per_payee_24h"] = {"max_t0": 50, "max_payments": 500}
-    elif row.number == 17:
-        policy["limits"]["per_approver_day_usd"] = "999999.00"
-    elif row.number == 18:
-        policy["approvals"] = {"max_validity_hours": 72, "challenge_ttl_seconds": 86400}
-    elif row.number == 19:
-        policy["fx"]["quote_safety_margin_seconds"] = 0
-    elif row.number == 20:
-        policy["fx"]["drift_bp"] = 5000
-    elif row.number == 21:
-        policy["reserve_floor"] = {}  # missing: the executor must refuse to start
-    elif row.number == 22:
-        policy["settlement"]["SEPA"]["min_hours"] = 0
-        policy["settlement"]["SEPA"]["business_days"] = 0
-        policy["settlement"]["FPS"]["business_days"] = 0
-        policy["settlement"]["ACH"]["business_days"] = 0
-        policy["settlement"]["SWIFT"]["final_by_timer"] = True
-        policy["settlement"]["SWIFT"]["presumed_settled_business_days"] = 0
-    elif row.number == 23:
-        policy["ambiguous"]["escalate_after_days"] = 0
-    elif row.number == 24:
-        policy["killswitch"]["clock_skew_seconds"] = 100000
-    elif row.number == 25:
-        policy["rails"]["fee_reservation_usd"]["SEPA"] = "0.00"
-    elif row.number == 26:
-        policy["killswitch"]["ambiguous_creates_per_run"] = 500
-        policy["killswitch"]["ambiguous_creates_rolling_24h"] = 500
-    elif row.number == 27:
-        policy["killswitch"]["failed_transfers_rolling_1h"] = 500
-    elif row.number == 28:
-        policy["killswitch"]["extraction_conflicts_rolling_24h"] = 500
-    elif row.number == 29:
-        policy["rails"]["flight_business_days"]["SEPA"] = 0  # never shorten a rail window
-    elif row.number == 30:
-        policy["killswitch"]["clear_signatures"] = 1
-    else:  # pragma: no cover - guarded by test_there_are_exactly_thirty_rows
-        raise AssertionError(f"row {row.number} has no loosen case")
+def _loosen(constraint: Constraint, policy: dict[str, Any]) -> Any:
+    """Apply a deliberate violation of exactly ``constraint``, in place.
+
+    Returns the value written so the caller can assert on it.
+    """
+    parts = constraint.where().split(".")
+    container = policy
+    for part in parts[:-1]:
+        container = container[part]
+    key = parts[-1]
+
+    if constraint.direction is Direction.SUPERSET:
+        container[key] = []
+        return container[key]
+
+    if constraint.direction is Direction.EXACT:
+        # A string YAML reads as truthy: `if policy["t0"]["enabled"]` would
+        # happily enable auto-pay from the string "false".
+        container[key] = "false-but-written-as-a-string"
+        return container[key]
+
+    if isinstance(constraint.value, dict):
+        # Row 21: an empty reserve floor. §4.15 says a missing floor means the
+        # executor refuses to start, which is the whole point of the row.
+        container[key] = {}
+        return container[key]
+
+    value = constraint.value
+    if isinstance(value, str):
+        # A plain out-of-bounds number, so the violation is caught by the FLOOR
+        # check rather than by the shape check. NaN and Infinity are refused at
+        # the shape layer and get their own tests; using them here would test the
+        # wrong defence.
+        number = Decimal(value)
+        written: Any = (
+            format(number - Decimal("1000000"), "f")
+            if (constraint.direction is Direction.MINIMUM)
+            else format(number + Decimal("1000000"), "f")
+        )
+    elif isinstance(value, int):
+        written = value - 1 if constraint.direction is Direction.MINIMUM else value + 1
+    else:  # pragma: no cover - every constraint has an int, str or special value
+        raise AssertionError(f"constraint {constraint.where()} has value {value!r}")
+
+    container[key] = written
+    return container[key]
 
 
 @pytest.mark.compliance("T-27")
-@pytest.mark.parametrize("row_number", sorted(row.number for row in FLOOR_ROWS))
-def test_t27_every_floor_row_has_a_loosen_test(
-    row_number: int, policy_copy: dict[str, Any], tmp_path: Path
+@pytest.mark.parametrize(
+    ("row_number", "constraint_path"),
+    sorted((row.number, c.where()) for row, c in all_constraints()),
+    ids=lambda v: f"r{v}" if isinstance(v, int) else v.split(".")[-1],
+)
+def test_t27_every_floor_constraint_has_a_loosen_test(
+    row_number: int,
+    constraint_path: str,
+    policy_copy: dict[str, Any],
+    tmp_path: Path,
 ) -> None:
-    """T-27: "parametrised over all 30 rows; a row without a test fails".
-
-    Each row is violated on purpose and the loader must refuse it, naming the
-    row. If this test cannot find a row to violate, that is the failure.
-    """
+    """Each bounded value is loosened on purpose; the loader must name the path."""
     row = next(r for r in FLOOR_ROWS if r.number == row_number)
-    _loosen(row, policy_copy)
+    constraint = next(c for c in row.constraints if c.where() == constraint_path)
+    _loosen(constraint, policy_copy)
     path = write_policy(tmp_path / "policy.yaml", policy_copy)
 
     with pytest.raises(PolicyError) as caught:
         load_policy(path, signature_path=None, allow_unsigned=True)
 
-    assert f"r{row_number}" in str(caught.value) or row.control in str(caught.value), (
-        f"row {row_number} was refused, but not by name: {caught.value}"
+    message = str(caught.value)
+    assert f"r{row_number}" in message, f"row {row_number} not named: {message}"
+    leaf = constraint_path.split(".")[-1]
+    assert leaf in message, f"row {row_number} refused, but not for {constraint_path}: {message}"
+
+
+def test_t27_every_row_has_at_least_one_constraint() -> None:
+    """A row with no constraints checks nothing, which is worse than no row."""
+    assert len(FLOOR_ROWS) == 30
+    empty = [row.number for row in FLOOR_ROWS if not row.constraints]
+    assert not empty, f"rows with nothing to check: {empty}"
+
+
+def test_t27_the_constraint_count_is_stable() -> None:
+    """Records how many bounded values §4.15 currently names.
+
+    If this number changes, the diff is the point: a new constraint is a new
+    control or a newly-noticed gap, and belongs in DECISIONS.md.
+    """
+    assert len(all_constraints()) == 51
+
+
+# ---------------------------------------------------------------------------
+# Non-finite money values, found by review: these defeat a naive numeric bound.
+# ---------------------------------------------------------------------------
+NON_FINITE = ["Infinity", "-Infinity", "NaN", "sNaN"]
+
+
+class TestNonFiniteMoneyValues:
+    """`Decimal("Infinity") < 10000` is False, so a MINIMUM row would accept it.
+
+    With `tiers.t2_threshold_usd: Infinity` no payment ever exceeds the threshold,
+    so nothing escalates to T2 and one signature moves any amount. The floor check
+    refuses non-finite values and, importantly, refuses them *without raising*:
+    an uncaught InvalidOperation used to escape load_policy as a crash, skipping
+    the REJECTED audit row and the kill-switch trip.
+    """
+
+    @pytest.mark.parametrize("value", NON_FINITE)
+    @pytest.mark.parametrize(
+        "path",
+        [
+            ("tiers", "t2_threshold_usd"),
+            ("bank_change", "first_payment_cap_usd"),
+            ("t0", "per_payment_limit_usd"),
+            ("limits", "per_day", "all_usd"),
+        ],
     )
+    def test_a_non_finite_money_value_is_refused(self, path: tuple[str, ...], value: str) -> None:
+        policy = copy.deepcopy(BASE_POLICY)
+        container = policy
+        for key in path[:-1]:
+            container = container[key]
+        container[path[-1]] = value
+
+        result = check_policy_against_floor(policy)
+        assert not result.ok
+        assert path[-1] in " ".join(result.violations)
+
+    @pytest.mark.parametrize("value", NON_FINITE)
+    def test_load_policy_refuses_it_without_crashing(
+        self, value: str, policy_copy: dict[str, Any], tmp_path: Path
+    ) -> None:
+        policy_copy["tiers"]["t2_threshold_usd"] = value
+        path = write_policy(tmp_path / "policy.yaml", policy_copy)
+
+        with pytest.raises(PolicyError):
+            load_policy(path, signature_path=None, allow_unsigned=True)
+
+    def test_a_rejected_non_finite_policy_is_still_audited_as_rejected(
+        self, policy_copy: dict[str, Any], tmp_path: Path
+    ) -> None:
+        """The crash skipped this row, and with it the documented halt path."""
+        conn = db.connect(tmp_path / "app.sqlite")
+        try:
+            policy_copy["tiers"]["t2_threshold_usd"] = "Infinity"
+            path = write_policy(tmp_path / "policy.yaml", policy_copy)
+            with pytest.raises(PolicyError):
+                load_policy(path, signature_path=None, allow_unsigned=True, conn=conn)
+            assert [row["result"] for row in conn.execute("SELECT result FROM policy_load")] == [
+                "REJECTED"
+            ]
+        finally:
+            conn.close()
+
+    def test_an_infinite_reserve_floor_is_refused(self, policy_copy: dict[str, Any]) -> None:
+        policy_copy["reserve_floor"] = {"USD": "Infinity"}
+        assert not check_policy_against_floor(policy_copy).ok
+
+
+# ---------------------------------------------------------------------------
+# Sub-values §4.15 names. Each of these was accepted before review (D-B15).
+# ---------------------------------------------------------------------------
+UNBOUNDED_BEFORE: tuple[tuple[tuple[str, ...], Any, int], ...] = (
+    (("t0", "bank_details_unchanged_days"), 0, 7),
+    (("t0", "min_payment_fraction_of_limit"), "0.00", 7),
+    (("limits", "per_run", "all_usd"), "99999999.00", 13),
+    (("limits", "per_run", "max_payments"), 100000, 13),
+    (("limits", "per_day", "t0_usd"), "999999.00", 14),
+    (("limits", "per_day", "max_payments"), 100000, 14),
+    (("limits", "per_day", "max_runs"), 999, 14),
+    (("limits", "per_day", "max_new_beneficiaries"), 100000, 14),
+    (("limits", "per_payee_24h", "max_t0"), 100000, 16),
+    (("approvals", "challenge_ttl_seconds"), 31536000, 18),
+    (("bank_change", "contact_provenance_min_invoice_age_days"), 0, 3),
+)
+
+
+class TestEveryNamedSubValueIsBounded:
+    """A row is covered only when every value §4.15 names for it is bounded.
+
+    `bank_details_unchanged_days: 0` is the serious one: it would let a payee
+    whose bank details changed yesterday qualify for T0, which is auto-pay with
+    no callback and no cooling-off.
+    """
+
+    @pytest.mark.parametrize(("path", "value", "row_number"), UNBOUNDED_BEFORE)
+    def test_the_sub_value_is_refused_when_loosened(
+        self, path: tuple[str, ...], value: Any, row_number: int, policy_copy: dict[str, Any]
+    ) -> None:
+        container = policy_copy
+        for key in path[:-1]:
+            container = container[key]
+        container[path[-1]] = value
+
+        result = check_policy_against_floor(policy_copy)
+        assert not result.ok, f"{'.'.join(path)} was accepted"
+        assert f"r{row_number}" in " ".join(result.violations)
+
+    @pytest.mark.parametrize(("path", "value", "row_number"), UNBOUNDED_BEFORE)
+    def test_the_sub_value_may_be_tightened(
+        self, path: tuple[str, ...], value: Any, row_number: int, policy_copy: dict[str, Any]
+    ) -> None:
+        """Tightening stays legal, so the floor is a bound and not a lock."""
+        row = next(r for r in FLOOR_ROWS if r.number == row_number)
+        constraint = next(c for c in row.constraints if c.where().split(".")[-1] == path[-1])
+        base = constraint.value
+        container = policy_copy
+        for key in path[:-1]:
+            container = container[key]
+        if isinstance(base, str):
+            number = Decimal(base)
+            tighter = (
+                number + Decimal("1")
+                if constraint.direction is Direction.MINIMUM
+                else number - Decimal("1")
+            )
+            container[path[-1]] = format(tighter, "f")
+        else:
+            container[path[-1]] = (
+                base + 1 if constraint.direction is Direction.MINIMUM else base - 1
+            )
+        assert check_policy_against_floor(policy_copy).ok
+
+
+class TestSettlementMustNameEveryRail:
+    """A policy that omits a rail used to pass, leaving that rail unwindowed."""
+
+    @pytest.mark.parametrize("rail", ["SEPA", "FPS", "ACH", "SWIFT"])
+    def test_omitting_a_rail_is_refused(self, rail: str, policy_copy: dict[str, Any]) -> None:
+        del policy_copy["settlement"][rail]
+        result = check_policy_against_floor(policy_copy)
+        assert not result.ok
+        assert rail in " ".join(result.violations)
+
+    def test_a_settlement_of_only_swift_is_refused(self, policy_copy: dict[str, Any]) -> None:
+        policy_copy["settlement"] = {"SWIFT": policy_copy["settlement"]["SWIFT"]}
+        assert not check_policy_against_floor(policy_copy).ok
+
+    def test_an_unknown_rail_is_refused(self, policy_copy: dict[str, Any]) -> None:
+        policy_copy["settlement"]["CARRIER_PIGEON"] = policy_copy["settlement"]["SEPA"]
+        assert not check_policy_against_floor(policy_copy).ok
+
+
+class TestMissingKeysAreErrors:
+    """§4.15: a missing required key is a load error.
+
+    Nine of ten deleted keys used to load, each falling through to a downstream
+    `.get()` default. A silently defaulted floor is not a floor.
+    """
+
+    MISSING: ClassVar[list[tuple[str, ...]]] = [
+        ("t0", "min_payment_fraction_of_limit"),
+        ("t0", "bank_details_unchanged_days"),
+        ("limits", "per_payee_24h", "max_t0"),
+        ("approvals", "challenge_ttl_seconds"),
+        ("fx", "quote_validity"),
+        ("settlement", "SEPA"),
+        ("vendor_category_reason",),
+        ("rails", "cutoff_local_time"),
+        ("bank_change", "first_payment_cap_median_fraction"),
+    ]
+
+    @pytest.mark.parametrize("path", MISSING)
+    def test_a_missing_required_key_is_refused(
+        self, path: tuple[str, ...], policy_copy: dict[str, Any], tmp_path: Path
+    ) -> None:
+        container = policy_copy
+        for key in path[:-1]:
+            container = container[key]
+        del container[path[-1]]
+        written = write_policy(tmp_path / "policy.yaml", policy_copy)
+
+        with pytest.raises(PolicyError, match=r"missing key"):
+            load_policy(written, signature_path=None, allow_unsigned=True)
 
 
 # ---------------------------------------------------------------------------
@@ -325,17 +518,19 @@ class TestShippedPolicyIsValid:
 # Tightening is allowed. Loosening is not.
 # ---------------------------------------------------------------------------
 class TestTighteningIsAllowed:
-    def test_a_higher_t2_threshold_is_accepted(self, policy_copy: dict[str, Any]) -> None:
-        """Raising the T1/T2 boundary sends more items to two sign-offs: stricter.
+    def test_a_lower_t2_threshold_is_accepted(self, policy_copy: dict[str, Any]) -> None:
+        """Lowering the T1 band ceiling sends *more* items to two sign-offs.
 
-        Lowering it to 5,000 would let a 9,000 payment through on one signature,
-        so that is the loosening T-27 row 11 refuses.
+        A USD 9,000 payment then needs two approvals instead of one, which is
+        stricter, so it is permitted. See D-B16 for why raising it is refused.
         """
-        policy_copy["tiers"]["t2_threshold_usd"] = "25000.00"
+        policy_copy["tiers"]["t2_threshold_usd"] = "5000.00"
         assert check_policy_against_floor(policy_copy).ok
 
-    def test_a_lower_t2_threshold_is_refused(self, policy_copy: dict[str, Any]) -> None:
-        policy_copy["tiers"]["t2_threshold_usd"] = "5000.00"
+    def test_a_higher_t2_threshold_is_refused(self, policy_copy: dict[str, Any]) -> None:
+        """The T1 band is a CEILING. Raising it would let a large payment
+        fall under it and get one signature instead of two."""
+        policy_copy["tiers"]["t2_threshold_usd"] = "25000.00"
         result = check_policy_against_floor(policy_copy)
         assert not result.ok
         assert any("r11" in violation for violation in result.violations)
@@ -623,8 +818,26 @@ def test_the_floor_module_does_not_import_the_llm() -> None:
     assert "openai" not in source
 
 
-@pytest.fixture(autouse=True)
-def _no_side_effects() -> Iterator[None]:
-    yield
-    # A failed load must never leave a half-written policy file behind.
-    assert not list(Path("var").glob("policy*.yaml")) if Path("var").exists() else True
+def test_a_refused_load_writes_nothing_outside_tmp_path(
+    tmp_path: Path, policy_copy: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A rejected policy must leave no trace in the working directory.
+
+    Scoped to ``tmp_path`` and a chdir: an earlier version of this check globbed
+    ``Path("var")`` relative to the developer's CWD, so dropping a
+    ``policy*.yaml`` there would fail 30 unrelated tests with a misleading
+    message.
+    """
+    monkeypatch.chdir(tmp_path)
+    policy_copy["duplicates"] = {"enabled": False}
+    path = write_policy(tmp_path / "policy.yaml", policy_copy)
+
+    with pytest.raises(PolicyError):
+        load_policy(path, signature_path=None, allow_unsigned=True)
+
+    assert not list(tmp_path.glob("*.part"))
+    assert not list(tmp_path.glob("*.tmp"))
+    # The only file a refused load may leave is the one the test wrote itself.
+    written = {path.name for path in tmp_path.iterdir()}
+    assert "policy.yaml" in written
+    assert not [name for name in written if name.startswith("policy") and name != "policy.yaml"]
