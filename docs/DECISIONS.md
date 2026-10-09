@@ -718,3 +718,59 @@ inaccuracy rather than a code defect, but it is the kind that makes every other
 number in the file suspect, and it hid the three missing §14 items above. The table
 now reflects the tree. **Not a §10.1 rule 11 entry**: no assertion about the
 system's behaviour was wrong, only a line in a log I wrote.
+
+---
+
+## D-B25 - Vendor matching and duplicate detection: findings from building them
+
+- **When:** Sat 10 Oct 2026, 02:36 IST
+- **Background:** closing gaps 2 and 3 of the (c1) milestone. Four defects were found
+  while building them, **all in my own work**, and one is a genuine gap in the spec
+  that should not be worked around.
+
+### 1. A lookalike check that flagged legitimate suppliers
+
+The first version quarantined a known domain appearing as a *suffix*, which caught
+`mail.acme.com` - an ordinary supplier subdomain. The dot boundary is what separates
+a real subdomain from a domain takeover, and the first version had it backwards. It
+would have quarantined ordinary suppliers on their ordinary mail servers.
+
+The corrected rule: a domain **appended** after a known one (`acme.com.evil.example`)
+or **prepended** without a dot boundary (`notacme.com`) is an attack; a proper
+subdomain is not. `notacme.com` is not within edit distance 2 of `acme.com` either,
+so distance alone would have missed it entirely.
+
+### 2. A bounded distance that lied
+
+`edit_distance` returned `MAX + 1` to mean "at least three", conflating that with
+"exactly three". Every caller compared `<= MAX`, so the conflation was invisible -
+until someone asked for the true value. Reverted; the fast path is now
+`within_distance()`, which returns a boolean and therefore has no sentinel to
+misread.
+
+### 3. Two of my own test expectations were wrong
+
+I asserted `acrne.com` was one edit from `acme.com` and `acme.con` was two. Both
+are the other way round. The code was right; I had not counted the positions. Caught
+because I checked the arithmetic rather than assuming the test was the source of
+truth.
+
+### 4. An intermittent failure that passed in isolation
+
+`test_a_balanced_posting_leaves_the_ledger_at_zero` hardcoded run id `'r'` while
+the drawn `run_id` differed, so the foreign key on `journal_line.run_id` failed.
+It appeared only in a full-suite run, because Hypothesis's example depends on the
+database file name, which depends on a counter that advances with the other tests in
+the same module - so the failure needed the counter and the example to line up. Five
+passing runs in a row preceded two failures, which is what made it findable.
+
+Diagnosed to the line and fixed, and there are three consecutive green full-suite runs
+since. **Recorded because "it passes when I run it" is not evidence.**
+
+### 5. A spec gap, named and not worked around
+
+§4.3 says "known sender domain **exact**". A supplier whose bills arrive from
+`billing.acme.com` therefore never resolves and always needs a human. That is not a
+bug in the matcher, and the fix is a schema change - record domains per *sender* in
+the vendor contact table rather than one domain per vendor - which this milestone does
+not attempt. It is recorded here so it is a known gap rather than a silent one.
