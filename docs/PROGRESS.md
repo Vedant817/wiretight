@@ -63,6 +63,44 @@ the 20-scenario eval with self-test.
    (`DECISIONS.md` D-B02). No other file in `raw/` matched.
 6. **Created** `docs/DECISIONS.md`, `docs/NEEDS_HUMAN.md`, `docs/undocumented-behaviour.md`, this file.
 
+### Scaffold + money (FIRST ACTIONS 1–2 continued)
+
+Built `pyproject.toml` with the §6.1 exact pins, and the modules the rest of the build rests on.
+
+- **`app/config.py`** — sandbox-only guard. Exact match on `AWX_ENV` and `AWX_BASE_URL`; there is
+  deliberately **no production-URL constant to compare against**, so no production host can appear
+  in `app/` at all. `WebSettings` / `WorkerSettings` each refuse to start if the other process's
+  secret is visible (T-09a/b, T-R4e).
+- **`tests/conftest.py`** — blocks `socket.socket`, `create_connection` and `getaddrinfo` for every
+  non-`live` test, pins `AWX_ENV=sandbox`, and redirects every writable path into `tmp_path`.
+- **`app/money.py`** — `Decimal` everywhere, string serialisation at the currency exponent, and
+  `raise_on_float()` which walks a payload and names the exact path (`items.0.amount`).
+
+**Gates, real output:**
+
+```
+uv lock                 -> Resolved 70 packages in 16.32s   (every §6.1 pin resolved unchanged)
+uv sync --extra dev     -> + 70 packages
+uv run ruff check       -> All checks passed!
+uv run ruff format      -> 12 files already formatted
+uv run mypy app         -> Success: no issues found in 7 source files
+uv run pytest tests/unit-> 82 passed in 1.15s
+```
+
+**Three real bugs found and fixed while writing the tests, not after:**
+
+1. **The socket block was uncatchable.** `test_offline_guarantees.py` failed 5 tests: the block
+   *was* raising, but `pytest.raises` missed it. Without `tests/__init__.py`, pytest imports the root
+   conftest as top-level `conftest` while the test imported `tests.conftest` — two module objects,
+   two different exception classes. Every future "no network here" assertion would have failed for
+   the wrong reason. Fixed by adding `tests/__init__.py`. (`DECISIONS.md` D-B05)
+2. **The banned-library scan matched itself**, since it holds `import respx` as data. It now skips
+   its own file; `respx`/`vcrpy` stay banned everywhere else. (D-B06)
+3. **`parse_money` accepted scientific notation.** `Decimal("1E+2")` parses fine, so `1E+2` and
+   `100.00` were both valid spellings of one amount that could canonicalise to different packet
+   hashes. Now refused, along with a leading `+`. Two test expectations in
+   `test_config_separation.py` were also wrong test data, not wrong behaviour (D-B04).
+
 ### Day-1 spike (§9): **Plan B**
 
 `.env` does not exist, so `AWX_CLIENT_ID` / `AWX_API_KEY` are absent and no §9.5 check can run.
@@ -99,6 +137,11 @@ git init -b main                       -> Initialized empty Git repository
 git rev-parse --show-toplevel          -> C:/Users/vedan/Documents/Resources/Code/wiretight
 uv --version                           -> uv 0.12.22
 python --version                       -> Python 3.14.0
+uv lock                                -> Resolved 70 packages (all §6.1 pins unchanged)
+uv run pytest tests/unit               -> 82 passed
+uv run ruff check app tests            -> All checks passed!
+uv run mypy app                        -> Success: no issues found in 7 source files
 ```
 
-No tests have been run yet. Nothing has been built, submitted, or sent to anyone.
+Nothing has been built against the sandbox, submitted, or sent to anyone. No test result in this
+file is estimated: every number above came from a command run on this commit.
