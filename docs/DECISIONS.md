@@ -375,3 +375,241 @@ made this necessary.
 `test_no_test_module_imports_an_unpinned_http_mock_library` necessarily contains the strings
 `import respx` / `import vcr` as data, so it flagged itself. It now skips its own file. Not a
 relaxation: `respx` and `vcrpy` remain banned everywhere else, which is checked on every run.
+---
+
+## D-B19 - Concurrency and durability defects, found by measurement
+
+- **When:** Sat 10 Oct 2026, 00:10 IST
+- **Method:** two independent audits, one a database/concurrency review, one an adversarial
+  edge-case hunt. Every finding was **reproduced with a throwaway script before any code
+  changed**. A finding that could not be reproduced is recorded below as ruled out, not as
+  fixed.
+- **Supersedes:** nothing. This tightens, and never loosens, any 4.5 lock, 4.8 ordering,
+  4.15 floor row or 10.1 honesty rule.
+
+### 10.1 rule 11 - measurements added
+
+Two numbers in this entry are claims about our own performance and are recorded as
+measurements taken on one Windows machine, not as properties of the system in production:
+
+| Measurement | Value | Conditions |
+|---|---|---|
+| Durable commits/sec | ~1,100-2,200 | `synchronous=FULL`, WAL, 1 KiB records |
+| `verify()` over 1M entries | 13.26 s, ~0.51 GB RSS | single-threaded, materialises all rows |
+| `count(*)` on 1M-row `audit_log` | 0.173 s | was on the hot path of every append |
+| Write lock held across a 2.0 s call | 4 writers stalled 1.8-2.0 s each | the 4.8 hazard, demonstrated |
+| Ledger half-postings | 2 of 8 trials, unbalanced by 10.00 | 8 threads x 20 postings |
+
+None of these is a benchmark of the finished product. They are the numbers that justified
+specific design choices, and they are reproducible from `tests/unit/test_b_concurrency.py`.
+
+### Ruled out, not fixed
+
+Two claims from the audits did not survive checking and are recorded so nobody 'fixes' them
+later or believes them in a writeup:
+
+- **"ZWSP splits the duplicate key."** False. `\s` does not match U+200B, but the invoice
+  normaliser's `re.sub` character class did strip it. The genuine bypass characters are
+  U+FEFF, U+00AD, U+2060, U+200D, U+202E and the combining marks, which are category Cf/Mn
+  and were not stripped. Verified by codepoint, after a first test run was itself corrupted by
+  PowerShell encoding and gave the wrong answer.
+- **"`0V042` and `V42` collide."** False for the stated case, but a real widening exists:
+  `lstrip("0")` now applies only to a wholly numeric invoice, so `000000042` and `42`
+  still agree while an alpha-prefixed vendor code is preserved.
+
+## D-B20 - Control defects: the lock, the floor and the money type
+
+- **When:** Sat 10 Oct 2026, 00:10 IST
+- **Supersedes:** nothing, except as noted below.
+
+### The duplicate lock was one invisible character wide
+
+`(vendor_id, normalised invoice no.)` is 4.3's duplicate-detection strategy and `DUPLICATE`
+is a HARD_BLOCK. Verified by codepoint: `INV-2291` and `INV-2291` + U+FEFF produce two
+different `obligation_key` values and both take the PRIMARY KEY row. The same characters
+split the bank fingerprint of an unchanged account, producing `HOLD: BANK_CHANGE` and a 72-hour
+cooling-off on a supplier whose bank did not move - the exact false positive that
+4.14.5's `bank_change_flag_precision` measures. U+202E additionally reversed what a human
+reads in the queue while the key stayed the same string. Fixed by `app/core/text_normalisation.py`,
+which strips category Cf/Cc/Zl/Zp/Mn/Mc. It deliberately does **not** fold homoglyphs: Cyrillic
+U+0430 is a real letter in a real supplier name, and merging two different suppliers silently is
+worse than reporting a near-miss. That belongs in vendor matching, where a human can see it.
+
+### `extra` could shadow the account being fingerprinted
+
+`PayeeDetails.extra` was expanded into the fingerprint's identifiers dict **after** the real
+account, so `extra={"account": ...}` made two different bank accounts hash identically. 4.3's
+core claim - a different fingerprint always produces a PayeeChangeRequest - was therefore
+falsifiable by an attacker-controlled corridor field, and a real bank change would never have
+fired the lock. Reserved keys are now refused, and `extra` is a read-only mapping because
+`frozen=True` never protected a mutable dict field.
+
+### The floor's T0 row consulted only the type
+
+`_check_exact` checked `isinstance(value, bool)` and never read `constraint.value`. So
+`t0.enabled: true` passed a row whose shipped value is `False`, and the only remaining barrier
+to live auto-payout was the signature file - which `load_policy(..., allow_unsigned=True)`
+skips. 4.15 r10 makes T0 legal *only* under a two-signature policy, which is not expressible as
+a plain bound because the floor cannot see signatures. The violation is therefore marked
+signature-gated and resolved by `load_policy` after verification. `policy.demo.yaml` still
+loads when signed; it no longer loads unsigned, which is the point.
+
+**This is a 10.1 rule 11 entry:** a previously-passing assertion (`t0.enabled: true` satisfies
+the floor) was **wrong**, and the fix makes the test suite assert the correct behaviour.
+
+### r22's conjunction
+
+4.15 r22 reads ">= 48 h **and** >= the rail's business-day window". The two were checked
+independently, so a policy could set `business_days: 30` beside `min_hours: 48` while
+`min_hours` - the number the poller actually consults - stayed at two days. Now checked where
+both values are visible. It is deliberately **not** a `Constraint`: T-27 parametrises one value
+at a time, and a conjunctive check cannot be expressed that way. A first attempt that did
+express it as an hour bound rejected the spec's own shipped policy, because 48 h is legitimately
+less than three banking days; that attempt was reverted and is recorded here so it is not
+retried.
+
+### Money
+
+- The ISO 4217 table had 12 entries; 22 currencies inherited exponent 2. KRW 1,000,000 became
+  `"1000000.00"`, a **100x overstatement** carried into every cap comparison, ledger leg and
+  tie-out term. An unlisted code is now refused rather than guessed, because the default of 2
+  is not a safe default in either direction for a zero-decimal currency.
+- `MONEY` rows accepted negative limits. Only the reserve row had a guard. A negative
+  `first_payment_cap_usd` makes tranche 1 a negative payment; a negative
+  `per_approver_day_usd` stops row 17 binding at all.
+- `parse_amount` placed its quantise call outside the `try`, so a 27-digit amount escaped as
+  an uncaught `decimal.InvalidOperation` - an `ArithmeticError`, not a `ValueError`. At
+  JPY's exponent of 0 the same amount **succeeded**, rounding 1e27 to a completely different
+  number, because the fractional part simply disappeared.
+
+### One trailing space
+
+`playbook_for("ACCOUNT_UNDER_RESTRICTION ")` returned `H`, not `F`. 4.15 r29 says any
+compliance failure trips the kill switch **on first occurrence**; `H` is "escalate, never
+auto-retry", so the run continues. 4.16's "unknown failure_type -> DEFAULT" makes `H` sound
+safe, and it is not safe for the one group where the spec's answer is "stop". Lookup now
+normalises case and whitespace first, so a near-miss still reaches its real playbook and a
+genuinely unknown type still reaches `H`.
+
+## D-B21 - Concurrency and durability: what measurement found
+
+- **When:** Sat 10 Oct 2026, 00:10 IST
+- **Why one entry:** these are the defects found by the concurrency audit, plus one introduced by
+  the D-B19 fix itself.
+
+### `Database.transaction()` held no transaction at all
+
+My own D-B19 rewrite. The wrapper did `transaction(conn).__enter__()` and discarded the
+generator context manager; CPython finalised it immediately, throwing `GeneratorExit` into the
+`yield`, which ran `ROLLBACK` **before the caller's block started**. Two failures, both
+silent because the writes succeeded: `conn.in_transaction` was `False` for the whole body, so
+the 4.8 guard could never fire; and an exception mid-block left every row committed, since each
+statement autocommitted with no transaction to roll back. Verified before fixing: 2 rows survived
+an abort that should have removed both.
+
+### A halt with no record of it
+
+`killswitch.trip` committed `halted=1` and the trip row, then called `audit.log_intent` in
+its own transaction. Forcing that append to fail left the switch engaged and durable, with a
+reason, and **zero** rows in the append-only log - and `audit.verify()` reported
+`ok=True, checked=0`. 14(b) requires the log before the act; that held for transfers and not for
+the kill switch. Now one transaction, so the trip row, the state update and the audit entry
+commit or roll back together.
+
+Concurrent trips compounded it: four calls produced six `trip` rows and six ids, of which five
+could never be cleared, because `clear()` refuses any id that is not the active trip. An
+operator who tripped, read the id and cleared it was stuck in HALTED with no in-band way out. This
+is reachable from **one operator**, by two rapid clicks.
+
+### The anchor was decorative
+
+The head anchor is the one artefact that survives an attacker deleting every seal, and it is the
+only signed file in the system whose signature was never verified - `read_anchor` parsed
+`data["signature"]` and discarded it. Reproduced end to end: a 200-entry chain truncated to 150,
+with the seals above 150 deleted and the anchor forged, produced
+`verify_checkpoints -> ok=True, checked=150`, `head_is_sealed -> ok=True` and a clean chain.
+Fifty INTENT/RESULT records - the log-before-act evidence that money was about to move - were
+deleted with every check green.
+
+Compounding it, the corrupt-anchor branch set `highest = seq`, which is precisely the rollback
+the docstring claims cannot happen. A damaged anchor now raises `AnchorCorruptError`: it is the
+only record of how far the chain reached, so rebuilding it from what is left is the one response
+guaranteed to destroy the evidence.
+
+### Torn writes read as tampering
+
+Checkpoints and the anchor were written with `Path.write_text` - open, write, close. Power loss
+between write and flush leaves a truncated file, and for the anchor a truncated file is
+indistinguishable from an attacker editing it: `verify_checkpoints` reports failure and the
+executor halts. Now temp file, `fsync`, `os.replace`, `fsync` the directory.
+
+### A false halt
+
+SQLite reports `SQLITE_BUSY_SNAPSHOT` with the same message as ordinary contention. It means the
+connection holds a read snapshot that cannot be upgraded; waiting cannot fix it, so the retry loop
+burned its whole budget and then reported `DatabaseBusyError` - which 4.16 turns into a halt.
+Reachable from any code that writes inside a lazy read cursor, which includes
+`ledger.balances` and `audit.verify`. Now recognised by extended code and raised as
+`StaleSnapshotError`, which is not retryable.
+
+### Half-postings
+
+`ledger.post` read `MAX(line_no)` and inserted each leg as a separate autocommitted statement.
+Two concurrent postings read the same head, the loser collided on the second leg, and the first
+leg stayed committed. 2 of 8 trials of 8 threads x 20 postings left the ledger **unbalanced by
+10.00**, with an orphaned debit that reads as money leaving the business. Now one transaction;
+re-measured 8/8 trials balanced with all 320 legs committed.
+
+### The migration lock wedged every database on the machine
+
+One fixed filename in the system temp directory, created `O_EXCL` and removed only in the
+creating process's `finally`. A `kill -9` between `os.open` and `unlink` left it forever,
+and because the name was fixed it blocked **every unrelated database** for the full 30 s timeout
+before failing. Now keyed by the resolved database path, with a stale-holder reclaim.
+
+### 4.8 made checkable
+
+Holding the single write lock across an HTTP call serialises every other writer behind that call's
+latency: measured, four concurrent writers stalled 1.8-2.0 s behind a 2.0 s call, and the configured
+timeout is 20 s. `db.assert_no_write_lock(conn, doing=...)` now refuses the call, so 4.8 is an
+assertion rather than an intention. It is called immediately before every outbound request.
+
+### Also
+
+- `maybe_write_checkpoint` ran `SELECT count(*) FROM audit_log` on **every append**: 0.173 s at
+  1M rows, a 173-second stall per write. Now reads the head seq (0.05 ms).
+- `account_prefix_totals` concatenated its prefix into a `LIKE` pattern with no `ESCAPE`, so
+  `AP_clearing` matched `APXclearing` and `%` matched the whole ledger. A single underscore
+  typo in an account family silently doubled the reconciliation population and the tie-out still
+  produced a number - a wrong one, with no error.
+- `Leg` accepted any currency string. A posting in a currency absent from the table balanced
+  inside a bucket no reconciliation reads, so a USD-scoped tie-out reported a perfect residual
+  while money had left the ledger's line of sight.
+- `tzdata` was not a dependency. `ZoneInfo("Asia/Kolkata")` raised on Windows and in slim
+  containers, so the IST daily caps would have crashed on day one. Added and pinned.
+
+## D-B22 - Gaps recorded honestly, not yet built
+
+Found by the same audits. None is fixed because each needs a module that does not exist yet. Each
+is a place a reviewer should look first.
+
+1. **The lock has no cross-row invariant.** `change_request_next(current, event)` takes no
+   `vendor_id`, so it cannot see a second change request for the same supplier. Two requests can
+   both sit in `COOLING_OFF` and both reach `APPROVED`, and 4.5.1's "the old version becomes
+   `SUPERSEDED`" has no defined answer for which wins. The machine is correct per-request and the
+   property that matters is cross-request. This belongs in `oob.py`, which is the next module.
+2. **No cap counter is atomic.** `payee_version.final_payment_count` and `counters` have no code
+   and no CAS. A read-modify-write lost 83% of its increments under 8 threads. The counter that
+   lifts the first-payment cap must move by `UPDATE ... RETURNING` with a rowcount check, and a
+   zero-row result must re-read and re-decide rather than proceed.
+3. **No retention policy.** `audit_log` is deliberately un-prunable (T-13), so the answer is
+   archival, not deletion: `VACUUM INTO` a verified snapshot and carry the sealed anchor forward.
+   `transfer_observation` grows one row per poll with no cap; it needs the first and last sighting
+   plus every *change*, not every poll.
+4. **`verify()` is O(n) and materialises every row.** 13.26 s and ~0.51 GB at 1M entries, single
+   threaded, before the executor does anything. It needs to verify from the last sealed anchor.
+5. **No `var/executor.lock` exists.** The single-writer guarantee the whole design rests on is
+   currently enforced by nothing, and two `make worker` invocations would both write money state.
+6. **No `audit_log(kind, at)` index**, so every incident timeline is a full scan.
+7. **Unknown events to a state machine are silent no-ops** rather than errors. Fail-closed, but a
+   typo leaves a change request in `PENDING_CALLBACK` forever with nothing logged.

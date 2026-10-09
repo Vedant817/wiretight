@@ -145,3 +145,88 @@ uv run mypy app                        -> Success: no issues found in 7 source f
 
 Nothing has been built against the sandbox, submitted, or sent to anyone. No test result in this
 file is estimated: every number above came from a command run on this commit.
+---
+
+## Session: production hardening (2026-10-10)
+
+### What was asked
+
+Move from milestone-by-milestone spec compliance to production-grade systems thinking: correct
+under heavy load, safe with several writers, no hardcoded demo data, and find the edge cases a
+competitor would miss.
+
+### What was done
+
+Two independent audits ran in parallel: a database/concurrency review and an adversarial
+edge-case hunt. Every finding was **reproduced with a throwaway script before any code changed**,
+which is why two claims were caught as false (ZWSP was already stripped;  V042/V42 do not
+collide) and recorded as ruled out rather than "fixed".
+
+Fixes landed in three groups:
+
+**Concurrency and durability (D-B21).** Per-thread connections (a shared one failed 100% of
+concurrent requests). A transaction wrapper I introduced that held no transaction and never
+rolled back. Ledger half-postings, measured unbalanced in 2 of 8 trials. A kill switch that could
+halt with zero audit rows while erify() reported clean. An audit anchor whose signature was
+parsed and discarded, leaving tail truncation undetectable. Torn writes via write_text. A false
+halt from SQLITE_BUSY_SNAPSHOT retried as if it were contention.
+
+**Control correctness (D-B20).** Unicode format characters splitting the duplicate key and the
+bank fingerprint. xtra shadowing the fingerprint's account. A currency table with 22 wrong
+exponents (KRW overstated 100x). A floor row that consulted only a type and so could not fail.
+Negative money limits. Row 22's conjunction. Case-sensitive failure-type lookup routing a
+compliance failure to the shrug handler. LIKE without ESCAPE in reconciliation. An unvalidated
+ledger currency. mask_account disclosing whole short accounts. gb() evading the hidden-text
+detector.
+
+**Environment.** 	zdata added and pinned: ZoneInfo("Asia/Kolkata") raised, so the IST daily
+caps would have crashed on day one.
+
+### Verification
+
+Each defect was reproduced first, then re-measured after the fix:
+
+`
+ledger half-postings      before 2/8 trials unbalanced   ->  after 0/8, 320/320 legs committed
+concurrent audit appends  before 4 errors, 0 rows      ->  after 480/480, contiguous, verify ok
+concurrent kill-switch    before 6 ids, 5 unclearable  ->  after 1 id, clearable, audited
+Database.transaction()    before no lock, no rollback  ->  after lock held, 0 rows survive abort
+audit throughput          2,132 appends/s; ledger postings rose 950/s -> 2,315/s
+`
+
+### Gates
+
+`
+uv run pytest tests -q                 -> 624 passed, 36 skipped
+uv run ruff check app tests            -> All checks passed!
+uv run ruff format --check app tests   -> 27 files already formatted
+uv run mypy app                        -> Success: no issues found in 16 source files
+`
+
+Skips are the declared-pending §10.3 acceptance ids, each carrying its milestone and a
+§10.1 rule 8 known-gaps marker.
+
+### Written
+
+- docs/PRODUCTION_HARDENING.md - the findings framed as differentiators, with the measured
+  numbers, what is deliberately not built, and the failure pattern they share.
+- docs/DECISIONS.md D-B19 through D-B22 - including the §10.1 rule 11 entries for the
+  measurements and for the assertion that turned out to be wrong.
+
+### Still blocked
+
+Unchanged: **no .env, so no Airwallex keys.** No §9.5 spike, no recorded fixtures, no contract
+tests, and Checkpoint 1 (Wed 14 Oct) remains unreachable. See docs/NEEDS_HUMAN.md H1.
+
+### Commands run
+
+`
+uv add tzdata==2026.2                  -> Resolved 71 packages, Added tzdata v2026.2
+uv run pytest tests -q                 -> 624 passed, 36 skipped
+uv run ruff check app tests            -> All checks passed!
+uv run ruff format --check app tests   -> 27 files already formatted
+uv run mypy app                        -> Success: no issues found in 16 source files
+git commit                             -> 37ca500
+`
+
+Nothing was built against the sandbox or sent anywhere. No number in this file is estimated.
