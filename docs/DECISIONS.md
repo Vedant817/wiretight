@@ -613,3 +613,108 @@ is a place a reviewer should look first.
 6. **No `audit_log(kind, at)` index**, so every incident timeline is a full scan.
 7. **Unknown events to a state machine are silent no-ops** rather than errors. Fail-closed, but a
    typo leaves a change request in `PENDING_CALLBACK` forever with nothing logged.
+
+---
+
+## D-B23 - Three requirements named in the spec that were not built
+
+- **When:** Sat 10 Oct 2026, 01:38 IST
+- **Background:** reading §14 back against the tree found three items that the
+  spec names and that I had reported as complete. One of them was a claim made for
+  a milestone marked done.
+
+### 1. `tests/property/` was empty (14 b)
+
+§14(b) lists three properties as acceptance for the trust substrate - no regression
+past terminal, `failure_type` never nulled, ledger sums to zero - and
+`tests/property` was an empty directory. Written in
+`tests/property/test_trust_substrate.py` as Hypothesis properties rather than
+examples, because the claim is that *no* input violates the rule.
+
+Two things came out of the first run, and both are the point:
+
+- **A real defect.** `failure_type: ""` was stored verbatim, so the column held
+  a third value between NULL and a real type: truthy to `is not None`, yet
+  `playbook_for("")` reports an unknown type. A code path reading the column
+  concluded a failure *was* recorded. Blank and whitespace-only are now `None`
+  (§4.11's "never nulled" only means anything if absent is one state).
+- **An assertion of mine was backwards.** I had asserted that a terminal
+  `awx_status` makes `is_regression` false. Observing `FAILED` after
+  `CANCELLED` **is** a backwards move and the code correctly flags it while
+  still holding the state. The state and the flag are separate claims; they are now
+  tested separately. **This is a §10.1 rule 11 entry: a previously-passing
+  assertion was wrong.**
+
+A third lesson is recorded in `money_at`: amounts must be drawn at the currency's
+own exponent. Drawing every currency at two decimal places produced an
+`UnbalancedError` - in the test, not the code. UGX has no minor unit, so four legs
+of `0.01` each quantize to `0` while their sum quantizes to `1`.
+
+### 2. `make verify-audit` had no command to run
+
+§14(b) makes *"`make verify-audit` 0/1 behaviour"* the Done clause, and the
+Makefile already called `python -m app.cli`. That module did not exist, so the
+Done clause was unreachable. Written as `app/cli.py` with three exit codes:
+
+- `0` - verified;
+- `1` - verification **failed**. Must never be `0`;
+- `2` - could not run: no database, no key, unparseable key.
+
+`2` is deliberate and is not a convenience. A CI job that cannot reach the
+database has a different cause from a job that proved the chain was edited, and the
+Makefile's live targets use it to refuse to run without `CONFIRM_LIVE=1`.
+Related: an unknown public key is **refused**, not treated as an all-forged chain,
+because reporting every checkpoint as tampered when the real problem is a
+configuration typo is a false alarm that trains an operator to ignore the alarm.
+
+### 3. The lock had no cross-row invariant (14 c1)
+
+§4.5.1 defines the change-request states, and §8.4 implements them as
+`change_request_next(current, event)` - a pure two-argument function with no
+`vendor_id`. It therefore cannot see a second change request, and the property that
+matters had **no implementation anywhere**:
+
+> at most one change request per supplier is ever in a lock-bearing state.
+
+Measured before the fix: two concurrent requests for one supplier could both sit in
+`COOLING_OFF` and both reach `APPROVED`, and §4.5.1's "the old version becomes
+`SUPERSEDED`" had no defined answer for which one won. The first to be approved
+would have won by accident, with no record that the second was ever a real request.
+
+The fix is a **partial UNIQUE index** over the non-terminal statuses, and that
+choice is the substance of this entry. A `UNIQUE(vendor_id)` would be wrong: a
+supplier whose November request was rejected must be able to file again in January,
+because §4.4 makes a re-request within 30 days force tier 2, and that only works if
+the history stays queryable. So the constraint is on *active* rows only, the
+database refuses the second concurrent request, and the application does not have to
+remember to check.
+
+**Two design notes worth stating, both recorded so they are not lost:**
+
+1. The integrity check can find a violation but not create one. A database migrated
+   from before the index could already hold two active requests, so
+   `assert_lock_integrity` exists for exactly that and **fails loudly** - a silent
+   violation of the product's central claim is worse than a refused start.
+2. The lock's guarantee must live in the database, not a process. A lock held in
+   Python would pass every single-threaded test and fail at the moment two
+   processes exist, which is the deployment §5.3 actually describes. The test proves
+   this by opening a *second* database object post-"restart" and asserting it is
+   refused.
+
+### Also
+
+`.github/workflows/ci.yml` per §6.6: offline job with no secrets; the live job
+behind `workflow_dispatch` and a protected environment, so a push can never spend
+sandbox money on its own. Every step of the offline job runs without a credential,
+which is the point - the whole trust substrate is testable offline because
+`tests/conftest.py` blocks sockets. A build that needs a sandbox key to prove the
+ledger balances cannot be trusted in CI.
+
+## D-B24 - Progress table said "not started" for work that was done
+
+The milestone table in `docs/PROGRESS.md` marked milestone (b) *not started* while
+its six modules were committed and its gates were green. That is a reporting
+inaccuracy rather than a code defect, but it is the kind that makes every other
+number in the file suspect, and it hid the three missing §14 items above. The table
+now reflects the tree. **Not a §10.1 rule 11 entry**: no assertion about the
+system's behaviour was wrong, only a line in a log I wrote.

@@ -13,8 +13,8 @@ All times **IST**. Dates follow the 16-day shift in `DECISIONS.md` D-B01.
 |---|---|---|---|
 | — | Scaffold + day-1 spike (§9) + plan A/B decision | Fri 9 Oct | **in progress** |
 | a | Airwallex client + record/replay transport | Fri 9 – Sat 10 Oct | not started |
-| b | Trust substrate: schema, state machines, audit chain, policy floor, kill switch, ledger | Sat 10 – Sun 11 Oct | not started |
-| c1 | Verify + the lock: parsers, vendors, dupes, fingerprint, change requests, signed callbacks | Mon 12 Oct | not started |
+| b | Trust substrate: schema, state machines, audit chain, policy floor, kill switch, ledger, property tests, CLI | Sat 10 - Sun 11 Oct | **done** (property tests, the CLI and the lock's cross-row invariant added later, per D-B23) |
+| c1 | Verify + the lock: parsers, vendors, dupes, fingerprint, change requests, signed callbacks | Mon 12 Oct | **partly done** — parsers, fingerprint, and `app/core/lock.py` (the cross-row invariant) are in. `vendors.py`, `dupes.py`, the signed callbacks, cooling-off, the first-payment cap and the screening stub are not. See D-B22 and D-B23. |
 | d | Planner + tiers + caps + tranches | Mon 12 – Tue 13 Oct | not started |
 | e1 | Packets + signing (WebAuthn + labelled HMAC fallback) | Tue 13 Oct | not started |
 | f1 | Executor + poller | **Wed 14 Oct — Checkpoint 1** | not started |
