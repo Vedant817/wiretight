@@ -774,3 +774,47 @@ since. **Recorded because "it passes when I run it" is not evidence.**
 bug in the matcher, and the fix is a schema change - record domains per *sender* in
 the vendor contact table rather than one domain per vendor - which this milestone does
 not attempt. It is recorded here so it is a known gap rather than a silent one.
+
+---
+
+## D-B26 - Atomic counters, and the unknown-event guard
+
+- **When:** 10/10/2026 02:50:50.ToUniversalTime().AddHours(5.5).ToString('ddd d MMM yyyy, HH:mm') IST
+- **Supersedes:** nothing. Both tighten.
+
+### Atomic counters (audit gap 2)
+
+`counters` and `payee_version.final_payment_count` had no code at all. Measured
+first: 6 threads x 40 read-then-increment, with no transaction and no CAS, stored
+**40 of 240** - a 83% loss with **zero errors**. The counter governs when the
+first-payment cap lifts, so the cap lifted early.
+
+`app/core/counters.py` serialises inside SQLite's write lock, and the rowcount of
+the conditional `UPDATE` answers "did I win". A zero rowcount raises
+`CounterLostUpdateError`, because a caller that believes it won when it lost has the
+same defect under a different name.
+
+The condition `WHERE status = 'ACTIVE_CAPPED'` is as load-bearing as the atomicity:
+an unconditional increment would count a payment against a superseded payee, and
+4.4's "3 FINAL payments to the same unchanged beneficiary" would be satisfiable
+across two different sets of details.
+
+**One defect in my own implementation, and it is the reason the module exists.** The
+first version wrote the arithmetic in SQL as `CAST(value AS REAL)`, which forces the
+value through IEEE-754 binary floating point: ten increments of 0.01 sum to
+**0.099999999999999992**. Measured, not theorised. It is the exact class of bug
+FINAL.md 7.3 bans floats to prevent, reintroduced inside the one module whose whole
+job is counting money exactly. The arithmetic now happens in Python, in `Decimal`.
+
+### Unknown events now raise (audit gap 7)
+
+`change_request_next` returned the current state for an event it did not know,
+which is fail-*silent*. A typo at a call site - `callback:confirmed` instead of
+`CALLBACK:CONFIRMED` - would strand a request in `PENDING_CALLBACK` forever with
+nothing logged, and the supplier could not be paid.
+
+An unknown event now raises `UnknownEventError`. A known event that does not apply
+in the current state still returns the current state, which is the correct behaviour
+for "not yet" and is why this is not simply "raise on any non-transition".
+
+All 710 tests pass unchanged, so no call site relied on the silent no-op.

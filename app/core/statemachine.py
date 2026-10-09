@@ -350,13 +350,52 @@ _TERMINAL_CHANGE: Final[frozenset[str]] = frozenset({"REJECTED", "EXPIRED", "WIT
 CALLBACK_VALIDITY_DAYS: Final[int] = 7
 
 
+#: Every event §4.5.1 defines, plus the reason discriminator. Anything else is a
+#: spelling mistake at a call site, and returning the current state for it silently
+#: would leave a change request stuck in ``PENDING_CALLBACK`` forever with nothing
+#: logged - which is the point of naming it (D-B22, gap 7).
+CHANGE_EVENTS: Final[frozenset[str]] = frozenset(
+    {
+        "REQUEST_CALLBACK",
+        "CALLBACK:CONFIRMED",
+        "CALLBACK:DENIED",
+        "NO_CHANGE_MADE",
+        "COOLING_OFF_ENDED",
+        "EXPIRED",
+        "WITHDRAWN",
+    }
+)
+
+
+class UnknownEventError(ValueError):
+    """An event this machine does not know.
+
+    Raised rather than returned-as-no-op. Returning the current state is right for
+    an event that does not apply *yet* - that is normal in a state machine - but not
+    for something that is not an event at all. "Not yet" and "never" need different
+    responses, and the difference cannot be recovered afterwards.
+    """
+
+
 def change_request_next(current: str, event: str) -> str:
     """Fold a change-request event into its status.
 
     ``REJECTED`` and ``EXPIRED`` are terminal and never reopened (§4.5.1):
     releasing a wrongly rejected supplier means a **new** request through the
     same callback rules, not reopening this one.
+
+    An **unknown** event raises. Returning the current state for one - which is
+    what this did before - is a silent no-op, and a typo at a call site
+    (``CALLBACK:CONFIRMED`` written as ``callback:confirmed``) would strand the
+    request in ``PENDING_CALLBACK`` forever with no error anywhere.
     """
+    if event not in CHANGE_EVENTS:
+        raise UnknownEventError(
+            f"unknown change-request event {event!r}. Known events are "
+            f"{sorted(CHANGE_EVENTS)}. Returning the current state for an unknown "
+            "event would strand the request silently (FINAL.md §4.5.1)."
+        )
+
     if current in _TERMINAL_CHANGE:
         return current
 
