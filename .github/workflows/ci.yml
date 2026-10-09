@@ -1,0 +1,121 @@
+# FINAL.md §6.6: the offline job has no secrets, and no job records fixtures.
+#
+# Every step here runs without any credential, which is the point: the whole
+# trust substrate - audit chain, ledger, kill switch, parsers, fingerprint - is
+# testable offline because tests/conftest.py blocks sockets. A build that needs a
+# sandbox key to prove the ledger balances is a build that cannot be trusted in CI.
+#
+# The live job is deliberately workflow_dispatch-only, behind a protected
+# environment with a required reviewer. It exists so a human being has to make a
+# decision to spend sandbox money, not a merge.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: 'Run the live sandbox job? Type YES to opt in.'
+        required: false
+        default: ''
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: offline (no secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install pinned dependencies
+        # --frozen, not --locked: the lock is the contract, and a drift means
+        # someone edited pyproject without re-locking.
+        run: uv sync --frozen --extra dev
+
+      - name: Sandbox guard is intact
+        # Refuses to start unless AWX_ENV=sandbox and AWX_BASE_URL is exactly the
+        # sandbox host. This is the check that stops a live key reaching a test run.
+        run: make keys
+
+      - name: Lint
+        run: make lint
+
+      - name: Tests (unit + property + acceptance, sockets blocked)
+        run: make test
+
+      - name: Eval
+        run: make eval
+
+      - name: Eval self-test
+        run: make eval-selftest
+
+      - name: Verify the audit chain
+        # §14 b: must exit 0 on a valid chain and 1 on a broken one. A failure
+        # here is a failing build, not a warning.
+        run: make verify-audit
+
+      - name: List every skip and xfail
+        # §10.1 rule 8: a skip needs a known-gaps line. This makes the list
+        # visible on every run so a new skip cannot be added quietly.
+        if: always()
+        run: |
+          echo "### Skips and xfails under tests" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          uv run pytest tests --collect-only -q 2>/dev/null | grep -E 'SKIP|XFAIL|skipped' \
+            >> $GITHUB_STEP_SUMMARY || echo '(none)' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results
+          path: eval/results/
+          if-no-files-found: ignore
+
+  live-sandbox:
+    name: live sandbox (manual, protected)
+    # The whole job is gated on a human typing YES. A push or a PR must never
+    # spend sandbox money on its own.
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live == 'YES'
+    runs-on: ubuntu-latest
+    environment: airwallex-sandbox
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install pinned dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Confirm the sandbox guard
+        run: make keys
+
+      # CONFIRM_LIVE=1 is what every * target in the Makefile requires. The
+      # protected environment is the second gate, so neither alone is enough.
+      - name: Live tests against the sandbox
+        env:
+          AWX_CLIENT_ID: ${{ secrets.AWX_CLIENT_ID }}
+          AWX_API_KEY: ${{ secrets.AWX_API_KEY }}
+        run: CONFIRM_LIVE=1 make test-live
+
+      - name: Live eval
+        env:
+          AWX_CLIENT_ID: ${{ secrets.AWX_CLIENT_ID }}
+          AWX_API_KEY: ${{ secrets.AWX_API_KEY }}
+        run: CONFIRM_LIVE=1 make eval-live
+
+      # NOTE: nothing here records fixtures. Recording is local (make
+      # fixtures-record) on purpose, so a CI run cannot write a fixture that a
+      # later assertion then depends on.

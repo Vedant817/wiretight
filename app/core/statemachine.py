@@ -132,6 +132,30 @@ class TransferObservation:
     late_failure_after_final: bool = False
 
 
+def _present(value: str | None) -> str | None:
+    """Normalise an observed failure field, keeping ``None`` for "not present".
+
+    Airwallex can return ``""`` or a whitespace-only string where a field is
+    absent. Those are stored as ``NULL``, not as an empty string.
+
+    The distinction matters, and it was found by a property test rather than by
+    reading. ``failure_type`` must be in exactly one of two states - absent, or a
+    real type - because "never nulled" (§4.11) and the demo caption (§4.12) both
+    read from it. A third state, an empty string, is neither: it is truthy to a
+    ``is not None`` check, so a code path reading the column concludes a failure
+    *was* recorded while ``playbook_for("")`` reports an unknown type. And an
+    incident rerun would keep the blank, so the real value arriving later would
+    be ignored as "already captured".
+
+    Stripping rather than rejecting keeps the capture direction simple: a blank
+    is absent evidence, which is the same as no evidence.
+    """
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
+
+
 def apply_transfer_observation(
     *,
     awx_status: str,
@@ -157,11 +181,16 @@ def apply_transfer_observation(
     regression = is_regression(current_awx_status, awx_status)
     next_awx = transfer_next_awx(current_awx_status, awx_status)
 
+    # Absent, not blank. See _present: an empty string would be a third state
+    # between "no failure recorded" and "this failure was recorded".
+    incoming_type = _present(failure_type)
+    incoming_reason = _present(failure_reason)
+
     kept_type: str | None = (
-        current_failure_type if current_failure_type is not None else failure_type
+        current_failure_type if current_failure_type is not None else incoming_type
     )
     kept_reason: str | None = (
-        current_failure_reason if current_failure_reason is not None else failure_reason
+        current_failure_reason if current_failure_reason is not None else incoming_reason
     )
 
     # A FAILED seen after we already declared FINAL is never ignored (§4.10).
