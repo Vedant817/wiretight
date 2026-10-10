@@ -309,12 +309,16 @@ class TestReadback:
 
 
 class TestSignature:
-    RECORD: dict = {
-        "change_request_id": "cr1",
-        "contact_id": "c1",
-        "outcome": "CONFIRMED",
-        "called_at": "2026-04-03T10:00:00Z",
-    }
+    # RECORD is built per test rather than as a class attribute, because a mutable
+    # default on a class is shared across every test in it (ruff RUF012).
+    @staticmethod
+    def _record() -> dict:
+        return {
+            "change_request_id": "cr1",
+            "contact_id": "c1",
+            "outcome": "CONFIRMED",
+            "called_at": "2026-04-03T10:00:00Z",
+        }
 
     def test_an_unsigned_callback_is_no_callback(self) -> None:
         """T-10b: the strictest rule in §4.5.2.
@@ -323,18 +327,18 @@ class TestSignature:
         directly-inserted row take the place of a real confirmation.
         """
         with pytest.raises(oob.UnsignedCallbackError, match="no callback"):
-            oob.verify_recorder_signature(record=self.RECORD, public_key=None, signature=b"")
+            oob.verify_recorder_signature(record=self._record(), public_key=None, signature=b"")
 
     def test_a_replayed_nonce_is_refused(self) -> None:
         """A reused challenge would be indistinguishable from a fresh signature."""
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
         key = Ed25519PrivateKey.generate()
-        signature = key.sign(oob._digest_input(self.RECORD))
+        signature = key.sign(oob._digest_input(self._record()))
 
         with pytest.raises(oob.UnsignedCallbackError, match="single"):
             oob.verify_recorder_signature(
-                record=self.RECORD,
+                record=self._record(),
                 public_key=key.public_key().public_bytes_raw(),
                 signature=signature,
                 nonce_used=True,
@@ -349,7 +353,7 @@ class TestSignature:
 
         with pytest.raises(oob.UnsignedCallbackError, match="does not match"):
             oob.verify_recorder_signature(
-                record=self.RECORD,
+                record=self._record(),
                 public_key=key.public_key().public_bytes_raw(),
                 signature=signature,
             )
@@ -360,17 +364,17 @@ class TestSignature:
         A plain json.dumps would differ on key order, and the signature would verify
         in one place and not in the other.
         """
-        assert oob.record_hash(self.RECORD) == oob.record_hash(
-            dict(reversed(list(self.RECORD.items())))
+        assert oob.record_hash(self._record()) == oob.record_hash(
+            dict(reversed(list(self._record().items())))
         )
 
     def test_the_hmac_fallback_is_labelled(self) -> None:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
         key = Ed25519PrivateKey.generate()
-        signature = key.sign(oob._digest_input(self.RECORD))
+        signature = key.sign(oob._digest_input(self._record()))
         method = oob.verify_recorder_signature(
-            record=self.RECORD,
+            record=self._record(),
             public_key=key.public_key().public_bytes_raw(),
             signature=signature,
             signing_method="HMAC_FALLBACK",

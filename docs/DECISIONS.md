@@ -818,3 +818,56 @@ in the current state still returns the current state, which is the correct behav
 for "not yet" and is why this is not simply "raise on any non-transition".
 
 All 710 tests pass unchanged, so no call site relied on the silent no-op.
+
+---
+
+## D-B27 - The executor's single-writer lock, and a liveness probe that killed processes
+
+- **When:** Sat 10 Oct 2026, 12:35 IST
+- **Supersedes:** nothing. §5.3's requirement was unimplemented; this implements it.
+
+### The lock
+
+`db.lock_path()` existed and was called from nowhere, so two `make worker`
+invocations both wrote money state. `app/core/singlewriter.py` implements it:
+a lock file, the holder's pid inside it, and a reclaim for the case that matters more
+than the lock itself - a `kill -9` between creating and removing the file.
+Without a reclaim the executor is dead forever with no in-band way out, the same
+failure shape as the kill switch's unclearable trip in D-B21.
+
+A lock whose pid is gone, or whose age exceeds the timeout, is reclaimed. The age
+check is a deliberate backstop rather than an optimisation: a pid on this machine is
+answerable, one across a container or a pid namespace is not, and a lock held that
+long has almost certainly died anyway.
+
+### Consequential defect in my own implementation
+
+`_pid_alive` used `os.kill(pid, 0)`, the idiomatic POSIX liveness probe. On
+Windows CPython **ignores the signal argument** and calls `TerminateProcess`, so
+`os.kill(pid, 0)` **terminates the process if it exists**. Measured: calling it on
+the test process's own pid killed the run instantly, the shell produced no output at
+all, and the file it was asked to write was never created - which looked like a hang
+and was actually a kill.
+
+It is not a hypothetical hazard in production either. The function is not called on
+the executor's own pid, so it would not have killed itself - it would have killed
+**another live executor** the first time a stale-lock check ran against one. A module
+whose entire purpose is to prevent two processes writing money state would have
+destroyed one of them.
+
+The Windows branch now asks through `OpenProcess` with
+`PROCESS_QUERY_LIMITED_INFORMATION`, which looks without signalling. The POSIX
+branch keeps the probe, where it is correct. Both are tested, including a test whose
+only assertion is that the process survives the check.
+
+**A note on the debugging**, because it cost time and the reason is worth recording:
+the first symptom was silence. Three commands in a row returned nothing at all, which
+reads as a harness fault. It was not - the process was being terminated before it
+could write its output file. A tool that returns no output is not the same as a tool
+that is fine.
+
+### Also fixed while here
+
+`executor_lock` accepted a `stale_after_s` argument it never used. Removed, and
+the docstring now says that reclaiming is the caller's job, so there is no question
+about whose timeout applies.
