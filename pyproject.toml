@@ -144,3 +144,8 @@ disallow_untyped_decorators = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
 extra_checks = true
+
+[dependency-groups]
+dev = [
+    "playwright>=1.65.1",
+]
