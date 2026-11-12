@@ -34,3 +34,13 @@ coverage.xml
 *.swp
 .DS_Store
 Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Demo recording artifacts (demo/video branch). Large media stays on disk,
+# never in the repo; the VO transcript and scripts are committed.
+# ---------------------------------------------------------------------------
+demo/raw-recording.*
+demo/*.mp4
+demo/*.webm
+demo/*.wav
+demo/vo-segments/
