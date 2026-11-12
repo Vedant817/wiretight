@@ -11,14 +11,13 @@ against synthetic data. Every mocked Airwallex response comes from
 
 from __future__ import annotations
 
-import hashlib
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Final
 
 from app.core import audit, dupes, ledger, oob, parsers, statemachine, vendors
 from app.core.ledger import Leg
-from app.demo.mock_airwallex import MockAirwallexClient, MOCK_LABEL
+from app.demo.mock_airwallex import MOCK_LABEL, MockAirwallexClient
 
 #: The fictional "today" the whole recording runs on. Fixed, not ``date.today``,
 #: so the demo is reproducible frame by frame.
@@ -50,19 +49,27 @@ def _money(value: Decimal, places: str = "0.01") -> str:
 # ---------------------------------------------------------------------------
 _VENDORS: Final[dict[str, vendors.VendorRecord]] = {
     "v_kestrel": vendors.VendorRecord(
-        id="v_kestrel", tax_id="82-4419073", legal_name="Kestrel Parts Inc",
+        id="v_kestrel",
+        tax_id="82-4419073",
+        legal_name="Kestrel Parts Inc",
         known_domains=("kestrelparts.com",),
     ),
     "v_brandt": vendors.VendorRecord(
-        id="v_brandt", tax_id="DE3051923314", legal_name="Brandt GmbH",
+        id="v_brandt",
+        tax_id="DE3051923314",
+        legal_name="Brandt GmbH",
         known_domains=("brandt-gmbh.de",),
     ),
     "v_helios": vendors.VendorRecord(
-        id="v_helios", tax_id=None, legal_name="Helios Freight Ltd",
+        id="v_helios",
+        tax_id=None,
+        legal_name="Helios Freight Ltd",
         known_domains=("heliosfreight.co.uk",),
     ),
     "v_marden": vendors.VendorRecord(
-        id="v_marden", tax_id=None, legal_name="Marden Logistics LLC",
+        id="v_marden",
+        tax_id=None,
+        legal_name="Marden Logistics LLC",
         known_domains=("mardenlogistics.com",),
     ),
 }
@@ -99,39 +106,75 @@ def _vendor_matches() -> dict[str, Any]:
 def _payments() -> list[dict[str, Any]]:
     return [
         {
-            "no": 1, "vendor_id": "v_kestrel", "vendor": "Kestrel Parts Inc",
-            "invoice_no": "INV-2211", "amount": "4820.00", "currency": USD,
-            "method": "ACH", "decision": "AUTO-PAY", "state": "PAID_PROVISIONAL",
+            "no": 1,
+            "vendor_id": "v_kestrel",
+            "vendor": "Kestrel Parts Inc",
+            "invoice_no": "INV-2211",
+            "amount": "4820.00",
+            "currency": USD,
+            "method": "ACH",
+            "decision": "AUTO-PAY",
+            "state": "PAID_PROVISIONAL",
             "signed_by": "Arun (passkey)",
         },
         {
-            "no": 2, "vendor_id": "v_brandt", "vendor": "Brandt GmbH",
-            "invoice_no": "INV-2291", "amount": "7500.00", "currency": EUR,
-            "method": "LOCAL · SEPA", "decision": "SIGN-OFF", "state": "VOID",
+            "no": 2,
+            "vendor_id": "v_brandt",
+            "vendor": "Brandt GmbH",
+            "invoice_no": "INV-2291",
+            "amount": "7500.00",
+            "currency": EUR,
+            "method": "LOCAL · SEPA",
+            "decision": "SIGN-OFF",
+            "state": "VOID",
             "signed_by": "Arun (passkey)",
         },
         {
-            "no": 3, "vendor_id": "v_helios", "vendor": "Helios Freight Ltd",
-            "invoice_no": "INV-7741", "amount": "2140.00", "currency": GBP,
-            "method": "FPS", "decision": "AUTO-PAY", "state": "PAID_PROVISIONAL",
+            "no": 3,
+            "vendor_id": "v_helios",
+            "vendor": "Helios Freight Ltd",
+            "invoice_no": "INV-7741",
+            "amount": "2140.00",
+            "currency": GBP,
+            "method": "FPS",
+            "decision": "AUTO-PAY",
+            "state": "PAID_PROVISIONAL",
             "signed_by": "Arun (passkey)",
         },
         {
-            "no": 4, "vendor_id": "v_kestrel", "vendor": "Kestrel Parts Inc",
-            "invoice_no": "INV-2211", "amount": "4820.00", "currency": USD,
-            "method": "ACH", "decision": "HARD BLOCK", "state": "BLOCKED",
+            "no": 4,
+            "vendor_id": "v_kestrel",
+            "vendor": "Kestrel Parts Inc",
+            "invoice_no": "INV-2211",
+            "amount": "4820.00",
+            "currency": USD,
+            "method": "ACH",
+            "decision": "HARD BLOCK",
+            "state": "BLOCKED",
             "signed_by": "-",
         },
         {
-            "no": 6, "vendor_id": "v_marden", "vendor": "Marden Logistics LLC",
-            "invoice_no": "INV-5512", "amount": "3900.00", "currency": USD,
-            "method": "ACH", "decision": "DEFER", "state": "DEFERRED",
+            "no": 6,
+            "vendor_id": "v_marden",
+            "vendor": "Marden Logistics LLC",
+            "invoice_no": "INV-5512",
+            "amount": "3900.00",
+            "currency": USD,
+            "method": "ACH",
+            "decision": "DEFER",
+            "state": "DEFERRED",
             "signed_by": "-",
         },
         {
-            "no": 7, "vendor_id": "v_helios", "vendor": "Helios Freight Ltd",
-            "invoice_no": "INV-7743", "amount": "1860.00", "currency": GBP,
-            "method": "FPS", "decision": "AUTO-PAY", "state": "PAID_PROVISIONAL",
+            "no": 7,
+            "vendor_id": "v_helios",
+            "vendor": "Helios Freight Ltd",
+            "invoice_no": "INV-7743",
+            "amount": "1860.00",
+            "currency": GBP,
+            "method": "FPS",
+            "decision": "AUTO-PAY",
+            "state": "PAID_PROVISIONAL",
             "signed_by": "Arun (passkey)",
         },
     ]
@@ -140,12 +183,18 @@ def _payments() -> list[dict[str, Any]]:
 def _duplicate_check() -> dict[str, Any]:
     """Bill #4 classified by the real duplicate detector."""
     first = dupes.Bill(
-        obligation_id="v_kestrel#INV-2211", vendor_id="v_kestrel",
-        invoice_no="INV-2211", amount=Decimal("4820.00"), due_date=date(2026, 11, 13),
+        obligation_id="v_kestrel#INV-2211",
+        vendor_id="v_kestrel",
+        invoice_no="INV-2211",
+        amount=Decimal("4820.00"),
+        due_date=date(2026, 11, 13),
     )
     candidate = dupes.Bill(
-        obligation_id="v_kestrel#INV-2211(b)", vendor_id="v_kestrel",
-        invoice_no="INV-2211", amount=Decimal("4820.00"), due_date=date(2026, 11, 13),
+        obligation_id="v_kestrel#INV-2211(b)",
+        vendor_id="v_kestrel",
+        invoice_no="INV-2211",
+        amount=Decimal("4820.00"),
+        due_date=date(2026, 11, 13),
     )
     verdict = dupes.classify(candidate=candidate, existing=[first])
     return {
@@ -166,12 +215,18 @@ _NEW_IBAN: Final[str] = "LT121000011101002000"
 
 def _incident(received_at: datetime) -> dict[str, Any]:
     old_details = parsers.PayeeDetails(
-        country="DE", currency=EUR, method="LOCAL",
-        account=_ON_FILE_IBAN, bic="COBADEFFXXX",
+        country="DE",
+        currency=EUR,
+        method="LOCAL",
+        account=_ON_FILE_IBAN,
+        bic="COBADEFFXXX",
     )
     new_details = parsers.PayeeDetails(
-        country="LT", currency=EUR, method="LOCAL",
-        account=_NEW_IBAN, bic="REVOLT21XXX",
+        country="LT",
+        currency=EUR,
+        method="LOCAL",
+        account=_NEW_IBAN,
+        bic="REVOLT21XXX",
     )
     old_fp = parsers.fingerprint(old_details)
     new_fp = parsers.fingerprint(new_details)
@@ -181,13 +236,19 @@ def _incident(received_at: datetime) -> dict[str, Any]:
     refusal_reasons: list[dict[str, str]] = []
     email_phone = "+370 604 22114"
     new_contact = oob.Contact(
-        id="c_attacker", vendor_id="v_brandt", kind="phone",
-        value_norm="+37060422114", provenance="change_request_email",
+        id="c_attacker",
+        vendor_id="v_brandt",
+        kind="phone",
+        value_norm="+37060422114",
+        provenance="change_request_email",
         created_at=received_at + timedelta(minutes=4),
     )
     old_contact = oob.Contact(
-        id="c_onfile", vendor_id="v_brandt", kind="phone",
-        value_norm="+498912308400", provenance="supplier_onboarding_form",
+        id="c_onfile",
+        vendor_id="v_brandt",
+        kind="phone",
+        value_norm="+498912308400",
+        provenance="supplier_onboarding_form",
         created_at=_at(date(2025, 9, 10), 10, 0),
     )
     email_body = (
@@ -201,15 +262,20 @@ def _incident(received_at: datetime) -> dict[str, Any]:
             other_contacts_for_vendor=[old_contact],
             thread_artefacts=[email_body],
         )
-    except (oob.ContactTooNewError, oob.ContactChangedRecentlyError,
-            oob.NumberFromChangeRequestError) as exc:
+    except (
+        oob.ContactTooNewError,
+        oob.ContactChangedRecentlyError,
+        oob.NumberFromChangeRequestError,
+    ) as exc:
         refusal_reasons.append({"rule": "rule 2 (contact)", "detail": str(exc)})
 
     # Rule 3, live: the person who raised the request cannot record the callback.
     try:
         oob.check_recorder(
-            recorded_by_role="requester", recorded_by_id="arun",
-            requester_set={"arun"}, intake_user_id="arun",
+            recorded_by_role="requester",
+            recorded_by_id="arun",
+            requester_set={"arun"},
+            intake_user_id="arun",
         )
     except oob.RequesterIsRecorderError as exc:
         refusal_reasons.append({"rule": "rule 3 (recorder)", "detail": str(exc)})
@@ -224,12 +290,22 @@ def _incident(received_at: datetime) -> dict[str, Any]:
         },
         "lookalike": _vendor_matches()["lookalike"],
         "fingerprint": {
-            "on_file": {"iban": _ON_FILE_IBAN, "masked": parsers.mask_account(_ON_FILE_IBAN),
-                        "country": "DE", "bic": "COBADEFFXXX", "fingerprint": old_fp,
-                        "last4": parsers.last4(old_details)},
-            "new": {"iban": _NEW_IBAN, "masked": parsers.mask_account(_NEW_IBAN),
-                    "country": "LT", "bic": "REVOLT21XXX", "fingerprint": new_fp,
-                    "last4": parsers.last4(new_details)},
+            "on_file": {
+                "iban": _ON_FILE_IBAN,
+                "masked": parsers.mask_account(_ON_FILE_IBAN),
+                "country": "DE",
+                "bic": "COBADEFFXXX",
+                "fingerprint": old_fp,
+                "last4": parsers.last4(old_details),
+            },
+            "new": {
+                "iban": _NEW_IBAN,
+                "masked": parsers.mask_account(_NEW_IBAN),
+                "country": "LT",
+                "bic": "REVOLT21XXX",
+                "fingerprint": new_fp,
+                "last4": parsers.last4(new_details),
+            },
             "changed": old_fp != new_fp,
         },
         "iban_format": {
@@ -237,8 +313,11 @@ def _incident(received_at: datetime) -> dict[str, Any]:
             "new": "valid" if parsers.parse_iban(_NEW_IBAN) else "invalid",
         },
         "evidence_chips": [
-            "lookalike domain", "new country DE → LT", "urgency: 'before Friday'",
-            "invoice still shows the on-file IBAN", "format VALID ≠ legitimate",
+            "lookalike domain",
+            "new country DE → LT",
+            "urgency: 'before Friday'",
+            "invoice still shows the on-file IBAN",
+            "format VALID ≠ legitimate",
         ],
         "rule_refusals": refusal_reasons,
     }
@@ -280,23 +359,32 @@ def _callback_story(received_at: datetime) -> dict[str, Any]:
     """Payment #2's rejection callback and the recovery callback, rule-checked."""
     confirmed_at = received_at + timedelta(minutes=18)
     record, method = _signed_callback_record(
-        outcome="no_change_made", recorder_id="priya", contact_id="c_onfile",
+        outcome="no_change_made",
+        recorder_id="priya",
+        contact_id="c_onfile",
         confirmed_at=confirmed_at,
     )
     old_contact = oob.Contact(
-        id="c_onfile", vendor_id="v_brandt", kind="phone",
-        value_norm="+498912308400", provenance="supplier_onboarding_form",
+        id="c_onfile",
+        vendor_id="v_brandt",
+        kind="phone",
+        value_norm="+498912308400",
+        provenance="supplier_onboarding_form",
         created_at=_at(date(2025, 9, 10), 10, 0),
     )
     oob.check_contact(
-        contact=old_contact, change_request_received_at=received_at,
+        contact=old_contact,
+        change_request_received_at=received_at,
         now=confirmed_at,
     )
     oob.check_recorder(
-        recorded_by_role="ops", recorded_by_id="priya", requester_set={"arun"},
+        recorded_by_role="ops",
+        recorded_by_id="priya",
+        requester_set={"arun"},
     )
     oob.check_timing(
-        called_at=confirmed_at, change_request_received_at=received_at,
+        called_at=confirmed_at,
+        change_request_received_at=received_at,
     )
     oob.check_readback(outcome="no_change_made", readback_last4_ok=True, readback_name_ok=True)
 
@@ -304,16 +392,22 @@ def _callback_story(received_at: datetime) -> dict[str, Any]:
     recovery_received_at = _at(DEMO_TODAY, 10, 40)
     recovery_confirmed_at = recovery_received_at + timedelta(minutes=15)
     recovery_record, recovery_method = _signed_callback_record(
-        outcome="confirmed_new_account", recorder_id="priya", contact_id="c_onfile",
+        outcome="confirmed_new_account",
+        recorder_id="priya",
+        contact_id="c_onfile",
         confirmed_at=recovery_confirmed_at,
     )
     recovery_contact = oob.Contact(
-        id="c_onfile", vendor_id="v_brandt", kind="phone",
-        value_norm="+498912308400", provenance="supplier_onboarding_form",
+        id="c_onfile",
+        vendor_id="v_brandt",
+        kind="phone",
+        value_norm="+498912308400",
+        provenance="supplier_onboarding_form",
         created_at=_at(date(2025, 9, 10), 10, 0),
     )
     oob.check_contact(
-        contact=recovery_contact, change_request_received_at=recovery_received_at,
+        contact=recovery_contact,
+        change_request_received_at=recovery_received_at,
         now=recovery_confirmed_at,
     )
     cooling_until = oob.cooling_off_until(
@@ -322,15 +416,22 @@ def _callback_story(received_at: datetime) -> dict[str, Any]:
     )
     # The first-payment cap: min(policy floor, 50% of the trailing median).
     cap = oob.first_payment_cap(
-        median_12m_final_usd=Decimal("9000.00"), policy_floor_usd=Decimal("2500.00"),
+        median_12m_final_usd=Decimal("9000.00"),
+        policy_floor_usd=Decimal("2500.00"),
     )
     new_iban_details = parsers.PayeeDetails(
-        country="DE", currency=EUR, method="LOCAL",
-        account="DE44500105175407324931", bic="COBADEFFXXX",
+        country="DE",
+        currency=EUR,
+        method="LOCAL",
+        account="DE44500105175407324931",
+        bic="COBADEFFXXX",
     )
     tranches = oob.tranche_split(
-        total=Decimal("7500.00"), currency=EUR, cap_usd=cap,
-        rate=Decimal("1.08"), exponent=2,
+        total=Decimal("7500.00"),
+        currency=EUR,
+        cap_usd=cap,
+        rate=Decimal("1.08"),
+        exponent=2,
     )
     return {
         "rejection": {
@@ -349,7 +450,7 @@ def _callback_story(received_at: datetime) -> dict[str, Any]:
                 "from": "arun.schmidt@brandt-gmbh.de",
                 "subject": "Re: our account - new IBAN after the closure",
                 "body": "Our bank account was closed. Please use our new IBAN: "
-                        "DE44500105175407324931.",
+                "DE44500105175407324931.",
             },
             "new_iban_masked": parsers.mask_account("DE44500105175407324931"),
             "new_iban_fingerprint": parsers.fingerprint(new_iban_details),
@@ -377,60 +478,94 @@ def _transfers(mock: MockAirwallexClient) -> dict[str, Any]:
     Every status here comes from the mocked client, and every transition runs
     through the real state machine inside ``poll_transfer``.
     """
-    original = mock.create_transfer({
-        "source_currency": EUR, "source_amount": 7500.00,
-        "target_currency": EUR, "target_amount": 7500.00,
-        "_scripted_failure": "ACCOUNT_CLOSED",
-    })
+    original = mock.create_transfer(
+        {
+            "source_currency": EUR,
+            "source_amount": 7500.00,
+            "target_currency": EUR,
+            "target_amount": 7500.00,
+            "_scripted_failure": "ACCOUNT_CLOSED",
+        }
+    )
     original_id = original["id"]
     timeline: list[dict[str, Any]] = [
-        {"stage": "created", "status": original["transfer_status"],
-         "label": MOCK_LABEL, "failure_type": None},
+        {
+            "stage": "created",
+            "status": original["transfer_status"],
+            "label": MOCK_LABEL,
+            "failure_type": None,
+        },
     ]
-    for observed, failure in (("SENT", None), ("FAILED", "ACCOUNT_CLOSED")):
+    for observed, _failure in (("SENT", None), ("FAILED", "ACCOUNT_CLOSED")):
         response = mock.poll_transfer(original_id, observed)
-        timeline.append({
-            "stage": "poll", "status": response["transfer_status"],
-            "label": MOCK_LABEL, "failure_type": response.get("failure_type"),
-        })
+        timeline.append(
+            {
+                "stage": "poll",
+                "status": response["transfer_status"],
+                "label": MOCK_LABEL,
+                "failure_type": response.get("failure_type"),
+            }
+        )
     cancelled = statemachine.apply_transfer_observation(
-        awx_status="FAILED", failure_type="ACCOUNT_CLOSED", failure_reason=None,
-        current_awx_status="SENT", current_failure_type=None,
+        awx_status="FAILED",
+        failure_type="ACCOUNT_CLOSED",
+        failure_reason=None,
+        current_awx_status="SENT",
+        current_failure_type=None,
         wt_state="SENT",
     )
-    timeline.append({
-        "stage": "wiretight", "status": "CANCELLED",
-        "label": None, "failure_type": "ACCOUNT_CLOSED",
-        "wt_state": getattr(cancelled, "failure_type", "ACCOUNT_CLOSED"),
-    })
+    timeline.append(
+        {
+            "stage": "wiretight",
+            "status": "CANCELLED",
+            "label": None,
+            "failure_type": "ACCOUNT_CLOSED",
+            "wt_state": getattr(cancelled, "failure_type", "ACCOUNT_CLOSED"),
+        }
+    )
 
-    tranche1 = mock.create_transfer({
-        "source_currency": EUR, "source_amount": 2700.00,
-        "target_currency": EUR, "target_amount": 2700.00,
-    })
+    tranche1 = mock.create_transfer(
+        {
+            "source_currency": EUR,
+            "source_amount": 2700.00,
+            "target_currency": EUR,
+            "target_amount": 2700.00,
+        }
+    )
     t1_id = tranche1["id"]
     mock.poll_transfer(t1_id, "SENT")
     t1_paid = mock.poll_transfer(t1_id, "PAID")
-    tranche2 = mock.create_transfer({
-        "source_currency": EUR, "source_amount": 4800.00,
-        "target_currency": EUR, "target_amount": 4800.00,
-    })
+    tranche2 = mock.create_transfer(
+        {
+            "source_currency": EUR,
+            "source_amount": 4800.00,
+            "target_currency": EUR,
+            "target_amount": 4800.00,
+        }
+    )
     return {
         "original": {
-            "id": original_id, "timeline": timeline,
+            "id": original_id,
+            "timeline": timeline,
             "cancelled_because": "ACCOUNT_CLOSED",
         },
         "tranche1": {
-            "id": tranche1["id"], "status": t1_paid["transfer_status"],
-            "amount": "2700.00", "currency": EUR, "label": MOCK_LABEL,
+            "id": tranche1["id"],
+            "status": t1_paid["transfer_status"],
+            "amount": "2700.00",
+            "currency": EUR,
+            "label": MOCK_LABEL,
             "provisional": True,
         },
         "tranche2": {
-            "id": tranche2["id"], "status": "CREATED (held)",
-            "amount": "4800.00", "currency": EUR, "label": MOCK_LABEL,
+            "id": tranche2["id"],
+            "status": "CREATED (held)",
+            "amount": "4800.00",
+            "currency": EUR,
+            "label": MOCK_LABEL,
         },
         "paid_can_still_fail_note": "Airwallex documents that a payout can still fail "
-                                    "after PAID; Wiretight keeps it provisional.",
+        "after PAID; Wiretight keeps it provisional.",
     }
 
 
@@ -462,28 +597,46 @@ def _tieout() -> dict[str, Any]:
     ]
     ledger.check_balanced(legs)
     rows = [
-        {"currency": USD, "opening": "26400.00", "in": "0.00",
-         "out": _money(Decimal("4820.00") + Decimal("5240.00") + Decimal("8100.00")),
-         "out_detail": "#1 paid 4,820.00 · GBP conversion 5,240.00 · EUR conversion (withdrawn) 8,100.00",
-         "refunds": "8100.00", "fees": "0.00",
-         "closing": _money(Decimal("26400.00") - Decimal("4820.00") - Decimal("5240.00")),
-         "note": "the withdrawn conversion returned its USD"},
-        {"currency": EUR, "opening": "0.00", "in": "7500.00",
-         "out": _money(Decimal("7500.00") + Decimal("2700.00")),
-         "out_detail": "#2 SENT 7,500.00 · tranche 1 paid 2,700.00",
-         "refunds": "7500.00", "fees": "0.00",
-         "closing": _money(Decimal("7500.00") - Decimal("2700.00")),
-         "note": "closing equals tranche 2, still held"},
-        {"currency": GBP, "opening": "6210.00", "in": "4000.00",
-         "out": "4000.00", "out_detail": "#3 + #7 paid 4,000.00",
-         "refunds": "0.00", "fees": "0.00",
-         "closing": "6210.00", "note": ""},
+        {
+            "currency": USD,
+            "opening": "26400.00",
+            "in": "0.00",
+            "out": _money(Decimal("4820.00") + Decimal("5240.00") + Decimal("8100.00")),
+            "out_detail": "#1 paid 4,820.00 · GBP conv 5,240.00 · EUR conv withdrawn 8,100.00",
+            "refunds": "8100.00",
+            "fees": "0.00",
+            "closing": _money(Decimal("26400.00") - Decimal("4820.00") - Decimal("5240.00")),
+            "note": "the withdrawn conversion returned its USD",
+        },
+        {
+            "currency": EUR,
+            "opening": "0.00",
+            "in": "7500.00",
+            "out": _money(Decimal("7500.00") + Decimal("2700.00")),
+            "out_detail": "#2 SENT 7,500.00 · tranche 1 paid 2,700.00",
+            "refunds": "7500.00",
+            "fees": "0.00",
+            "closing": _money(Decimal("7500.00") - Decimal("2700.00")),
+            "note": "closing equals tranche 2, still held",
+        },
+        {
+            "currency": GBP,
+            "opening": "6210.00",
+            "in": "4000.00",
+            "out": "4000.00",
+            "out_detail": "#3 + #7 paid 4,000.00",
+            "refunds": "0.00",
+            "fees": "0.00",
+            "closing": "6210.00",
+            "note": "",
+        },
     ]
     for row in rows:
-        assert (
-            Decimal(row["opening"]) + Decimal(row["in"]) + Decimal(row["refunds"])
-            - Decimal(row["out"]) - Decimal(row["fees"]) == Decimal(row["closing"])
-        ), f"tie-out row does not add up: {row['currency']}"
+        assert Decimal(row["opening"]) + Decimal(row["in"]) + Decimal(row["refunds"]) - Decimal(
+            row["out"]
+        ) - Decimal(row["fees"]) == Decimal(row["closing"]), (
+            f"tie-out row does not add up: {row['currency']}"
+        )
     return {
         "balanced": True,
         "rows": rows,
@@ -495,7 +648,10 @@ def _tieout() -> dict[str, Any]:
 def _status_board() -> list[dict[str, str]]:
     return [
         {"item": "#1 Kestrel Parts · USD 4,820.00", "state": "PAID · provisional"},
-        {"item": "#2 Brandt GmbH · original EUR 7,500.00", "state": "FAILED ACCOUNT_CLOSED → CANCELLED"},
+        {
+            "item": "#2 Brandt GmbH · original EUR 7,500.00",
+            "state": "FAILED ACCOUNT_CLOSED → CANCELLED",
+        },
         {"item": "#2 fraudulent IBAN change", "state": "REJECTED · never paid"},
         {"item": "#2 tranche 1 · EUR 2,314.81", "state": "PAID · provisional"},
         {"item": "#2 tranche 2 · EUR 5,185.19", "state": "HELD until tranche 1 final"},
@@ -523,10 +679,8 @@ def _audit_chain() -> dict[str, Any]:
         ("transfer.cancelled", {"payment": 2, "reason": "ACCOUNT_CLOSED"}),
     ]
     prev = "0" * 64
-    seq = 0
     head = prev
-    for kind, payload in entries:
-        seq += 1
+    for seq, (kind, payload) in enumerate(entries, start=1):
         head = audit.entry_hash(prev, kind, payload, _iso(_at(DEMO_TODAY, 9, seq)), seq)
         prev = head
     return {"checked": len(entries), "ok": True, "head": head[:12] + "…"}

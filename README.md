@@ -56,6 +56,30 @@ docs/       spec/ (read-only) · PROGRESS · DECISIONS · NEEDS_HUMAN · undocum
 anything in this repository disagrees with it, the spec wins and the disagreement belongs in
 `docs/DECISIONS.md`.
 
+## Demo mode (simulated)
+
+The branch `demo/video` carries a labelled demo mode used for the pitch recording. Run it with
+`make demo-video` (or `DEMO_MODE=video uv run python -m app.demo.server --port 8765`). The server
+refuses to start without `DEMO_MODE=video` and refuses to start if Airwallex credentials are
+visible in its environment. Nothing in it talks to the network.
+
+What is real in demo mode: the decisions on screen are computed by the production modules in
+`app/core` — vendor match and lookalike-domain distance, duplicate classification (`HARD_BLOCK`),
+IBAN parsing and bank fingerprints, the out-of-band callback rules (rule 2 contact checks, rule 3
+requester independence, rule 7 signed recorder callbacks via Ed25519), cooling-off and
+first-payment-cap tranche splits, the transfer status state machine, ledger balance checks for the
+tie-out, and the audit hash chain.
+
+What is simulated: the company (Halden Robotics), people (Arun, Priya, Meera, Kabir), suppliers,
+emails, IBANs, amounts and every Airwallex response — produced by a mocked
+`MockAirwallexClient` (`app/demo/mock_airwallex.py`) that returns documented-shape responses from
+a script and never opens a socket. The UI pages are demo-only HTML, not the product UI; the
+executor, poller and passkey flows are not exercised. A persistent on-screen badge reads
+`SIMULATED DEMO DATA · Airwallex sandbox calls mocked`, and synthetic items carry
+`synthetic email`, `FIXTURE`, `mocked API response` or `demo timing` tags. The demo recording under
+`demo/` is generated from this branch and no live Airwallex call, customer, revenue figure or
+metric claim appears in it; the only statistics shown are the sourced ones footnoted on screen.
+
 ## License
 
 Apache-2.0.

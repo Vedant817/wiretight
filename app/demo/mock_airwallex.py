@@ -76,10 +76,7 @@ class MockAirwallexClient:
         """
         current = self.transfers.get(transfer_id, {})
         scripted = current.get("_scripted_failure")
-        if observed_status == "FAILED" and scripted:
-            observed_failure = scripted
-        else:
-            observed_failure = None
+        observed_failure = scripted if observed_status == "FAILED" and scripted else None
         current_status = current.get("transfer_status")
         if statemachine.is_regression(current_status, observed_status):
             raise ValueError(f"mocked poll regression: {current_status} -> {observed_status}")

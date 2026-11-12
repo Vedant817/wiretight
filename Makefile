@@ -178,6 +178,14 @@ worker:
 demo:
 	$(PY) scripts/run_demo.py
 
+# The labelled demo mode for the pitch recording: simulated data throughout,
+# mocked Airwallex responses. DEMO_MODE=video is required so demo mode is a
+# deliberate act.
+.PHONY: demo-video
+demo-video:
+	env -u AWX_CLIENT_ID -u AWX_API_KEY DEMO_MODE=video $(PY) -m app.demo.server \
+		--port $${DEMO_PORT:-8765}
+
 .PHONY: shadow-report
 shadow-report:
 	$(PY) -m app.core.shadow --run $(RUN)
