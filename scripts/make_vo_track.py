@@ -1,10 +1,20 @@
-"""Measure speech clips, append short pauses, and write the shared scene clock."""
+"""Measure complete sentence clips and write the shared narration/scene clock."""
 
 import json
 import math
 import subprocess
 
-from demo_timeline import FINAL_HOLD, OUT, PAUSE, SEG, TIMELINE, scenes
+from demo_timeline import (
+    FINAL_HOLD,
+    OUT,
+    PAUSE,
+    SEG,
+    SENTENCE_PAUSE,
+    TIMELINE,
+    scenes,
+    sentences,
+    spoken_text,
+)
 
 
 def run(args: list[str]) -> str:
@@ -16,29 +26,39 @@ def main() -> None:
     files = []
     start = 0.0
     for i, scene in enumerate(timeline):
-        src = SEG / f"scene{i:02d}.mp3"
-        speech = SEG / f"scene{i:02d}-speech.wav"
-        # Trim only boundary silence. Never cut speech to fit an allotted slot.
-        run(["ffmpeg", "-y", "-i", str(src), "-af",
-             "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.05,"
-             "areverse,silenceremove=start_periods=1:start_threshold=-50dB:"
-             "start_silence=0.05,areverse", "-ar", "48000", "-ac", "1", str(speech)])
-        duration = float(run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                              "-of", "csv=p=0", str(speech)]).strip())
-        pause = FINAL_HOLD if i == len(timeline) - 1 else PAUSE
-        # Round up to 25fps boundaries so audio and visuals share exact cuts.
-        frames = math.ceil((duration + pause) * 25)
-        total = frames / 25
-        padded = SEG / f"scene{i:02d}p.wav"
-        run(["ffmpeg", "-y", "-i", str(speech), "-af", f"apad,atrim=duration={total}",
-             "-ar", "48000", "-ac", "1", str(padded)])
-        files.append(f"file '{padded.as_posix()}'")
-        scene.update(start=round(start, 3), speech_duration=duration, duration=total,
-                     frames=frames)
-        start += total
-    assert start < 300, f"Narration exceeds five minutes: {start}"
+        sentence_list = sentences(scene["text"])
+        clock = 0.0
+        scene["sentences"] = []
+        for j, text in enumerate(sentence_list):
+            name = f"v3-scene{i:02d}-sentence{j:02d}"
+            src = SEG / f"{name}.mp3"
+            speech = SEG / f"{name}-speech.wav"
+            # Trim boundary silence only. All spoken samples remain uncut.
+            run(["ffmpeg", "-y", "-i", str(src), "-af",
+                 "silenceremove=start_periods=1:start_threshold=-60dB,"
+                 "areverse,silenceremove=start_periods=1:start_threshold=-60dB,areverse",
+                 "-ar", "48000", "-ac", "1", str(speech)])
+            duration = float(run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                                  "-of", "csv=p=0", str(speech)]).strip())
+            last_sentence = j == len(sentence_list) - 1
+            last_scene = i == len(timeline) - 1
+            pause = (FINAL_HOLD if last_scene else PAUSE) if last_sentence else SENTENCE_PAUSE
+            total = duration + pause
+            if last_sentence:
+                total = math.ceil((clock + total) * 25) / 25 - clock
+            padded = SEG / f"{name}p.wav"
+            run(["ffmpeg", "-y", "-i", str(speech), "-af", f"apad,atrim=duration={total}",
+                 "-ar", "48000", "-ac", "1", str(padded)])
+            files.append(f"file '{padded.as_posix()}'")
+            scene["sentences"].append({"text": spoken_text(text), "start": round(start+clock, 6),
+                                       "speech_duration": duration, "pause": total-duration,
+                                       "clip": src.name})
+            clock += total
+        scene.update(start=round(start, 3), duration=round(clock, 3), frames=round(clock*25))
+        start += clock
+    assert start < 285, f"Narration exceeds 4:45: {start}"
     TIMELINE.write_text(json.dumps(timeline, indent=2) + "\n", encoding="utf-8")
-    filelist = SEG / "concat.txt"
+    filelist = SEG / "v3-concat.txt"
     filelist.write_text("\n".join(files), encoding="utf-8")
     wav = OUT / "wiretight-vo.wav"
     run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(filelist),

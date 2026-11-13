@@ -5,10 +5,18 @@
     "frame": 0,
     "text": "This supplier payment was signed off.",
     "flipped": false,
+    "sentences": [
+      {
+        "text": "This supplier payment was signed off.",
+        "start": 0.0,
+        "speech_duration": 1.873292,
+        "pause": 0.7267080000000001,
+        "clip": "v3-scene00-sentence00.mp3"
+      }
+    ],
     "start": 0.0,
-    "speech_duration": 1.949958,
-    "duration": 2.36,
-    "frames": 59,
+    "duration": 2.6,
+    "frames": 65,
     "title": "Cold open"
   },
   {
@@ -17,10 +25,25 @@
     "frame": 0,
     "text": "Then the bank details changed. So the sign-off died with them.",
     "flipped": true,
-    "start": 2.36,
-    "speech_duration": 3.673125,
-    "duration": 4.08,
-    "frames": 102,
+    "sentences": [
+      {
+        "text": "Then the bank details changed.",
+        "start": 2.6,
+        "speech_duration": 1.681625,
+        "pause": 0.30000000000000004,
+        "clip": "v3-scene01-sentence00.mp3"
+      },
+      {
+        "text": "So the sign-off died with them.",
+        "start": 4.581625,
+        "speech_duration": 1.431208,
+        "pause": 0.7071669999999999,
+        "clip": "v3-scene01-sentence01.mp3"
+      }
+    ],
+    "start": 2.6,
+    "duration": 4.12,
+    "frames": 103,
     "title": "Cold open"
   },
   {
@@ -29,10 +52,25 @@
     "frame": 1,
     "text": "Small finance teams pay overseas suppliers every week from an inbox, a spreadsheet and a bank portal. One 'we've changed banks' email can redirect a payment.",
     "flipped": true,
-    "start": 6.44,
-    "speech_duration": 9.990208,
-    "duration": 10.4,
-    "frames": 260,
+    "sentences": [
+      {
+        "text": "Small finance teams pay overseas suppliers every week from an inbox, a spreadsheet and a bank portal.",
+        "start": 6.72,
+        "speech_duration": 6.480292,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene02-sentence00.mp3"
+      },
+      {
+        "text": "One 'we've changed banks' email can redirect a payment.",
+        "start": 13.500292,
+        "speech_duration": 2.97925,
+        "pause": 0.7204580000000003,
+        "clip": "v3-scene02-sentence01.mp3"
+      }
+    ],
+    "start": 6.72,
+    "duration": 10.48,
+    "frames": 262,
     "title": "Title"
   },
   {
@@ -41,10 +79,39 @@
     "frame": 2,
     "text": "In AFP's 2026 survey, 74 percent of US organisations were hit by business email compromise. Vendor imposter fraud was cited by 45 percent, up eleven points. Businesses reported 2.77 billion dollars in business email compromise losses to the FBI in 2024, and the FBI's advice is simple: verify account changes through a second channel. Wiretight puts that check inside the payment run.",
     "flipped": true,
-    "start": 16.84,
-    "speech_duration": 31.296958,
-    "duration": 31.72,
-    "frames": 793,
+    "sentences": [
+      {
+        "text": "In AFP's 2026 survey, 74 percent of US organisations were hit by business email compromise.",
+        "start": 17.2,
+        "speech_duration": 7.94575,
+        "pause": 0.3000000000000007,
+        "clip": "v3-scene03-sentence00.mp3"
+      },
+      {
+        "text": "Vendor imposter fraud was cited by 45 percent, up eleven points.",
+        "start": 25.44575,
+        "speech_duration": 4.949542,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene03-sentence01.mp3"
+      },
+      {
+        "text": "Businesses reported 2.77 billion dollars in business email compromise losses to the FBI in 2024, and the FBI's advice is simple: verify account changes through a second channel.",
+        "start": 30.695292,
+        "speech_duration": 14.018542,
+        "pause": 0.3000000000000007,
+        "clip": "v3-scene03-sentence02.mp3"
+      },
+      {
+        "text": "Wiretight puts that check inside the payment run.",
+        "start": 45.013834,
+        "speech_duration": 2.869417,
+        "pause": 0.7167489999999987,
+        "clip": "v3-scene03-sentence03.mp3"
+      }
+    ],
+    "start": 17.2,
+    "duration": 31.4,
+    "frames": 785,
     "title": "Problem - the numbers"
   },
   {
@@ -53,10 +120,25 @@
     "frame": 3,
     "text": "Wiretight is for the finance lead or founder who runs the weekly supplier payment run on Airwallex. The fraud loss lands on the payer, so the payer owns the budget.",
     "flipped": true,
-    "start": 48.56,
-    "speech_duration": 10.837083,
-    "duration": 11.24,
-    "frames": 281,
+    "sentences": [
+      {
+        "text": "Wiretight is for the finance lead or founder who runs the weekly supplier payment run on Airwallex.",
+        "start": 48.6,
+        "speech_duration": 6.477083,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene04-sentence00.mp3"
+      },
+      {
+        "text": "The fraud loss lands on the payer, so the payer owns the budget.",
+        "start": 55.377083,
+        "speech_duration": 3.788917,
+        "pause": 0.7139999999999991,
+        "clip": "v3-scene04-sentence01.mp3"
+      }
+    ],
+    "start": 48.6,
+    "duration": 11.28,
+    "frames": 282,
     "title": "Who it is for"
   },
   {
@@ -65,10 +147,32 @@
     "frame": 4,
     "text": "Why now? Airwallex exposes balances, FX, beneficiaries, payouts and the ledger through one API, and language models can now read messy bills and emails well enough to raise flags. Yet only 17 percent of organisations use AI against payments fraud.",
     "flipped": true,
-    "start": 59.8,
-    "speech_duration": 19.44825,
-    "duration": 19.88,
-    "frames": 497,
+    "sentences": [
+      {
+        "text": "Why now?",
+        "start": 59.88,
+        "speech_duration": 0.457167,
+        "pause": 0.29999999999999993,
+        "clip": "v3-scene05-sentence00.mp3"
+      },
+      {
+        "text": "Airwallex exposes balances, FX, beneficiaries, payouts and the ledger through one API, and language models can now read messy bills and emails well enough to raise flags.",
+        "start": 60.637167,
+        "speech_duration": 12.994458,
+        "pause": 0.3000000000000007,
+        "clip": "v3-scene05-sentence01.mp3"
+      },
+      {
+        "text": "Yet only 17 percent of organisations use AI against payments fraud.",
+        "start": 73.931625,
+        "speech_duration": 4.975833,
+        "pause": 0.7325420000000005,
+        "clip": "v3-scene05-sentence02.mp3"
+      }
+    ],
+    "start": 59.88,
+    "duration": 19.76,
+    "frames": 494,
     "title": "Why now"
   },
   {
@@ -77,8 +181,23 @@
     "frame": 5,
     "text": "Wiretight enforces one rule in code: no payout reaches bank details a human hasn't confirmed and signed off on exact terms. One note before the demo: this recording uses synthetic data, and the Airwallex responses are mocked.",
     "flipped": true,
-    "start": 79.68,
-    "speech_duration": 16.084917,
+    "sentences": [
+      {
+        "text": "Wiretight enforces one rule in code: no payout reaches bank details a human hasn't confirmed and signed off on exact terms.",
+        "start": 79.64,
+        "speech_duration": 9.166875,
+        "pause": 0.3000000000000007,
+        "clip": "v3-scene06-sentence00.mp3"
+      },
+      {
+        "text": "One note before the demo: this recording uses synthetic data, and the Airwallex responses are mocked.",
+        "start": 89.106875,
+        "speech_duration": 6.349708,
+        "pause": 0.703417,
+        "clip": "v3-scene06-sentence01.mp3"
+      }
+    ],
+    "start": 79.64,
     "duration": 16.52,
     "frames": 413,
     "title": "The rule"
@@ -89,10 +208,53 @@
     "frame": 6,
     "text": "Here's Halden Robotics' payment run. The goal: pay on time, once, to the real supplier, and never drop below the cash reserve. Code builds the plan. One bill is deferred to protect the reserve. A duplicate invoice is hard-blocked. The finance lead signs off the rest with a passkey, and each signature covers the exact payee, account, amount and currency.",
     "flipped": true,
-    "start": 96.2,
-    "speech_duration": 25.109667,
-    "duration": 25.52,
-    "frames": 638,
+    "sentences": [
+      {
+        "text": "Here's Hall-den Robotics' payment run.",
+        "start": 96.16,
+        "speech_duration": 2.035833,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene07-sentence00.mp3"
+      },
+      {
+        "text": "The goal: pay on time, once, to the real supplier, and never drop below the cash reserve.",
+        "start": 98.495833,
+        "speech_duration": 6.507833,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene07-sentence01.mp3"
+      },
+      {
+        "text": "Code builds the plan.",
+        "start": 105.303666,
+        "speech_duration": 1.194667,
+        "pause": 0.30000000000000004,
+        "clip": "v3-scene07-sentence02.mp3"
+      },
+      {
+        "text": "One bill is deferred to protect the reserve.",
+        "start": 106.798333,
+        "speech_duration": 2.407042,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene07-sentence03.mp3"
+      },
+      {
+        "text": "A duplicate invoice is hard-blocked.",
+        "start": 109.505375,
+        "speech_duration": 2.096875,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene07-sentence04.mp3"
+      },
+      {
+        "text": "The finance lead signs off the rest with a passkey, and each signature covers the exact payee, account, amount and currency.",
+        "start": 111.90225,
+        "speech_duration": 8.618167,
+        "pause": 0.7195830000000001,
+        "clip": "v3-scene07-sentence05.mp3"
+      }
+    ],
+    "start": 96.16,
+    "duration": 25.08,
+    "frames": 627,
     "title": "The run and the plan"
   },
   {
@@ -101,10 +263,25 @@
     "frame": 7,
     "text": "Then this arrives. New account, urgent, from a domain one letter off.",
     "flipped": true,
-    "start": 121.72,
-    "speech_duration": 4.994375,
-    "duration": 5.4,
-    "frames": 135,
+    "sentences": [
+      {
+        "text": "Then this arrives.",
+        "start": 121.24,
+        "speech_duration": 0.918042,
+        "pause": 0.30000000000000004,
+        "clip": "v3-scene08-sentence00.mp3"
+      },
+      {
+        "text": "New account, urgent, from a domain one letter off.",
+        "start": 122.458042,
+        "speech_duration": 3.557792,
+        "pause": 0.7041659999999998,
+        "clip": "v3-scene08-sentence01.mp3"
+      }
+    ],
+    "start": 121.24,
+    "duration": 5.48,
+    "frames": 137,
     "title": "The email"
   },
   {
@@ -113,10 +290,25 @@
     "frame": 8,
     "text": "The new details are perfectly valid, and that's the point. The sign-off was for the old account, so it's void.",
     "flipped": true,
-    "start": 127.12,
-    "speech_duration": 6.539792,
-    "duration": 6.96,
-    "frames": 174,
+    "sentences": [
+      {
+        "text": "The new details are perfectly valid, and that's the point.",
+        "start": 126.72,
+        "speech_duration": 3.181917,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene09-sentence00.mp3"
+      },
+      {
+        "text": "The sign-off was for the old account, so it's void.",
+        "start": 130.201917,
+        "speech_duration": 2.802417,
+        "pause": 0.7156660000000001,
+        "clip": "v3-scene09-sentence01.mp3"
+      }
+    ],
+    "start": 126.72,
+    "duration": 7.0,
+    "frames": 175,
     "title": "The lock fires (1 of 2)"
   },
   {
@@ -125,10 +317,25 @@
     "frame": 9,
     "text": "Only this payment is blocked. Everything else still goes out, and the euro conversion for it is withdrawn before any money moves.",
     "flipped": true,
-    "start": 134.08,
-    "speech_duration": 8.0365,
-    "duration": 8.44,
-    "frames": 211,
+    "sentences": [
+      {
+        "text": "Only this payment is blocked.",
+        "start": 133.72,
+        "speech_duration": 1.41375,
+        "pause": 0.30000000000000004,
+        "clip": "v3-scene10-sentence00.mp3"
+      },
+      {
+        "text": "Everything else still goes out, and the euro conversion for it is withdrawn before any money moves.",
+        "start": 135.43375,
+        "speech_duration": 6.062708,
+        "pause": 0.7035420000000006,
+        "clip": "v3-scene10-sentence01.mp3"
+      }
+    ],
+    "start": 133.72,
+    "duration": 8.48,
+    "frames": 212,
     "title": "Plan diff - surgical"
   },
   {
@@ -137,10 +344,18 @@
     "frame": 10,
     "text": "The person who raised the request can't confirm it.",
     "flipped": true,
-    "start": 142.52,
-    "speech_duration": 2.651125,
-    "duration": 3.08,
-    "frames": 77,
+    "sentences": [
+      {
+        "text": "The person who raised the request can't confirm it.",
+        "start": 142.2,
+        "speech_duration": 2.562042,
+        "pause": 0.7179579999999999,
+        "clip": "v3-scene11-sentence00.mp3"
+      }
+    ],
+    "start": 142.2,
+    "duration": 3.28,
+    "frames": 82,
     "title": "Rule 3 - requester cannot confirm"
   },
   {
@@ -149,10 +364,25 @@
     "frame": 11,
     "text": "Someone else calls the supplier on the number we already had, not the one in the email. The supplier made no change.",
     "flipped": true,
-    "start": 145.6,
-    "speech_duration": 6.672625,
-    "duration": 7.08,
-    "frames": 177,
+    "sentences": [
+      {
+        "text": "Someone else calls the supplier on the number we already had, not the one in the email.",
+        "start": 145.48,
+        "speech_duration": 4.554667,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene12-sentence00.mp3"
+      },
+      {
+        "text": "The supplier made no change.",
+        "start": 150.334667,
+        "speech_duration": 1.565458,
+        "pause": 0.7398750000000001,
+        "clip": "v3-scene12-sentence01.mp3"
+      }
+    ],
+    "start": 145.48,
+    "duration": 7.16,
+    "frames": 179,
     "title": "Priya calls the number on file"
   },
   {
@@ -161,10 +391,18 @@
     "frame": 12,
     "text": "The request is rejected, and the real invoice goes to the account on file, with two sign-offs because this supplier is now flagged.",
     "flipped": true,
-    "start": 152.68,
-    "speech_duration": 8.395708,
-    "duration": 8.8,
-    "frames": 220,
+    "sentences": [
+      {
+        "text": "The request is rejected, and the real invoice goes to the account on file, with two sign-offs because this supplier is now flagged.",
+        "start": 152.64,
+        "speech_duration": 8.309208,
+        "pause": 0.7307919999999992,
+        "clip": "v3-scene13-sentence00.mp3"
+      }
+    ],
+    "start": 152.64,
+    "duration": 9.04,
+    "frames": 226,
     "title": "Request rejected, real invoice paid"
   },
   {
@@ -173,10 +411,25 @@
     "frame": 13,
     "text": "Then the payout comes back. The supplier's account was closed.",
     "flipped": true,
-    "start": 161.48,
-    "speech_duration": 3.645917,
-    "duration": 4.08,
-    "frames": 102,
+    "sentences": [
+      {
+        "text": "Then the payout comes back.",
+        "start": 161.68,
+        "speech_duration": 1.386042,
+        "pause": 0.30000000000000004,
+        "clip": "v3-scene14-sentence00.mp3"
+      },
+      {
+        "text": "The supplier's account was closed.",
+        "start": 163.366042,
+        "speech_duration": 1.699458,
+        "pause": 0.7345000000000002,
+        "clip": "v3-scene14-sentence01.mp3"
+      }
+    ],
+    "start": 161.68,
+    "duration": 4.12,
+    "frames": 103,
     "title": "The payout comes back"
   },
   {
@@ -185,10 +438,25 @@
     "frame": 14,
     "text": "And the supplier sends a genuine new account. That is exactly where redirection fraud hides, so recovery gets no shortcut.",
     "flipped": true,
-    "start": 165.56,
-    "speech_duration": 8.102458,
-    "duration": 8.52,
-    "frames": 213,
+    "sentences": [
+      {
+        "text": "And the supplier sends a genuine new account.",
+        "start": 165.8,
+        "speech_duration": 2.340292,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene15-sentence00.mp3"
+      },
+      {
+        "text": "That is exactly where redirection fraud hides, so recovery gets no shortcut.",
+        "start": 168.440292,
+        "speech_duration": 5.186708,
+        "pause": 0.7330000000000005,
+        "clip": "v3-scene15-sentence01.mp3"
+      }
+    ],
+    "start": 165.8,
+    "duration": 8.56,
+    "frames": 214,
     "title": "The genuine request (2 of 2)"
   },
   {
@@ -197,10 +465,18 @@
     "frame": 15,
     "text": "Same lock: a callback to the older contact, a cooling-off period, two sign-offs, and a capped first payment.",
     "flipped": true,
-    "start": 174.08,
-    "speech_duration": 7.229625,
-    "duration": 7.64,
-    "frames": 191,
+    "sentences": [
+      {
+        "text": "Same lock: a callback to the older contact, a cooling-off period, two sign-offs, and a capped first payment.",
+        "start": 174.36,
+        "speech_duration": 7.143708,
+        "pause": 0.7362919999999997,
+        "clip": "v3-scene16-sentence00.mp3"
+      }
+    ],
+    "start": 174.36,
+    "duration": 7.88,
+    "frames": 197,
     "title": "Cooling-off, sign-offs, cap"
   },
   {
@@ -209,10 +485,32 @@
     "frame": 16,
     "text": "The first capped tranche goes out. Airwallex documents that a payout can still fail after PAID, so Wiretight keeps it provisional. The rest waits until the first payment lands.",
     "flipped": true,
-    "start": 181.72,
-    "speech_duration": 11.384375,
-    "duration": 11.8,
-    "frames": 295,
+    "sentences": [
+      {
+        "text": "The first capped payment goes out.",
+        "start": 182.24,
+        "speech_duration": 1.62225,
+        "pause": 0.30000000000000004,
+        "clip": "v3-scene17-sentence00.mp3"
+      },
+      {
+        "text": "Airwallex documents that a payout can still fail after PAID, so Wiretight keeps it provisional.",
+        "start": 184.16225,
+        "speech_duration": 6.097375,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene17-sentence01.mp3"
+      },
+      {
+        "text": "The rest waits until the first payment lands.",
+        "start": 190.559625,
+        "speech_duration": 2.611208,
+        "pause": 0.7091670000000003,
+        "clip": "v3-scene17-sentence02.mp3"
+      }
+    ],
+    "start": 182.24,
+    "duration": 11.64,
+    "frames": 291,
     "title": "Tranche 1 out, tranche 2 held"
   },
   {
@@ -221,10 +519,25 @@
     "frame": 17,
     "text": "Finally, proof. Every payout is tied out against the ledger, currency by currency, and any gap is shown, never plugged.",
     "flipped": true,
-    "start": 193.52,
-    "speech_duration": 8.62275,
-    "duration": 9.04,
-    "frames": 226,
+    "sentences": [
+      {
+        "text": "Finally, proof.",
+        "start": 193.88,
+        "speech_duration": 0.922,
+        "pause": 0.29999999999999993,
+        "clip": "v3-scene18-sentence00.mp3"
+      },
+      {
+        "text": "Every payout is tied out against the ledger, currency by currency, and any gap is shown, never plugged.",
+        "start": 195.102,
+        "speech_duration": 7.187833,
+        "pause": 0.7101669999999993,
+        "clip": "v3-scene18-sentence01.mp3"
+      }
+    ],
+    "start": 193.88,
+    "duration": 9.12,
+    "frames": 228,
     "title": "Tie-out"
   },
   {
@@ -233,10 +546,18 @@
     "frame": 18,
     "text": "Then a journal export for the books.",
     "flipped": true,
-    "start": 202.56,
-    "speech_duration": 1.9575,
-    "duration": 2.36,
-    "frames": 59,
+    "sentences": [
+      {
+        "text": "Then a journal export for the books.",
+        "start": 203.0,
+        "speech_duration": 1.868667,
+        "pause": 0.731333,
+        "clip": "v3-scene19-sentence00.mp3"
+      }
+    ],
+    "start": 203.0,
+    "duration": 2.6,
+    "frames": 65,
     "title": "Status board"
   },
   {
@@ -245,10 +566,32 @@
     "frame": 19,
     "text": "Under the hood, the model only reads documents and raises flags. Code decides the money. Only the executor holds the Airwallex key, and it re-checks every signature before calling balances, FX quotes and conversions, beneficiaries, transfers and financial transactions.",
     "flipped": true,
-    "start": 204.92,
-    "speech_duration": 19.343625,
-    "duration": 19.76,
-    "frames": 494,
+    "sentences": [
+      {
+        "text": "Under the hood, the model only reads documents and raises flags.",
+        "start": 205.6,
+        "speech_duration": 4.320375,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene20-sentence00.mp3"
+      },
+      {
+        "text": "Code decides the money.",
+        "start": 210.220375,
+        "speech_duration": 1.191667,
+        "pause": 0.30000000000000004,
+        "clip": "v3-scene20-sentence01.mp3"
+      },
+      {
+        "text": "Only the executor holds the Airwallex key, and it re-checks every signature before calling balances, FX quotes and conversions, beneficiaries, transfers and financial transactions.",
+        "start": 211.712042,
+        "speech_duration": 12.834083,
+        "pause": 0.7338749999999994,
+        "clip": "v3-scene20-sentence02.mp3"
+      }
+    ],
+    "start": 205.6,
+    "duration": 19.68,
+    "frames": 492,
     "title": "Architecture"
   },
   {
@@ -257,10 +600,32 @@
     "frame": 20,
     "text": "Teams start in shadow mode: Wiretight moves no money and reports what it would have caught. Then one sign-off, then auto-pay earned per supplier. Our pricing hypothesis is a monthly fee per company, later per client for bookkeeping firms.",
     "flipped": true,
-    "start": 224.68,
-    "speech_duration": 15.845583,
-    "duration": 16.28,
-    "frames": 407,
+    "sentences": [
+      {
+        "text": "Teams start in shadow mode: Wiretight moves no money and reports what it would have caught.",
+        "start": 225.28,
+        "speech_duration": 5.312958,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene21-sentence00.mp3"
+      },
+      {
+        "text": "Then one sign-off, then auto-pay earned per supplier.",
+        "start": 230.892958,
+        "speech_duration": 3.484708,
+        "pause": 0.2999999999999998,
+        "clip": "v3-scene21-sentence01.mp3"
+      },
+      {
+        "text": "Our pricing hypothesis is a monthly fee per company, later per client for bookkeeping firms.",
+        "start": 234.677666,
+        "speech_duration": 6.031625,
+        "pause": 0.7307090000000009,
+        "clip": "v3-scene21-sentence02.mp3"
+      }
+    ],
+    "start": 225.28,
+    "duration": 16.16,
+    "frames": 404,
     "title": "Business model"
   },
   {
@@ -269,10 +634,25 @@
     "frame": 21,
     "text": "Wiretight. Supplier payouts that can't be quietly redirected.",
     "flipped": true,
-    "start": 240.96,
-    "speech_duration": 4.25675,
-    "duration": 6.76,
-    "frames": 169,
+    "sentences": [
+      {
+        "text": "Wiretight.",
+        "start": 241.44,
+        "speech_duration": 0.632625,
+        "pause": 0.30000000000000004,
+        "clip": "v3-scene22-sentence00.mp3"
+      },
+      {
+        "text": "Supplier payouts that can't be quietly redirected.",
+        "start": 242.372625,
+        "speech_duration": 3.070458,
+        "pause": 2.516917,
+        "clip": "v3-scene22-sentence01.mp3"
+      }
+    ],
+    "start": 241.44,
+    "duration": 6.52,
+    "frames": 163,
     "title": "Close"
   }
 ]

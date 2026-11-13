@@ -1,0 +1,45 @@
+This supplier payment was signed off.
+
+Then the bank details changed. So the sign-off died with them.
+
+Small finance teams pay overseas suppliers every week from an inbox, a spreadsheet and a bank portal. One 'we've changed banks' email can redirect a payment.
+
+In AFP's 2026 survey, 74 percent of US organisations were hit by business email compromise. Vendor imposter fraud was cited by 45 percent, up eleven points. Businesses reported 2.77 billion dollars in business email compromise losses to the FBI in 2024, and the FBI's advice is simple: verify account changes through a second channel. Wiretight puts that check inside the payment run.
+
+Wiretight is for the finance lead or founder who runs the weekly supplier payment run on Airwallex. The fraud loss lands on the payer, so the payer owns the budget.
+
+Why now? Airwallex exposes balances, FX, beneficiaries, payouts and the ledger through one API, and language models can now read messy bills and emails well enough to raise flags. Yet only 17 percent of organisations use AI against payments fraud.
+
+Wiretight enforces one rule in code: no payout reaches bank details a human hasn't confirmed and signed off on exact terms. One note before the demo: this recording uses synthetic data, and the Airwallex responses are mocked.
+
+Here's Hall-den Robotics' payment run. The goal: pay on time, once, to the real supplier, and never drop below the cash reserve. Code builds the plan. One bill is deferred to protect the reserve. A duplicate invoice is hard-blocked. The finance lead signs off the rest with a passkey, and each signature covers the exact payee, account, amount and currency.
+
+Then this arrives. New account, urgent, from a domain one letter off.
+
+The new details are perfectly valid, and that's the point. The sign-off was for the old account, so it's void.
+
+Only this payment is blocked. Everything else still goes out, and the euro conversion for it is withdrawn before any money moves.
+
+The person who raised the request can't confirm it.
+
+Someone else calls the supplier on the number we already had, not the one in the email. The supplier made no change.
+
+The request is rejected, and the real invoice goes to the account on file, with two sign-offs because this supplier is now flagged.
+
+Then the payout comes back. The supplier's account was closed.
+
+And the supplier sends a genuine new account. That is exactly where redirection fraud hides, so recovery gets no shortcut.
+
+Same lock: a callback to the older contact, a cooling-off period, two sign-offs, and a capped first payment.
+
+The first capped payment goes out. Airwallex documents that a payout can still fail after PAID, so Wiretight keeps it provisional. The rest waits until the first payment lands.
+
+Finally, proof. Every payout is tied out against the ledger, currency by currency, and any gap is shown, never plugged.
+
+Then a journal export for the books.
+
+Under the hood, the model only reads documents and raises flags. Code decides the money. Only the executor holds the Airwallex key, and it re-checks every signature before calling balances, FX quotes and conversions, beneficiaries, transfers and financial transactions.
+
+Teams start in shadow mode: Wiretight moves no money and reports what it would have caught. Then one sign-off, then auto-pay earned per supplier. Our pricing hypothesis is a monthly fee per company, later per client for bookkeeping firms.
+
+Wiretight. Supplier payouts that can't be quietly redirected.

@@ -1,31 +1,29 @@
-"""Generate complete scene narration with edge-tts, without fixed-slot cuts."""
+"""Generate a complete edge-tts clip per sentence, with explicit pause boundaries."""
 
-import argparse
 import asyncio
 
 import edge_tts
-from demo_timeline import SEG, scenes
+from demo_timeline import OUT, SEG, scenes, sentences, spoken_text
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--resume", action="store_true",
-                        help="reuse completed clips from this take")
-    args = parser.parse_args()
     SEG.mkdir(parents=True, exist_ok=True)
     limit = asyncio.Semaphore(3)
 
-    async def generate(scene: dict) -> None:
-        out = SEG / f"scene{scene['id']:02d}.mp3"
-        if args.resume and out.exists() and out.stat().st_size:
-            return
-        # Only TTS input is respelled; displayed terms and transcript stay intact.
-        spoken = scene["text"].replace("tranche", "trahnsh")
+    async def generate(scene: dict, index: int, text: str) -> None:
+        name = f"v3-scene{scene['id']:02d}-sentence{index:02d}"
         async with limit:
-            await edge_tts.Communicate(spoken, "en-US-AndrewNeural", rate="-8%").save(str(out))
-        print(f"{out.name}: {scene['text']}", flush=True)
+            await edge_tts.Communicate(
+                spoken_text(text), "en-US-AndrewNeural", rate="-8%", boundary="WordBoundary",
+            ).save(str(SEG / f"{name}.mp3"), str(SEG / f"{name}.jsonl"))
+        print(f"{name}: {spoken_text(text)}", flush=True)
 
-    await asyncio.gather(*(generate(scene) for scene in scenes()))
+    timeline = scenes()
+    (OUT / "VO-v3-spoken.txt").write_text(
+        "\n\n".join(spoken_text(s["text"]) for s in timeline) + "\n", encoding="utf-8",
+    )
+    await asyncio.gather(*(generate(scene, j, text) for scene in timeline
+                           for j, text in enumerate(sentences(scene["text"]))))
 
 
 if __name__ == "__main__":

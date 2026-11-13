@@ -7,8 +7,19 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "demo"
 SEG = OUT / "vo-segments"
 TIMELINE = OUT / "timeline.json"
-PAUSE = 0.4
+PAUSE = 0.7
+SENTENCE_PAUSE = 0.3
 FINAL_HOLD = 2.5
+
+
+def sentences(text: str) -> list[str]:
+    """Split at sentence punctuation, preserving every word and question mark."""
+    return re.split(r"(?<=[.!?])\s+(?=[A-Z])", text)
+
+
+def spoken_text(text: str) -> str:
+    """Pronunciation/wording overrides apply only to synthesized speech."""
+    return text.replace("Halden", "Hall-den").replace("capped tranche", "capped payment")
 
 # Segment, page frame, text that starts this scene (None means segment start).
 CUES = (

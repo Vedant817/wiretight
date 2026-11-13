@@ -86,8 +86,9 @@ th{color:var(--dim);font-size:14px;text-transform:uppercase;letter-spacing:.6px}
 .steps{display:flex;gap:12px;margin:18px 0}
 .step{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
   padding:16px;text-align:center;font-size:17px}
-.step .n{display:inline-block;width:30px;height:30px;line-height:30px;border-radius:50%;
-  background:#243b53;color:#cfe6ff;margin-bottom:8px;font-weight:700}
+.step .n{display:block;width:max-content;min-width:34px;min-height:34px;
+  line-height:34px;padding:0 12px;border-radius:17px;
+  background:#243b53;color:#cfe6ff;margin:0 auto 12px;font-weight:700}
 #nav{position:fixed;bottom:18px;right:20px;z-index:50;display:flex;gap:10px;align-items:center}
 #frameinfo{color:var(--dim);font-size:13px;margin-right:6px}
 #next{background:#243b53;border-color:#3f6d9e;color:#cfe6ff;padding:10px 26px;font-size:17px}
@@ -384,7 +385,7 @@ const FRAMES = [
   <div class="center" style="margin-top:30px">
     <div class="big" style="font-size:40px;font-weight:800">Wiretight.</div>
     <div class="dim" style="font-size:24px">Supplier payouts that can't be quietly redirected.</div>
-    <div class="footnote">repo: github.com/&lt;placeholder&gt;/wiretight · branch demo/video · all data synthetic</div>
+    <div class="footnote">branch demo/video · all data synthetic</div>
   </div></div>`},
 ];
 
