@@ -1,38 +1,31 @@
-"""One-shot helper: generate the demo voiceover per segment with edge-tts.
+"""Generate complete scene narration with edge-tts, without fixed-slot cuts."""
 
-Writes one mp3 per segment into demo/vo-segments/ named segNN.mp3, using the
-paragraphs from demo/VO.txt (the text after "Segment N (...):" lines).
-"""
-
-from __future__ import annotations
-
+import argparse
 import asyncio
-import re
-from pathlib import Path
 
 import edge_tts
-
-VOICE = "en-US-AndrewNeural"
-RATE = "+0%"
-ROOT = Path(__file__).resolve().parent.parent
-VO_TEXT = ROOT / "demo" / "VO.txt"
-OUT_DIR = ROOT / "demo" / "vo-segments"
+from demo_timeline import SEG, scenes
 
 
 async def main() -> None:
-    text = VO_TEXT.read_text(encoding="utf-8")
-    parts = re.split(r"^Segment (\d+) \(slot [^)]+\):\s*$", text, flags=re.MULTILINE)
-    # parts: [preamble, "0", paragraph0, "1", paragraph1, ...]
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for i in range(1, len(parts), 2):
-        seg = int(parts[i])
-        paragraph = " ".join(parts[i + 1].split())
-        if not paragraph:
-            continue
-        out = OUT_DIR / f"seg{seg:02d}.mp3"
-        tts = edge_tts.Communicate(paragraph, VOICE, rate=RATE)
-        await tts.save(str(out))
-        print(f"seg{seg:02d}: {out.name} ({len(paragraph)} chars)")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--resume", action="store_true",
+                        help="reuse completed clips from this take")
+    args = parser.parse_args()
+    SEG.mkdir(parents=True, exist_ok=True)
+    limit = asyncio.Semaphore(3)
+
+    async def generate(scene: dict) -> None:
+        out = SEG / f"scene{scene['id']:02d}.mp3"
+        if args.resume and out.exists() and out.stat().st_size:
+            return
+        # Only TTS input is respelled; displayed terms and transcript stay intact.
+        spoken = scene["text"].replace("tranche", "trahnsh")
+        async with limit:
+            await edge_tts.Communicate(spoken, "en-US-AndrewNeural", rate="-8%").save(str(out))
+        print(f"{out.name}: {scene['text']}", flush=True)
+
+    await asyncio.gather(*(generate(scene) for scene in scenes()))
 
 
 if __name__ == "__main__":

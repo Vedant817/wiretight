@@ -1,6 +1,6 @@
 """The demo page: one HTML document that plays the whole scripted run.
 
-Eighteen frames, each advanced by one click or keypress so the recording is
+Twenty-two frames, each advanced by one click or keypress so the recording is
 deterministic. The badge is rendered on every frame, synthetic items carry
 their tags, and every frame is rendered from the payload the seed module
 computed with the real core modules.
@@ -43,7 +43,7 @@ h1{font-size:56px;margin-bottom:10px}
 h2{font-size:36px;margin-bottom:8px}
 .sub{color:var(--dim);font-size:22px;margin-bottom:22px}
 .tag{display:inline-block;background:#2c3442;color:#b8c4d6;border:1px solid #3d4859;
-  font-size:13px;padding:2px 8px;border-radius:4px;margin-left:8px;vertical-align:middle}
+  font-size:16px;padding:2px 8px;border-radius:4px;margin-left:8px;vertical-align:middle}
 .tag.mock{background:#2b2113;color:#e8c377;border-color:#6d5728}
 .tag.fix{background:#1d2b3a;color:#8fc1e8;border-color:#33628c}
 .tag.red{background:#3a1715;color:#ffb3ae;border-color:#a34a44}
@@ -92,7 +92,7 @@ th{color:var(--dim);font-size:14px;text-transform:uppercase;letter-spacing:.6px}
 #frameinfo{color:var(--dim);font-size:13px;margin-right:6px}
 #next{background:#243b53;border-color:#3f6d9e;color:#cfe6ff;padding:10px 26px;font-size:17px}
 #cap{position:fixed;bottom:18px;left:20px;color:var(--dim);font-size:14px;z-index:50}
-.footnote{color:var(--dim);font-size:13px;margin-top:14px;line-height:1.5}
+.footnote{color:var(--dim);font-size:16px;margin-top:14px;line-height:1.5}
 .slide{background:var(--panel);border:1px solid var(--line);border-radius:14px;
   padding:44px 48px}
 .center{text-align:center}
@@ -154,7 +154,7 @@ const FRAMES = [
  {chips:[], title:'Title',
   html:()=>`<div class="slide center"><h1>Wiretight</h1>
   <div class="big dim">Supplier payouts that can't be quietly redirected.</div>
-  <div class="footnote">Demo branch - simulated data throughout. See README, "Demo mode (simulated)".</div></div>`},
+  </div>`},
 
  {chips:[], title:'Problem - the numbers',
   html:()=>`<div class="slide"><h2>Supplier payment fraud, 2024-2026</h2>
@@ -408,14 +408,16 @@ function render(){
 }
 function next(){ if(idx < FRAMES.length-1){ idx++; render(); } }
 function prev(){ if(idx > 0){ idx--; render(); } }
-window.__wt = {next, prev, go:(i)=>{idx=i;render();}, state:()=>idx};
+window.__wt = {next, prev, go:(i)=>{idx=i;render();}, state:()=>idx,
+  title:()=>FRAMES[idx].title,
+  flip:(value)=>{window.__flipped=value;render();}};
 document.getElementById('next').addEventListener('click', next);
 document.addEventListener('keydown', e=>{
   if(e.key==='ArrowRight' || e.key===' ') next();
   if(e.key==='ArrowLeft') prev();
 });
 // Cold-open flip: payment #2 flips to VOID five seconds into frame 0.
-setTimeout(()=>{
+if(!new URLSearchParams(location.search).has('capture')) setTimeout(()=>{
   __flipped = true;
   window.__flipped = true;
   const h = document.getElementById('cohead');

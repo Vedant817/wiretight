@@ -1,77 +1,62 @@
-"""One-shot helper: record the demo walkthrough headlessly with Playwright.
+"""Capture demo frames with Playwright and render on the measured narration clock.
 
-Steps through the demo page's 22 frames by clicking "Next" once per frame and
-holding each frame for its script slot, with the context recording at
-1920x1080. Closing the context flushes the webm; it lands in
-demo/raw-recording.webm. ``--test`` runs a fast 1 s-per-frame pass for
-pipeline verification only.
+Run make_voiceover.py, make_vo_track.py, then this script. Static demo pages are
+captured at 1920x1080 and encoded with exact frame counts: no browser startup,
+click latency or accumulated sleeps can shift a scene relative to its narration.
+The cold-open change is an explicit cue. All scenes retain the simulated badge.
 """
 
-from __future__ import annotations
-
-import argparse
+import json
 import shutil
-from pathlib import Path
 
+from demo_timeline import OUT, TIMELINE
+from make_vo_track import run
 from playwright.sync_api import sync_playwright
-
-ROOT = Path(__file__).resolve().parent.parent
-URL = "http://127.0.0.1:8765/"
-#: Per-frame hold, seconds. Order matches the demo page's FRAMES array.
-#: Totals 272 s = 4:32, matching the VO track's slot lengths.
-HOLDS: tuple[float, ...] = (
-    10.0,  # 0  cold open (VOID flip fires at 5 s inside the page)
-    8.0, 32.0,  #      title | stats (VO segment 1)
-    12.0, 17.0,  #     persona | why now (VO segment 2)
-    15.5,  # 5    rule + honesty note
-    24.0,  # 6    run plan
-    7.0,  # 7     the email
-    12.0, 12.0,  #    incident diff | plan diff (VO segment 6)
-    8.0, 8.0, 8.0,  #  requester blocked | Priya | rejected (VO segment 7)
-    7.0,  # 13    transfer timeline
-    13.0, 13.0,  #    recovery email | cooling-off (VO segment 9)
-    12.0,  # 16   tranches
-    6.0, 6.0,  #      tie-out | status board (VO segment 11)
-    19.0,  # 19   architecture
-    15.5,  # 20   business model
-    7.0,  # 21    close
-)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test", action="store_true", help="1 s per frame, pipeline check")
-    args = parser.parse_args()
-    holds = tuple(1.0 for _ in HOLDS) if args.test else HOLDS
-
-    take_dir = ROOT / "demo" / "raw-take"
-    shutil.rmtree(take_dir, ignore_errors=True)
-    take_dir.mkdir(parents=True, exist_ok=True)
-    final = ROOT / "demo" / "raw-recording.webm"
-
+    timeline = json.loads(TIMELINE.read_text(encoding="utf-8"))
+    take = OUT / "raw-take"
+    take.mkdir(exist_ok=True)
+    final = OUT / "wiretight-demo.mp4"
+    previous = OUT / "wiretight-demo-v1.mp4"
+    if final.exists() and not previous.exists():
+        shutil.copy2(final, previous)
+    clips = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            viewport={"width": 1920, "height": 1080},
-            record_video_dir=str(take_dir),
-            record_video_size={"width": 1920, "height": 1080},
-        )
-        page = context.new_page()
-        page.goto(URL, wait_until="load")
-        page.wait_for_timeout(2000)
-        for i, hold in enumerate(holds):
-            if i > 0:
-                page.click("#next")
-            page.wait_for_timeout(int(hold * 1000))
-        video = page.video
-        assert video is not None
-        raw_path = video.path()
-        context.close()
+        page = browser.new_page(viewport={"width": 1920, "height": 1080},
+                                device_scale_factor=1)
+        page.goto("http://127.0.0.1:8765/?capture", wait_until="load")
+        page.evaluate("document.fonts.ready")
+        for scene in timeline:
+            page.evaluate("s => { __wt.flip(s.flipped); __wt.go(s.frame); }", scene)
+            page.wait_for_timeout(450)  # settle the cold-open CSS pop before capture
+            assert "SIMULATED DEMO DATA" in page.locator("#badge").inner_text()
+            assert page.locator("#badge").is_visible()
+            assert page.evaluate("""() => [...document.querySelectorAll('#stage .frame *')]
+                .every(e => { const r=e.getBoundingClientRect();
+                    return r.right<=1920 && r.bottom<=1010 && r.left>=0 && r.top>=0; })""")
+            scene["title"] = page.evaluate("__wt.title()")
+            png = take / f"scene{scene['id']:02d}.png"
+            page.screenshot(path=str(png))
+            clip = take / f"scene{scene['id']:02d}.mp4"
+            run(["ffmpeg", "-y", "-loop", "1", "-framerate", "25", "-i", str(png),
+                 "-frames:v", str(scene["frames"]), "-c:v", "libx264", "-preset", "fast",
+                 "-crf", "18", "-pix_fmt", "yuv420p", str(clip)])
+            clips.append(f"file '{clip.as_posix()}'")
+            print(f"{scene['start']:7.2f}s {scene['title']}", flush=True)
         browser.close()
-
-    src = Path(raw_path)
-    shutil.move(str(src), final)
-    print(f"saved {final} ({final.stat().st_size} bytes)")
+    filelist = take / "concat.txt"
+    filelist.write_text("\n".join(clips), encoding="utf-8")
+    rendered = take / "wiretight-demo-v2.mp4"
+    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(filelist),
+         "-i", str(OUT / "wiretight-vo.wav"), "-map", "0:v", "-map", "1:a",
+         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart",
+         str(rendered)])
+    shutil.copy2(rendered, final)
+    TIMELINE.write_text(json.dumps(timeline, indent=2) + "\n", encoding="utf-8")
+    print(f"Saved {final}")
 
 
 if __name__ == "__main__":

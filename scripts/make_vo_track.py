@@ -1,60 +1,51 @@
-"""One-shot helper: pad each VO segment to its script slot and concatenate.
+"""Measure speech clips, append short pauses, and write the shared scene clock."""
 
-Slot lengths come from the recording timeline (segments group the demo page's
-sub-frames); total 288.5 s = 4:48.5, inside the 4:55 cap. Output:
-demo/wiretight-vo.wav (mono 44.1 kHz) and demo/wiretight-vo.mp3.
-"""
-
-from __future__ import annotations
-
+import json
+import math
 import subprocess
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SEG = ROOT / "demo" / "vo-segments"
-OUT = ROOT / "demo"
-# segment -> slot seconds (matches the recording timeline; total 277 s = 4:37,
-# under the 4:55 cap. Segment 5 and 8 are short beats in the script's cut list.)
-SLOTS: dict[int, float] = {
-    0: 10.0, 1: 40.0, 2: 29.0, 3: 15.5, 4: 24.0, 5: 7.0, 6: 24.0, 7: 24.0,
-    8: 7.0, 9: 26.0, 10: 12.0, 11: 12.0, 12: 19.0, 13: 15.5, 14: 7.0,
-}
+from demo_timeline import FINAL_HOLD, OUT, PAUSE, SEG, TIMELINE, scenes
 
 
-def run(cmd: list[str]) -> None:
-    subprocess.run(cmd, check=True, capture_output=True)
+def run(args: list[str]) -> str:
+    return subprocess.run(args, check=True, capture_output=True, text=True).stdout
 
 
 def main() -> None:
-    list_file = OUT / "vo-list.txt"
-    lines: list[str] = []
-    total = 0.0
-    for seg, slot in SLOTS.items():
-        src = SEG / f"seg{seg:02d}.mp3"
-        padded = SEG / f"seg{seg:02d}p.wav"
-        run([
-            "ffmpeg", "-y", "-i", str(src),
-            "-af", f"aresample=44100,apad=whole_dur={slot}",
-            "-ac", "1", "-ar", "44100", "-c:a", "pcm_s16le", str(padded),
-        ])
-        lines.append(f"file '{padded.as_posix()}'")
-        total += slot
-    list_file.write_text("\n".join(lines), encoding="utf-8")
+    timeline = scenes()
+    files = []
+    start = 0.0
+    for i, scene in enumerate(timeline):
+        src = SEG / f"scene{i:02d}.mp3"
+        speech = SEG / f"scene{i:02d}-speech.wav"
+        # Trim only boundary silence. Never cut speech to fit an allotted slot.
+        run(["ffmpeg", "-y", "-i", str(src), "-af",
+             "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.05,"
+             "areverse,silenceremove=start_periods=1:start_threshold=-50dB:"
+             "start_silence=0.05,areverse", "-ar", "48000", "-ac", "1", str(speech)])
+        duration = float(run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                              "-of", "csv=p=0", str(speech)]).strip())
+        pause = FINAL_HOLD if i == len(timeline) - 1 else PAUSE
+        # Round up to 25fps boundaries so audio and visuals share exact cuts.
+        frames = math.ceil((duration + pause) * 25)
+        total = frames / 25
+        padded = SEG / f"scene{i:02d}p.wav"
+        run(["ffmpeg", "-y", "-i", str(speech), "-af", f"apad,atrim=duration={total}",
+             "-ar", "48000", "-ac", "1", str(padded)])
+        files.append(f"file '{padded.as_posix()}'")
+        scene.update(start=round(start, 3), speech_duration=duration, duration=total,
+                     frames=frames)
+        start += total
+    assert start < 300, f"Narration exceeds five minutes: {start}"
+    TIMELINE.write_text(json.dumps(timeline, indent=2) + "\n", encoding="utf-8")
+    filelist = SEG / "concat.txt"
+    filelist.write_text("\n".join(files), encoding="utf-8")
     wav = OUT / "wiretight-vo.wav"
-    run([
-        "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(list_file),
-        "-c:a", "pcm_s16le", str(wav),
-    ])
-    mp3 = OUT / "wiretight-vo.mp3"
-    run([
-        "ffmpeg", "-y", "-i", str(wav),
-        "-c:a", "libmp3lame", "-b:a", "128k", str(mp3),
-    ])
-    probe = subprocess.run(
-        ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
-         "-of", "csv=p=0", str(wav)], capture_output=True, text=True,
-    ).stdout.strip()
-    print(f"slots total {total:.1f}s; vo.wav duration {probe}s")
+    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(filelist),
+         "-c:a", "pcm_s16le", str(wav)])
+    run(["ffmpeg", "-y", "-i", str(wav), "-c:a", "libmp3lame", "-b:a", "128k",
+         str(OUT / "wiretight-vo.mp3")])
+    print(f"{len(timeline)} scene cues; {start:.2f}s total; timeline: {TIMELINE}")
 
 
 if __name__ == "__main__":

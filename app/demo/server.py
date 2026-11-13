@@ -13,6 +13,7 @@ import json
 import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
 from app.config import AIRWALLEX_SECRET_VARS
 from app.demo.page import render_page
@@ -28,7 +29,7 @@ class _DemoHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         try:
-            if self.path in {"/", "/index.html"}:
+            if urlsplit(self.path).path in {"/", "/index.html"}:
                 self.send_response(_OK)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(self.page)))
