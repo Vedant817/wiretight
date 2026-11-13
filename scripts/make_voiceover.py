@@ -19,7 +19,7 @@ async def main() -> None:
         print(f"{name}: {spoken_text(text)}", flush=True)
 
     timeline = scenes()
-    (OUT / "VO-v3-spoken.txt").write_text(
+    (OUT / "VO-v4-spoken.txt").write_text(
         "\n\n".join(spoken_text(s["text"]) for s in timeline) + "\n", encoding="utf-8",
     )
     await asyncio.gather(*(generate(scene, j, text) for scene in timeline

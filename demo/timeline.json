@@ -179,27 +179,20 @@
     "id": 6,
     "segment": 3,
     "frame": 5,
-    "text": "Wiretight enforces one rule in code: no payout reaches bank details a human hasn't confirmed and signed off on exact terms. One note before the demo: this recording uses synthetic data, and the Airwallex responses are mocked.",
+    "text": "Wiretight enforces one rule in code: no payout reaches bank details a human hasn't confirmed and signed off on exact terms.",
     "flipped": true,
     "sentences": [
       {
         "text": "Wiretight enforces one rule in code: no payout reaches bank details a human hasn't confirmed and signed off on exact terms.",
         "start": 79.64,
         "speech_duration": 9.166875,
-        "pause": 0.3000000000000007,
+        "pause": 0.7131250000000016,
         "clip": "v3-scene06-sentence00.mp3"
-      },
-      {
-        "text": "One note before the demo: this recording uses synthetic data, and the Airwallex responses are mocked.",
-        "start": 89.106875,
-        "speech_duration": 6.349708,
-        "pause": 0.703417,
-        "clip": "v3-scene06-sentence01.mp3"
       }
     ],
     "start": 79.64,
-    "duration": 16.52,
-    "frames": 413,
+    "duration": 9.88,
+    "frames": 247,
     "title": "The rule"
   },
   {
@@ -211,48 +204,48 @@
     "sentences": [
       {
         "text": "Here's Hall-den Robotics' payment run.",
-        "start": 96.16,
+        "start": 89.52,
         "speech_duration": 2.035833,
         "pause": 0.2999999999999998,
         "clip": "v3-scene07-sentence00.mp3"
       },
       {
         "text": "The goal: pay on time, once, to the real supplier, and never drop below the cash reserve.",
-        "start": 98.495833,
+        "start": 91.855833,
         "speech_duration": 6.507833,
         "pause": 0.2999999999999998,
         "clip": "v3-scene07-sentence01.mp3"
       },
       {
         "text": "Code builds the plan.",
-        "start": 105.303666,
+        "start": 98.663666,
         "speech_duration": 1.194667,
         "pause": 0.30000000000000004,
         "clip": "v3-scene07-sentence02.mp3"
       },
       {
         "text": "One bill is deferred to protect the reserve.",
-        "start": 106.798333,
+        "start": 100.158333,
         "speech_duration": 2.407042,
         "pause": 0.2999999999999998,
         "clip": "v3-scene07-sentence03.mp3"
       },
       {
         "text": "A duplicate invoice is hard-blocked.",
-        "start": 109.505375,
+        "start": 102.865375,
         "speech_duration": 2.096875,
         "pause": 0.2999999999999998,
         "clip": "v3-scene07-sentence04.mp3"
       },
       {
         "text": "The finance lead signs off the rest with a passkey, and each signature covers the exact payee, account, amount and currency.",
-        "start": 111.90225,
+        "start": 105.26225,
         "speech_duration": 8.618167,
         "pause": 0.7195830000000001,
         "clip": "v3-scene07-sentence05.mp3"
       }
     ],
-    "start": 96.16,
+    "start": 89.52,
     "duration": 25.08,
     "frames": 627,
     "title": "The run and the plan"
@@ -266,20 +259,20 @@
     "sentences": [
       {
         "text": "Then this arrives.",
-        "start": 121.24,
+        "start": 114.6,
         "speech_duration": 0.918042,
         "pause": 0.30000000000000004,
         "clip": "v3-scene08-sentence00.mp3"
       },
       {
         "text": "New account, urgent, from a domain one letter off.",
-        "start": 122.458042,
+        "start": 115.818042,
         "speech_duration": 3.557792,
         "pause": 0.7041659999999998,
         "clip": "v3-scene08-sentence01.mp3"
       }
     ],
-    "start": 121.24,
+    "start": 114.6,
     "duration": 5.48,
     "frames": 137,
     "title": "The email"
@@ -293,20 +286,20 @@
     "sentences": [
       {
         "text": "The new details are perfectly valid, and that's the point.",
-        "start": 126.72,
+        "start": 120.08,
         "speech_duration": 3.181917,
         "pause": 0.2999999999999998,
         "clip": "v3-scene09-sentence00.mp3"
       },
       {
         "text": "The sign-off was for the old account, so it's void.",
-        "start": 130.201917,
+        "start": 123.561917,
         "speech_duration": 2.802417,
         "pause": 0.7156660000000001,
         "clip": "v3-scene09-sentence01.mp3"
       }
     ],
-    "start": 126.72,
+    "start": 120.08,
     "duration": 7.0,
     "frames": 175,
     "title": "The lock fires (1 of 2)"
@@ -320,20 +313,20 @@
     "sentences": [
       {
         "text": "Only this payment is blocked.",
-        "start": 133.72,
+        "start": 127.08,
         "speech_duration": 1.41375,
         "pause": 0.30000000000000004,
         "clip": "v3-scene10-sentence00.mp3"
       },
       {
         "text": "Everything else still goes out, and the euro conversion for it is withdrawn before any money moves.",
-        "start": 135.43375,
+        "start": 128.79375,
         "speech_duration": 6.062708,
         "pause": 0.7035420000000006,
         "clip": "v3-scene10-sentence01.mp3"
       }
     ],
-    "start": 133.72,
+    "start": 127.08,
     "duration": 8.48,
     "frames": 212,
     "title": "Plan diff - surgical"
@@ -347,13 +340,13 @@
     "sentences": [
       {
         "text": "The person who raised the request can't confirm it.",
-        "start": 142.2,
+        "start": 135.56,
         "speech_duration": 2.562042,
         "pause": 0.7179579999999999,
         "clip": "v3-scene11-sentence00.mp3"
       }
     ],
-    "start": 142.2,
+    "start": 135.56,
     "duration": 3.28,
     "frames": 82,
     "title": "Rule 3 - requester cannot confirm"
@@ -367,20 +360,20 @@
     "sentences": [
       {
         "text": "Someone else calls the supplier on the number we already had, not the one in the email.",
-        "start": 145.48,
+        "start": 138.84,
         "speech_duration": 4.554667,
         "pause": 0.2999999999999998,
         "clip": "v3-scene12-sentence00.mp3"
       },
       {
         "text": "The supplier made no change.",
-        "start": 150.334667,
+        "start": 143.694667,
         "speech_duration": 1.565458,
         "pause": 0.7398750000000001,
         "clip": "v3-scene12-sentence01.mp3"
       }
     ],
-    "start": 145.48,
+    "start": 138.84,
     "duration": 7.16,
     "frames": 179,
     "title": "Priya calls the number on file"
@@ -394,13 +387,13 @@
     "sentences": [
       {
         "text": "The request is rejected, and the real invoice goes to the account on file, with two sign-offs because this supplier is now flagged.",
-        "start": 152.64,
+        "start": 146.0,
         "speech_duration": 8.309208,
         "pause": 0.7307919999999992,
         "clip": "v3-scene13-sentence00.mp3"
       }
     ],
-    "start": 152.64,
+    "start": 146.0,
     "duration": 9.04,
     "frames": 226,
     "title": "Request rejected, real invoice paid"
@@ -414,20 +407,20 @@
     "sentences": [
       {
         "text": "Then the payout comes back.",
-        "start": 161.68,
+        "start": 155.04,
         "speech_duration": 1.386042,
         "pause": 0.30000000000000004,
         "clip": "v3-scene14-sentence00.mp3"
       },
       {
         "text": "The supplier's account was closed.",
-        "start": 163.366042,
+        "start": 156.726042,
         "speech_duration": 1.699458,
         "pause": 0.7345000000000002,
         "clip": "v3-scene14-sentence01.mp3"
       }
     ],
-    "start": 161.68,
+    "start": 155.04,
     "duration": 4.12,
     "frames": 103,
     "title": "The payout comes back"
@@ -441,20 +434,20 @@
     "sentences": [
       {
         "text": "And the supplier sends a genuine new account.",
-        "start": 165.8,
+        "start": 159.16,
         "speech_duration": 2.340292,
         "pause": 0.2999999999999998,
         "clip": "v3-scene15-sentence00.mp3"
       },
       {
         "text": "That is exactly where redirection fraud hides, so recovery gets no shortcut.",
-        "start": 168.440292,
+        "start": 161.800292,
         "speech_duration": 5.186708,
         "pause": 0.7330000000000005,
         "clip": "v3-scene15-sentence01.mp3"
       }
     ],
-    "start": 165.8,
+    "start": 159.16,
     "duration": 8.56,
     "frames": 214,
     "title": "The genuine request (2 of 2)"
@@ -468,13 +461,13 @@
     "sentences": [
       {
         "text": "Same lock: a callback to the older contact, a cooling-off period, two sign-offs, and a capped first payment.",
-        "start": 174.36,
+        "start": 167.72,
         "speech_duration": 7.143708,
         "pause": 0.7362919999999997,
         "clip": "v3-scene16-sentence00.mp3"
       }
     ],
-    "start": 174.36,
+    "start": 167.72,
     "duration": 7.88,
     "frames": 197,
     "title": "Cooling-off, sign-offs, cap"
@@ -488,27 +481,27 @@
     "sentences": [
       {
         "text": "The first capped payment goes out.",
-        "start": 182.24,
+        "start": 175.6,
         "speech_duration": 1.62225,
         "pause": 0.30000000000000004,
         "clip": "v3-scene17-sentence00.mp3"
       },
       {
         "text": "Airwallex documents that a payout can still fail after PAID, so Wiretight keeps it provisional.",
-        "start": 184.16225,
+        "start": 177.52225,
         "speech_duration": 6.097375,
         "pause": 0.2999999999999998,
         "clip": "v3-scene17-sentence01.mp3"
       },
       {
         "text": "The rest waits until the first payment lands.",
-        "start": 190.559625,
+        "start": 183.919625,
         "speech_duration": 2.611208,
         "pause": 0.7091670000000003,
         "clip": "v3-scene17-sentence02.mp3"
       }
     ],
-    "start": 182.24,
+    "start": 175.6,
     "duration": 11.64,
     "frames": 291,
     "title": "Tranche 1 out, tranche 2 held"
@@ -522,20 +515,20 @@
     "sentences": [
       {
         "text": "Finally, proof.",
-        "start": 193.88,
+        "start": 187.24,
         "speech_duration": 0.922,
         "pause": 0.29999999999999993,
         "clip": "v3-scene18-sentence00.mp3"
       },
       {
         "text": "Every payout is tied out against the ledger, currency by currency, and any gap is shown, never plugged.",
-        "start": 195.102,
+        "start": 188.462,
         "speech_duration": 7.187833,
         "pause": 0.7101669999999993,
         "clip": "v3-scene18-sentence01.mp3"
       }
     ],
-    "start": 193.88,
+    "start": 187.24,
     "duration": 9.12,
     "frames": 228,
     "title": "Tie-out"
@@ -549,13 +542,13 @@
     "sentences": [
       {
         "text": "Then a journal export for the books.",
-        "start": 203.0,
+        "start": 196.36,
         "speech_duration": 1.868667,
         "pause": 0.731333,
         "clip": "v3-scene19-sentence00.mp3"
       }
     ],
-    "start": 203.0,
+    "start": 196.36,
     "duration": 2.6,
     "frames": 65,
     "title": "Status board"
@@ -569,27 +562,27 @@
     "sentences": [
       {
         "text": "Under the hood, the model only reads documents and raises flags.",
-        "start": 205.6,
+        "start": 198.96,
         "speech_duration": 4.320375,
         "pause": 0.2999999999999998,
         "clip": "v3-scene20-sentence00.mp3"
       },
       {
         "text": "Code decides the money.",
-        "start": 210.220375,
+        "start": 203.580375,
         "speech_duration": 1.191667,
         "pause": 0.30000000000000004,
         "clip": "v3-scene20-sentence01.mp3"
       },
       {
         "text": "Only the executor holds the Airwallex key, and it re-checks every signature before calling balances, FX quotes and conversions, beneficiaries, transfers and financial transactions.",
-        "start": 211.712042,
+        "start": 205.072042,
         "speech_duration": 12.834083,
         "pause": 0.7338749999999994,
         "clip": "v3-scene20-sentence02.mp3"
       }
     ],
-    "start": 205.6,
+    "start": 198.96,
     "duration": 19.68,
     "frames": 492,
     "title": "Architecture"
@@ -603,27 +596,27 @@
     "sentences": [
       {
         "text": "Teams start in shadow mode: Wiretight moves no money and reports what it would have caught.",
-        "start": 225.28,
+        "start": 218.64,
         "speech_duration": 5.312958,
         "pause": 0.2999999999999998,
         "clip": "v3-scene21-sentence00.mp3"
       },
       {
         "text": "Then one sign-off, then auto-pay earned per supplier.",
-        "start": 230.892958,
+        "start": 224.252958,
         "speech_duration": 3.484708,
         "pause": 0.2999999999999998,
         "clip": "v3-scene21-sentence01.mp3"
       },
       {
         "text": "Our pricing hypothesis is a monthly fee per company, later per client for bookkeeping firms.",
-        "start": 234.677666,
+        "start": 228.037666,
         "speech_duration": 6.031625,
         "pause": 0.7307090000000009,
         "clip": "v3-scene21-sentence02.mp3"
       }
     ],
-    "start": 225.28,
+    "start": 218.64,
     "duration": 16.16,
     "frames": 404,
     "title": "Business model"
@@ -637,20 +630,20 @@
     "sentences": [
       {
         "text": "Wiretight.",
-        "start": 241.44,
+        "start": 234.8,
         "speech_duration": 0.632625,
         "pause": 0.30000000000000004,
         "clip": "v3-scene22-sentence00.mp3"
       },
       {
         "text": "Supplier payouts that can't be quietly redirected.",
-        "start": 242.372625,
+        "start": 235.732625,
         "speech_duration": 3.070458,
         "pause": 2.516917,
         "clip": "v3-scene22-sentence01.mp3"
       }
     ],
-    "start": 241.44,
+    "start": 234.8,
     "duration": 6.52,
     "frames": 163,
     "title": "Close"

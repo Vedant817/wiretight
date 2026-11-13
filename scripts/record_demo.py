@@ -3,10 +3,11 @@
 Run make_voiceover.py, make_vo_track.py, then this script. Static demo pages are
 captured at 1920x1080 and encoded with exact frame counts: no browser startup,
 click latency or accumulated sleeps can shift a scene relative to its narration.
-The cold-open change is an explicit cue. All scenes retain the simulated badge.
+The cold-open change is an explicit cue. All scenes retain the disclosure footer.
 """
 
 import json
+import re
 import shutil
 
 from demo_timeline import OUT, TIMELINE
@@ -16,10 +17,10 @@ from playwright.sync_api import sync_playwright
 
 def main() -> None:
     timeline = json.loads(TIMELINE.read_text(encoding="utf-8"))
-    take = OUT / "raw-take-v3"
+    take = OUT / "raw-take-v4"
     take.mkdir(exist_ok=True)
     final = OUT / "wiretight-demo.mp4"
-    previous = OUT / "wiretight-demo-v2.mp4"
+    previous = OUT / "wiretight-demo-v3.mp4"
     if final.exists() and not previous.exists():
         shutil.copy2(final, previous)
     clips = []
@@ -33,8 +34,14 @@ def main() -> None:
         for scene in timeline:
             page.evaluate("s => { __wt.flip(s.flipped); __wt.go(s.frame); }", scene)
             page.wait_for_timeout(450)  # settle the cold-open CSS pop before capture
-            assert "SIMULATED DEMO DATA" in page.locator("#badge").inner_text()
-            assert page.locator("#badge").is_visible()
+            footer = ("Synthetic company data · Airwallex API responses simulated · "
+                      "cooling-off shortened for recording")
+            assert page.locator("#cap").inner_text() == footer
+            assert page.locator("#cap").is_visible()
+            assert page.locator("#badge").count() == 0
+            rendered_text = page.locator("body").inner_text()
+            (take / f"scene{scene['id']:02d}.txt").write_text(rendered_text, encoding="utf-8")
+            assert not re.search("demo|mock|simulated", rendered_text.replace(footer, ""), re.I)
             assert "placeholder" not in page.locator("body").inner_text().lower()
             assert page.evaluate("""() => [...document.querySelectorAll('#stage .frame *')]
                 .every(e => { const r=e.getBoundingClientRect();
@@ -81,7 +88,7 @@ def main() -> None:
         clips.append(f"file '{clip.as_posix()}'")
     filelist = take / "concat.txt"
     filelist.write_text("\n".join(clips), encoding="utf-8")
-    rendered = take / "wiretight-demo-v3.mp4"
+    rendered = take / "wiretight-demo-v4.mp4"
     run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(filelist),
          "-i", str(OUT / "wiretight-vo.wav"), "-map", "0:v", "-map", "1:a",
          "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart",

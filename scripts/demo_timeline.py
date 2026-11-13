@@ -40,6 +40,10 @@ def scenes() -> list[dict]:
     parts = re.split(r"^Segment (\d+) \(slot [^)]+\):\s*$", text, flags=re.MULTILINE)
     paragraphs = {int(parts[i]): " ".join(parts[i + 1].split())
                   for i in range(1, len(parts), 2)}
+    omitted = ("One note before the demo: this recording uses synthetic data, "
+               "and the Airwallex responses are mocked.")
+    assert omitted in paragraphs[3]
+    paragraphs[3] = paragraphs[3].replace(omitted, "").strip()
     result = []
     for i, (segment, frame, cue) in enumerate(CUES):
         paragraph = paragraphs[segment]

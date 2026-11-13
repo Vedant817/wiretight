@@ -1,8 +1,8 @@
 """The demo page: one HTML document that plays the whole scripted run.
 
 Twenty-two frames, each advanced by one click or keypress so the recording is
-deterministic. The badge is rendered on every frame, synthetic items carry
-their tags, and every frame is rendered from the payload the seed module
+deterministic. The disclosure footer is rendered on every frame,
+and every frame is rendered from the payload the seed module
 computed with the real core modules.
 """
 
@@ -14,7 +14,7 @@ _PAGE: Final[str] = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Wiretight - demo (simulated)</title>
+<title>Wiretight</title>
 <style>
 :root{
   --bg:#0e1116; --panel:#171c24; --panel2:#1d242f; --line:#2a3342;
@@ -104,10 +104,8 @@ li{margin:8px 0 8px 24px;font-size:20px}
 <body>
 <div id="app">
   <div id="chips"></div>
-  <div id="badge"></div>
   <div id="stage"></div>
-  <div id="cap">SIMULATED - company, people, emails, IBANs and amounts are synthetic.
-    No live Airwallex call was made.</div>
+  <div id="cap">Synthetic company data · Airwallex API responses simulated · cooling-off shortened for recording</div>
   <div id="nav">
     <span id="frameinfo"></span>
     <button id="next" class="btn">Next &gt;</button>
@@ -117,15 +115,14 @@ li{margin:8px 0 8px 24px;font-size:20px}
 <script>
 const P = JSON.parse(document.getElementById('payload').textContent);
 const CHIPS = ['GOAL','INITIAL PLAN','NEW INFO','REVISED DECISION','RESULT'];
-document.getElementById('badge').textContent = P.badge;
 
 const T = {
-  synth: (t)=>`<span class="tag">${t||'synthetic email'}</span>`,
-  mock: ()=>'<span class="tag mock">mocked API response</span>',
-  fix: (t)=>`<span class="tag fix">${t||'FIXTURE'}</span>`,
+  synth: ()=>'',
+  mock: ()=>'',
+  fix: ()=>'',
   red: (t)=>`<span class="tag red">${t}</span>`,
   grn: (t)=>`<span class="tag grn">${t}</span>`,
-  dt: ()=>'<span class="tag mock">demo timing</span>',
+  dt: ()=>'',
   ass: (t)=>`<span class="tag">${t||'ASSUMPTION'}</span>`,
 };
 const inc = P.incident, cb = P.callbacks, tr = P.transfers;
@@ -149,7 +146,7 @@ function payCards(filter){
 const FRAMES = [
  {chips:['RESULT'], title:'Cold open',
   html:()=>`<h1 id="cohead">Payment run - week of 9 Nov 2026</h1>
-  <div class="sub">Halden Robotics ${T.ass('synthetic company · synthetic amounts')}</div>
+  <div class="sub">Halden Robotics</div>
   <div class="cards">${payCards(()=>true)}</div>`},
 
  {chips:[], title:'Title',
@@ -188,10 +185,6 @@ const FRAMES = [
 
  {chips:[], title:'The rule',
   html:()=>`<div class="rulebar">No payout reaches bank details a human hasn't confirmed and signed off on exact terms.</div>
-  <div class="banner" style="margin-top:20px;background:#241012;border-color:#a34a44">
-    Before the demo: this recording uses <b>synthetic data</b>, and the Airwallex
-    responses are <b>mocked</b>. ${T.mock()} ${T.synth()}
-  </div>
   <div class="dim" style="margin-top:14px">Every decision you are about to see is computed by the real Wiretight modules - parsers, duplicate detection, fingerprints, callback rules, the ledger.</div>`},
 
  {chips:['GOAL','INITIAL PLAN'], title:'The run and the plan',
@@ -325,7 +318,7 @@ const FRAMES = [
   html:()=>`<div class="slide"><h2>Recovery payout ${T.mock()}</h2>
   <div class="steps" style="margin-top:20px">
    <div class="step"><div class="n">T1</div><span class="green"><b>EUR ${tr.tranche1.amount} · PAID · provisional</b></span>
-     <div class="dim" style="font-size:15px">${tr.tranche1.id}</div></div>
+     </div>
    <div class="step"><div class="n">T2</div><span class="amber"><b>EUR ${tr.tranche2.amount} · HELD</b></span>
      <div class="dim" style="font-size:15px">until tranche 1 is final</div></div>
   </div>
@@ -365,7 +358,7 @@ const FRAMES = [
     <div class="step"><div class="n">EXEC</div>executor<div class="dim" style="font-size:15px">the only holder of the Airwallex key · re-checks every signature</div></div>
   </div>
   <div class="banner" style="margin-top:16px">Airwallex API surface: Balances · FX rates, quotes &amp; conversions · Beneficiaries · Transfers · Simulation · Financial transactions</div>
-  <div class="footnote">In this recording the API strip is called by a mocked client ${T.mock()}; the executor itself is not yet built.</div></div>`},
+  <div class="footnote">The executor itself is not yet built.</div></div>`},
 
  {chips:[], title:'Business model',
   html:()=>`<div class="slide"><h2>Adoption path</h2>
@@ -385,7 +378,7 @@ const FRAMES = [
   <div class="center" style="margin-top:30px">
     <div class="big" style="font-size:40px;font-weight:800">Wiretight.</div>
     <div class="dim" style="font-size:24px">Supplier payouts that can't be quietly redirected.</div>
-    <div class="footnote">branch demo/video · all data synthetic</div>
+    <div class="footnote">all data synthetic</div>
   </div></div>`},
 ];
 
