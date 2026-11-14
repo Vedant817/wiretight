@@ -720,3 +720,184 @@ Keys were not printed, logged or committed. No claim of overall production readi
 Protocol references: [locked quotes](https://www.airwallex.com/docs/api/transactional_fx/quotes/create),
 [conversion request/lookup](https://www.airwallex.com/docs/api/transactional_fx/conversion/create),
 [Windows byte-range locking](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/locking?view=msvc-170).
+
+
+## 2026-11-14: operational UI, isolation and security verification
+
+This section supersedes the preceding stretch's implementation checklist. It does
+not supersede the explicit lack of live provider acceptance.
+
+- [x] Historical recording code and legacy signers moved under `tests/support/`; shared product modules contain no HMAC authority helpers.
+- [x] Static scan of every product Python module plus isolated imports of web, worker, executor, CLI and launcher reject transitive archive/test imports.
+- [x] Real operational UI wired to authenticated approval packets, server-time cooling deadlines, execution/payment states, durable jobs, tie-outs and exceptions.
+- [x] Durable run opening, planning, reconciliation and closing consume the real provider client; open-run recovery preserves its original committed baseline.
+- [x] Server-side approver authorization, CSRF checks and cancellation/state rechecks prevent direct API bypass and stale-tab approvals.
+- [x] Startup configuration refuses unsafe modes/origins/signing; structured logs redact secrets and omit private exception bodies, with real tests.
+- [x] Health/readiness report persisted worker/provider freshness and actual worker control checks; missing keys fail closed.
+- [x] One-command local launcher, secret separation and exact setup variables documented; separate-process HTTP and headed browser checks run.
+- [ ] Live sandbox contract and money acceptance: blocked on absent Airwallex sandbox credentials; explicitly skipped, never represented by test doubles as live proof.
+- [ ] Owner acceptance with genuine business/master records and physical passkeys: not performed by this agent. Chromium virtual authenticator checks are not physical-device proof.
+
+The current product supports manual evidence-backed intake/review, not optional
+PDF/LLM extraction or autonomous T0 payment approval. Historical spec-index tests
+remain in the suite with 36 declared skips. Their broad milestone descriptions are
+old compatibility bookkeeping; they are **not passed**, and this stretch does not
+claim complete original-spec certification. Current implementation evidence is in
+`test_operation_jobs.py`, `test_operations_security.py`, `test_product_readiness.py`,
+`test_runtime_boundary.py`, and the existing real executor/FX/reconciliation suites.
+No automated sanctions-provider acceptance or real bank-account ownership check is
+claimed. Those capabilities are not replaced by fabricated responses.
+
+Observed focused commands and final results:
+
+```text
+uv run pytest tests/unit/test_operations_security.py tests/unit/test_product_webhooks.py tests/unit/test_operation_jobs.py tests/unit/test_execution_requests.py tests/unit/test_refresh_worker.py -q --timeout=180
+40 passed in 218.06s (0:03:38)
+uv run pytest tests/unit/test_product_readiness.py -q --timeout=180
+8 passed in 3.28s
+uv run python -m tests.support.audit_runtime_imports
+PASS: 53 product modules scanned; 5 isolated entry imports; archive imports and legacy signers forbidden
+uv run python -m tests.support.http_smoke
+PASS: separate-process HTTP login, evidence, supplier, invoice, duplicate/CSRF, logout
+PASS: health remains unready; no provider, device or payment acceptance claimed
+uv run python -m tests.support.http_smoke --launcher
+PASS: separate-process HTTP login, evidence, supplier, invoice, duplicate/CSRF, logout
+PASS: health remains unready; no provider, device or payment acceptance claimed
+PASS: one-command launcher serves real HTTP with missing-key readiness; owned children stopped
+uv run python -m tests.support.browser_smoke --headed
+PASS: ops UI hides money controls; direct requests to every packet action are refused
+PASS: browser passkey registration and approval verify on the server; CSRF is refused
+PASS: genuine browser assertion from tab A is refused after tab B cancels
+PASS: cancellation updates the approval UI; mobile layout fits; no browser script errors
+```
+
+Browser preview reported `available:false`; a separate visible Playwright Chromium
+session was used and closed. Browser records are disposable fixtures strictly under
+test support; the service and WebAuthn verifier are real, with no provider calls.
+Desktop/mobile screenshots and the browser result are local, ignored artifacts at
+`output/playwright/`. The test browser/server were closed after verification.
+
+Defects found and repaired during this stretch: policy role checking occurred after
+policy access; it now runs first. Settings are resolved once at startup, so webhook
+secret-removal testing now restarts the application rather than assuming hot reload.
+A Windows virtualenv launcher can leave a Python child behind; owned process trees
+are now stopped, preventing orphan workers and test database handles. The first
+browser test's cleanup failed on an open database; the final headed rerun above
+returned exit 0. Earlier failing attempts are not counted as passing checks.
+
+Explicit live guard:
+
+```text
+uv run python -c "import os, pytest; os.environ['CONFIRM_LIVE']='1'; raise SystemExit(pytest.main(['tests/live/test_airwallex_read.py','-q','-rs']))"
+SKIPPED [1] tests\live\test_airwallex_read.py:21: AWX_CLIENT_ID and AWX_API_KEY are not configured
+1 skipped in 1.28s
+```
+
+Vedant must provide his existing sandbox credentials and webhook signing secret
+privately, provision the real roster/entity/reserve, register passkeys, obtain two
+policy signatures, pin the reviewed roster, and supply genuine bank/contact/invoice
+evidence before live acceptance. No signup or credential entry was attempted.
+No keys printed/committed, no external messages, push, PR, publication, or root
+`demo/` media changes. Final verification output is recorded below.
+
+
+The first full run after the UI/worker changes finished with:
+`1 failed, 926 passed, 37 skipped in 561.75s (0:09:21)`.
+The failed policy HTTP fixture changed APP_POLICY_PATH after startup. The fixture
+now establishes its path before creating the app, preserving startup-only config.
+The corrected scenario command and observed result:
+
+```text
+uv run pytest tests/unit/test_real_decisions.py::test_real_policy_callback_and_halt_http_flows -q --timeout=180
+1 passed in 8.85s
+uv run pytest tests/unit/test_operation_jobs.py -q --timeout=180
+4 passed in 31.25s
+```
+
+The latter run includes successful clean run closure, durable baseline recovery,
+planning during cooling/revocation refusal, and malformed queued payload refusal.
+These focused checks do not replace the final full-suite rerun.
+
+
+### Final full-suite rerun, exact captured output
+
+The actual PowerShell command also preserved stdout/stderr to a local ignored artifact:
+
+```powershell
+uv run pytest tests -q --timeout=180 2>&1 | Tee-Object -FilePath output/playwright/final-pytest.txt
+exit $LASTEXITCODE
+```
+
+Exit code: 0. Exact test output:
+
+```text
+........................................................................ [  7%]
+........................................................................ [ 14%]
+........................................................................ [ 22%]
+........................................................................ [ 29%]
+..................ss.sssss.ssssss.sss.s.ssssssss.sssssssssss............ [ 37%]
+...................................s.................................... [ 44%]
+........................................................................ [ 52%]
+........................................................................ [ 59%]
+........................................................................ [ 67%]
+........................................................................ [ 74%]
+........................................................................ [ 82%]
+........................................................................ [ 89%]
+........................................................................ [ 96%]
+.............................                                            [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-01 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-02 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-04 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-04b belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-04c belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-05 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-06 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-08 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-09 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-10 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-10b belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-11 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-12 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-14 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-15 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-16 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-18 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-20 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-21 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-21b belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-22 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-23 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-24 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-25 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-26 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-28 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-29 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-30 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-31 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-32 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-33 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-34 belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-R4a belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-R4b belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-R4c belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\acceptance\test_compliance_index.py:205: T-R4d belongs to a milestone not built yet (see docs/PROGRESS.md). �10.1 rule 8: a skip needs a README known-gaps line before the freeze.
+SKIPPED [1] tests\live\test_airwallex_read.py:19: Read-only sandbox test requires CONFIRM_LIVE=1
+928 passed, 37 skipped in 560.91s (0:09:20)
+```
+
+Final lint/type checks (exit 0):
+
+```text
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+110 files already formatted
+uv run mypy app
+Success: no issues found in 53 source files
+```
+
+`git diff --check` returned exit 0. Comparing against the starting commit `a938d47`,
+`git diff a938d47 --name-only -- demo` produced no paths. The 37 skips comprise
+36 historical spec-index placeholders and one unconfirmed live test; the separate
+confirmed live guard above reported absent credentials. No skip is counted as a pass.

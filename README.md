@@ -9,49 +9,64 @@ Airwallex **sandbox**. Code, never the model, decides money. Every sign-off is a
 signature over a hash of the exact terms. Any new or changed bank details go through a lock:
 a signed operations callback to an older contact, a cooling-off period, two sign-offs, and a
 capped first payment. `PAID` is provisional. Reconciliation against Airwallex financial
-transactions is still being built; the application is not ready for payment operations.
+transactions is implemented against the real sandbox client. Live provider acceptance
+has not been performed; this is not a claim of production payment readiness.
 
 ---
 
-## ⚠ Status: under construction
+## Local setup and current status
 
-**Production assignment status (14 November 2026): incomplete.** The new product
-service includes readiness, webhooks, authenticated operator sessions and passkey
-approval APIs, plus signed policy, callback and halt-clear decisions. A guarded
-payout dispatcher and authenticated supplier/invoice/evidence intake now exist with
-offline tests. The worker handles approved payout/FX jobs, polling and durable
-recovery; full run/planning/reconciliation orchestration and operational UI remain
-unfinished. See
-[the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
-The real sandbox HTTP client has offline fault tests; it has no live acceptance yet.
-The 36 skipped compliance-index placeholders remain known acceptance gaps; passing
-new focused tests does not make those broader product milestones complete.
+The operational desk includes the approval queue, passkey approval, server-enforced
+cooling, execution requests/status, run planning and reconciliation exceptions.
+All provider observations and money requests go through the genuine sandbox client.
+Test fixtures and historical recording tools live under `tests/support/`.
+See [the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
+Known verification gaps: the original spec index still has 36 declared skipped
+placeholders; real sandbox and physical-device acceptance are not established.
+Passing the current focused tests does not certify every historical spec milestone.
 
-From a fresh checkout with Python 3.12 and uv installed, run this single command
-to install pinned dependencies and start the diagnostic service on localhost:
+With Python 3.12 and uv installed, install pinned dependencies and start both isolated
+processes with one command:
 
 ```powershell
-uv run --frozen --extra dev uvicorn app.api.main:app --host 127.0.0.1 --port 8000 --no-access-log
+uv run --frozen --extra dev python -m app.local
 ```
 
-Open `http://127.0.0.1:8000/`. `/health` and `/ready` return HTTP 503 with setup and
-implementation blockers. This command does not create companies, fund accounts,
-simulate transactions or enable money movement.
+Open `http://localhost:8000/`. The launcher removes Airwallex credentials from the
+web process and the LLM/webhook secrets from the worker's environment. Ctrl+C stops
+the owned children, including Windows virtualenv launcher descendants. On Windows,
+process-tree termination is abrupt; committed money intents remain recoverable.
 
-Current service variables (set in its process environment): `AWX_ENV=sandbox`,
-`AWX_BASE_URL=https://api.sandbox.airwallex.com`, `AWX_MODE=live`,
-`APP_DB_PATH` (optional; defaults to `var/app.sqlite`), and `AWX_WEBHOOK_SECRET`
-(required only for receiving signed webhooks). Keep Airwallex API credentials out
-of the web process. Worker/client credentials are `AWX_CLIENT_ID` and `AWX_API_KEY`,
-read by `WorkerSettings` from environment or a gitignored `.env`; optional
-`AWX_LOGIN_AS`, `AWX_API_VERSION`, `AWX_HTTP_TIMEOUT_S` configure the client.
-The sandbox worker runs with `uv run python -m app.workers.service`
-(or `--once` for one iteration). It consumes REFRESH, QUOTE and EXECUTE requests,
-persists actual balance observations, polls existing payouts/conversions and executes
-only through server-side human-approval, cooling, funding, reserve and drift guards.
-Missing keys cause exit 2 and a setup-error heartbeat. Failed reads preserve older
-observations. Complete operational readiness remains false.
-No production-host mode is supported.
+Use environment variables or a **gitignored** `.env`. Required for provider operation:
+
+| Variable | Value or purpose |
+|---|---|
+| `AWX_CLIENT_ID` | Your existing Airwallex sandbox client ID; worker only |
+| `AWX_API_KEY` | Your existing sandbox API key; worker only |
+| `AWX_WEBHOOK_SECRET` | Your sandbox webhook signing secret; web only |
+
+The following defaults require no configuration for localhost:
+`AWX_ENV=sandbox`, `AWX_BASE_URL=https://api.sandbox.airwallex.com`, `AWX_MODE=live`,
+`SIGNING_MODE=webauthn`, `APP_HOST=127.0.0.1`, `APP_PORT=8000`,
+`WEBAUTHN_RP_ID=localhost`, `WEBAUTHN_ORIGIN=http://localhost:8000`,
+`APP_DB_PATH=var/app.sqlite`, `APP_POLICY_PATH=policy.yaml`, `APP_KEY_DIR=var/keys`,
+`APP_HALT_FILE=var/HALT`, `APP_AUDIT_CHECKPOINT_DIR=var/audit-checkpoints`,
+`POLL_INTERVAL_S=2`, `AWX_HTTP_TIMEOUT_S=20`, `LOG_LEVEL=INFO`.
+Optional provider headers: `AWX_LOGIN_AS`, `AWX_API_VERSION`.
+If changing the origin, set a matching RP ID and use HTTPS outside localhost.
+Recording modes, HMAC signing and shortened cooling configuration are refused.
+
+Without keys the worker exits 2 and records a setup error without contacting the
+provider. The UI remains available; `/health` and `/ready` return 503 with the real
+missing dependency state. Readiness requires a fresh worker heartbeat, a fresh
+provider balance observation, trusted operator keys, signed policy, no halt, and
+successful reconciliation checks. It is never a live-acceptance certificate.
+
+To run only the web service, remove Airwallex credentials from its process environment:
+`uv run uvicorn app.api.main:app --host 127.0.0.1 --port 8000 --no-access-log`.
+The separate worker is `uv run python -m app.workers.service` (`--once` for one cycle).
+It consumes REFRESH, PLAN, QUOTE and EXECUTE jobs, watches transfers/conversions,
+and reconciles open runs. A crash never authorizes a second blind money POST.
 
 Run offline checks with `uv run --extra dev pytest tests -q --timeout=180`,
 `uv run ruff check app tests`, `uv run ruff format --check app tests` and
@@ -66,24 +81,26 @@ ops operator for the two-person approval workflow. There are no default accounts
 `operator-disable --email ...` immediately revokes an operator's sessions and approval
 eligibility. Both commands accept `--db`; otherwise they use `APP_DB_PATH`.
 Passkey APIs use `WEBAUTHN_RP_ID` (default `localhost`) and `WEBAUTHN_ORIGIN`
-(default `http://localhost:8000`); HTTPS is required outside localhost. Operator UI
-and first-run enrollment screens are still pending. Password login alone cannot
+(default `http://localhost:8000`); HTTPS is required outside localhost. The account
+section offers passkey registration and policy review/signing. Password login alone cannot
 approve a payment: sign-off requires a user-verified passkey assertion bound to the
 exact packet hash. No HMAC or test signer is accepted by these product endpoints.
 Runtime policy approval requires two passkeys and an exact match to the configured
 entity and enabled roster. Callback confirmation records the full 72-hour minimum
 cooling window. Clearing a database halt needs two fresh sign-offs; a local `HALT`
-file remains an independent stop. First-run business/policy setup and the operator
-screens are still under construction, so these APIs do not yet form a usable
-payment application.
+file remains an independent stop. The operations desk exposes these approvals and
+execution requests; the worker rechecks all authoritative controls.
 
 After provisioning the roster, `init-installation --legal-name ... --reserve-usd ...`
 creates the business, policy and private local keys using the values you supply.
 After real passkey enrollment and policy signing, `trust-operators` pins the enrolled
 roster outside SQLite. Use `uv run python -m app.cli <command> --help` for paths and
-arguments. Never put a password or Airwallex key in command arguments. The full-app
-launcher and intake/planning screens are still pending; these setup commands alone
-do not make the app usable for payments.
+arguments. Never put a password or Airwallex key in command arguments. Enroll each
+operator in the UI, have two independent approvers sign the policy, then pin the
+reviewed roster with `trust-operators`. Provision at least three approvers and an
+independent ops callback recorder. These genuine human setup steps are required;
+the launcher creates no business records. Supplier/evidence intake uses the
+authenticated API below; planning, approvals and operational follow-up use the UI.
 
 Authenticated intake routes are documented in [the intake guide](docs/INTAKE.md).
 New contacts get the current time. To import an existing supplier-master contact,

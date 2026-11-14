@@ -137,3 +137,55 @@ Observed output: `PASS: 49 product modules scanned; 4 isolated entry imports; ar
 Targeted legacy/control regression command:
 `uv run pytest tests/acceptance/test_b_policy_floor.py tests/acceptance/test_b_killswitch.py tests/unit/test_oob.py tests/unit/test_singlewriter.py tests/unit/test_real_decisions.py -q --timeout=180`
 Observed final line: `289 passed in 104.74s (0:01:44)`.
+
+
+## 2026-11-14 operational desk: current product-path scan
+
+Supersedes the earlier numbered hit inventory, which described the previous tree.
+Command: `rg -n -i 'demo|dummy|mock|fake|sample|hardcod|seed|notimplemented|TODO|simulat' app`.
+Every remaining match is listed here. None supplies business data, approvals,
+provider responses, shortened timing or a recording transport.
+
+| Current location | Disposition |
+|---|---|
+| `app/money.py:322` | Python arithmetic protocol `NotImplemented` sentinel for incompatible operands; not an unimplemented money operation. |
+| `app/config.py:282` | Explicit refusal of recording/timing flags, including values from `.env`; no enabling branch. |
+| `app/workers/service.py:145-146` | Redundant refusal of recording/timing environment flags. |
+| `app/core/runtime_policy.py:27-28` | Rejects the historical timing key; never shortens the signed 72-hour floor. |
+| `app/workers/executor.py:5` | Documentation of the absence of a simulator or test signer. |
+| `app/integrations/airwallex.py:1` | Documentation of the real HTTP-only boundary. |
+| `app/core/statemachine.py:187` | Documents a sandbox provider cancellation reason; this module interprets observed status, and never calls a simulation API. |
+
+The recording package, HMAC policy/halt helpers, raw callback fixtures and obsolete
+PID lock remain **only** at the `tests/support/` paths listed in the preceding
+section. Shared product policy/halt/OOB modules no longer define their legacy
+signers. The runtime boundary check now includes the one-command launcher as a
+fifth isolated entry point, alongside web, worker, executor and CLI. Its negative
+import finder rejects `tests`, `scripts`, `app.demo` and `unittest.mock` at every
+transitive import, and the static scan covers all Python files under `app/`.
+
+Actual policy floor values, allowed corridor/currency codes, risk limits, calendar
+rules, zero audit-chain genesis hash, and UUID idempotency namespaces are controls
+or protocol constants. Business identity, account identifiers, invoice amounts,
+provider states and balances come from operator input, persistence or actual HTTP.
+The browser verification database and virtual authenticator live strictly in
+`tests/support/browser_fixture.py` and `tests/support/browser_smoke.py`.
+
+Operational changes: `/api/operations` exposes persisted terms, signatures,
+server time, cooling deadlines, execution/jobs and tie-outs; authenticated approvers
+request durable OPEN_RUN/PLAN_PAYMENT/RECONCILE_RUN/CLOSE_RUN jobs. The worker reads
+real provider baselines and risk rates and reconciles open runs. Planning and job
+completion commit together; opening-run jobs reuse their committed baseline after
+restart. Reconciliation residuals now also create exception rows.
+
+Cancellation voids unclaimed packets under a SQLite write transaction, consumes
+outstanding ceremonies, and refuses packets with execution intents/consumption.
+The passkey finish and execution claim independently re-read current state.
+The real browser test holds a genuine Chromium assertion in tab A, cancels through
+tab B, and observes HTTP 409 on the delayed finish. Ops-role access and missing
+CSRF tokens are rejected by the server, independently of UI visibility.
+
+Airwallex protocol wording was rechecked against the official
+[transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses)
+and [failure handling](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/handle-failed-transfers)
+documentation. Documentation lookup is not live sandbox acceptance.
