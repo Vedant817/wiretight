@@ -37,7 +37,7 @@ class SigningError(RuntimeError):
     pass
 
 
-def packet(conn: db.Connection, packet_id: str) -> Row:
+def packet(conn: db.Connection, packet_id: str, *, allow_consumed: bool = False) -> Row:
     row: Row | None = conn.execute(
         "SELECT * FROM approval_packet WHERE id=?", (packet_id,)
     ).fetchone()
@@ -50,7 +50,15 @@ def packet(conn: db.Connection, packet_id: str) -> Row:
     raise_on_float(payload)
     if audit.canonical_json(payload) != encoded:
         raise SigningError("Approval packet is not canonical")
-    if row["expires_at"] <= utcnow().isoformat() or row["state"] not in {"OPEN", "APPROVED"}:
+    states = {"OPEN", "APPROVED"}
+    if (
+        allow_consumed
+        and conn.execute(
+            "SELECT 1 FROM approval_consumption WHERE packet_id=?", (packet_id,)
+        ).fetchone()
+    ):
+        states.add("CONSUMED")
+    if row["expires_at"] <= utcnow().isoformat() or row["state"] not in states:
         raise SigningError("Approval packet expired or unavailable")
     if row["required_approvers"] not in {1, 2} or row["tier"] == "T0":
         raise SigningError("Every money action needs human approval")
@@ -325,9 +333,11 @@ class Passkeys:
                 (utcnow().isoformat(), ceremony_id),
             )
 
-    def verify_stored(self, conn: db.Connection, packet_id: str) -> None:
+    def verify_stored(
+        self, conn: db.Connection, packet_id: str, *, allow_consumed: bool = False
+    ) -> None:
         """Executor checks actual stored assertions; APPROVED is never evidence."""
-        row = packet(conn, packet_id)
+        row = packet(conn, packet_id, allow_consumed=allow_consumed)
         signatures = conn.execute(
             "SELECT * FROM approval_signature WHERE packet_id=?", (packet_id,)
         ).fetchall()

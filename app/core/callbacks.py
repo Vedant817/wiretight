@@ -112,6 +112,7 @@ def build_record(
     record.update(
         kind="CALLBACK",
         change_request_id=request_id,
+        change_request_received_at=request["received_at"],
         recorded_by=session.user_id,
         vendor_id=request["vendor_id"],
         proposed_fingerprint=request["proposed_fingerprint"],

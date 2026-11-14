@@ -45,7 +45,7 @@ from types import TracebackType
 from typing import Final
 
 #: Incremented whenever ``schema.sql`` gains a migration step.
-SCHEMA_VERSION: Final[int] = 3
+SCHEMA_VERSION: Final[int] = 4
 
 _SCHEMA_PATH: Final[Path] = Path(__file__).with_name("schema.sql")
 
@@ -333,7 +333,7 @@ def _migrate_locked(conn: Connection) -> None:
             )
         return
 
-    if current not in {0, 1, 2}:
+    if current not in {0, 1, 2, 3}:
         raise RuntimeError(
             f"schema is at version {current}, which this build cannot migrate from. "
             "Intermediate migrations must ship before the version they produce."
@@ -355,6 +355,8 @@ def _migrate_locked(conn: Connection) -> None:
             scripts.append(_SCHEMA_PATH.with_name("migration_002.sql").read_text(encoding="utf-8"))
         if current < 3:
             scripts.append(_SCHEMA_PATH.with_name("migration_003.sql").read_text(encoding="utf-8"))
+        if current < 4:
+            scripts.append(_SCHEMA_PATH.with_name("migration_004.sql").read_text(encoding="utf-8"))
         # executescript does NOT create a transaction automatically. Version
         # changes and DDL must commit together, including on a fresh database.
         script = "BEGIN IMMEDIATE;\n" + "\n".join(scripts)
