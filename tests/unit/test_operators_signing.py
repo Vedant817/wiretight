@@ -116,6 +116,7 @@ def test_failed_login_rate_limit_survives_connections(domain):
         )
 
 
+@pytest.mark.compliance("T-06")
 def test_real_passkey_two_person_approval_and_reverification(domain):
     database, _ = domain
     conn = database.connection()
@@ -136,6 +137,7 @@ def test_real_passkey_two_person_approval_and_reverification(domain):
     assert audit.verify(conn).ok
 
 
+@pytest.mark.compliance("T-11")
 def test_requester_and_ops_cannot_approve(domain):
     database, _ = domain
     conn = database.connection()
@@ -166,6 +168,8 @@ def test_passkey_failures_never_approve(domain, bad):
     assert conn.execute("SELECT COUNT(*) FROM approval_signature").fetchone()[0] == 0
 
 
+@pytest.mark.compliance("T-06")
+@pytest.mark.compliance("T-11")
 def test_concurrent_double_click_records_one_signature(domain):
     database, _ = domain
     passkeys = signing.Passkeys(rp_id="localhost", origin="http://localhost:8000")
@@ -348,3 +352,29 @@ def test_executor_reverification_detects_stored_assertion_tampering(domain):
 
 # Reuse the localhost-only TestClient fixture; application code is never patched.
 from tests.unit.test_product_webhooks import service  # noqa: E402,F401
+
+
+@pytest.mark.compliance("T-34")
+def test_two_enabled_approvers_cannot_begin_t2_signoff(domain):
+    database, _ = domain
+    conn = database.connection()
+    passkeys = signing.Passkeys(rp_id="localhost", origin="http://localhost:8000")
+    actor, _ = registered(conn, 1, passkeys)
+    operators.disable(conn, "operator2@example.test")
+    with pytest.raises(signing.SigningError, match="at least three"):
+        passkeys.begin(conn, actor, packet_id="p")
+    assert conn.execute("SELECT COUNT(*) FROM approval_signature").fetchone()[0] == 0
+
+
+@pytest.mark.compliance("T-11")
+def test_duplicate_roster_email_is_not_a_second_human(domain):
+    database, _ = domain
+    with pytest.raises(db.sqlite3.IntegrityError):
+        operators.provision(
+            database.connection(),
+            name="Duplicate",
+            email=" OPERATOR1@EXAMPLE.TEST ",
+            role="approver",
+            password="another-test-password-long",
+        )
+    assert database.connection().execute("SELECT COUNT(*) FROM user").fetchone()[0] == 4

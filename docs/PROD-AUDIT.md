@@ -189,3 +189,92 @@ Airwallex protocol wording was rechecked against the official
 [transfer statuses](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses)
 and [failure handling](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/handle-failed-transfers)
 documentation. Documentation lookup is not live sandbox acceptance.
+
+
+## Historical placeholder dispositions (next stretch)
+
+All 36 not-written skips were removed. Deleted cases are not passes. Applicable
+cases are registered on real tests; the index now checks actual collected test
+functions rather than matching marker-looking strings in comments.
+
+| ID | Disposition and reason / real behavior test |
+|---|---|
+| T-01 | Deleted: optional PDF/OCR hidden-text extraction is absent. Evidence uploads are stored as attachments and never parsed into payment terms. |
+| T-02 | Replaced placeholder with `tests/unit/test_execution_adversaries.py::test_uploaded_memo_claiming_phone_confirmation_cannot_create_callback` |
+| T-04 | Replaced placeholder with `tests/unit/test_real_executor.py::test_bank_terms_changed_after_signing_refuses_all_mutations` |
+| T-04b | Replaced placeholder with `tests/unit/test_execution_adversaries.py::test_corrupt_provider_beneficiary_last_four_prevents_payout` |
+| T-04c | Replaced placeholder with `tests/unit/test_real_executor.py::test_approved_payment_executes_once_and_uses_real_boundaries` |
+| T-05 | Deleted: the specified 3x1900 T0 automatic-payment scenario is incompatible with mandatory human approval. Active velocity and daily caps are tested under T-08 and T-R4b. |
+| T-06 | Replaced placeholder with `tests/unit/test_operators_signing.py::test_real_passkey_two_person_approval_and_reverification`, `tests/unit/test_operators_signing.py::test_concurrent_double_click_records_one_signature` |
+| T-08 | Replaced placeholder with `tests/unit/test_execution_adversaries.py::test_provider_velocity_is_partitioned_at_ist_midnight` |
+| T-09 | Replaced placeholder with `tests/unit/test_airwallex.py::test_redirect_is_never_followed_and_ambient_proxy_is_not_used`, `tests/unit/test_config_separation.py::test_sandbox_guard_is_exact_on_both_variables` |
+| T-10 | Replaced placeholder with `tests/unit/test_real_decisions.py::test_callback_cannot_use_recent_or_requester_contact` |
+| T-10b | Replaced placeholder with `tests/unit/test_execution_adversaries.py::test_unsigned_callback_row_never_authorizes_execution` |
+| T-11 | Replaced placeholder with `tests/unit/test_operators_signing.py::test_requester_and_ops_cannot_approve`, `tests/unit/test_operators_signing.py::test_concurrent_double_click_records_one_signature`, `tests/unit/test_operators_signing.py::test_duplicate_roster_email_is_not_a_second_human` |
+| T-12 | Replaced placeholder with `tests/unit/test_fx_execution.py::test_quote_expiry_requires_new_quote_and_new_human_approval`, `tests/unit/test_fx_execution.py::test_rate_amount_or_bank_drift_blocks_conversion` |
+| T-14 | Deleted: bank-account ownership verification API is not integrated or claimed; beneficiary schema validation and signed manual review do not simulate FULL_MATCH/CANNOT_VERIFY. |
+| T-15 | Replaced placeholder with `tests/unit/test_worker_process_crash.py::test_real_worker_process_death_then_restart_never_reposts`, `tests/unit/test_worker_process_crash.py::test_kill_after_durable_claim_before_money_post_recovers_lookup_only` |
+| T-16 | Replaced placeholder with `tests/unit/test_execution_adversaries.py::test_ambiguous_payout_cannot_be_replanned_in_another_run` |
+| T-18 | Deleted: no LLM service is in the product path, so a fictional LLM outage is not an application test. |
+| T-20 | Deleted: multi-item shared FX funding is unsupported; each conversion binds to one human-approved payment. Actual quote/amount binding remains tested. |
+| T-21 | Deleted: PDF onboarding extraction does not exist. Manual bank changes cannot supply their own callback phone; that real boundary is tested under T-10. |
+| T-21b | Replaced placeholder with `tests/unit/test_execution_adversaries.py::test_webhook_claims_do_not_override_provider_get_and_forgery_is_refused` |
+| T-22 | Deleted: sub-dollar history enabling T0 applies to removed automatic approval. Current payments require humans regardless of history. |
+| T-23 | Replaced placeholder with `tests/unit/test_real_executor.py::test_approved_status_without_valid_signature_cannot_move_money` |
+| T-24 | Replaced placeholder with `tests/unit/test_real_executor.py::test_insufficient_balance_refuses_before_any_mutation` |
+| T-25 | Replaced placeholder with `tests/unit/test_fx_execution.py::test_conversion_lost_response_is_resolved_without_second_post` |
+| T-26 | Deleted: instructions in a document are never executed against other invoices; optional document extraction is absent. |
+| T-28 | Replaced placeholder with `tests/unit/test_execution_adversaries.py::test_signed_callback_first_payment_is_capped_and_remainder_held` |
+| T-29 | Replaced placeholder with `tests/unit/test_real_decisions.py::test_callback_cannot_use_recent_or_requester_contact` |
+| T-30 | Deleted: no LLM-extracted bank identifier competes with the parser in the supported manual intake path. |
+| T-31 | Replaced placeholder with `tests/unit/test_execution_adversaries.py::test_compliance_failure_trips_halt_and_holds_the_destination` |
+| T-32 | Replaced placeholder with `tests/unit/test_fx_execution.py::test_quote_expiry_requires_new_quote_and_new_human_approval` |
+| T-33 | Deleted: runtime seeding and automatic T0/T1 split were removed. Archive isolation is tested under T-R4a; actual signed caps/tranches under T-28. |
+| T-34 | Replaced placeholder with `tests/unit/test_operators_signing.py::test_two_enabled_approvers_cannot_begin_t2_signoff` |
+| T-R4a | Replaced placeholder with `tests/unit/test_runtime_boundary.py::test_product_entrypoints_cannot_import_test_or_historical_authority` |
+| T-R4b | Replaced placeholder with `tests/unit/test_real_executor.py::test_provider_history_counts_toward_caps_even_when_not_in_local_ledger` |
+| T-R4c | Deleted: recording-caption vocabulary freeze is not application behavior. Root demo files remain untouched; product-source dispositions are recorded in this audit. |
+| T-R4d | Deleted: the weaker allow-fraud-with-T2 expectation does not apply. Flagged obligations are blocked outright by build_payment, including for two approvers. |
+
+
+### Current source scan and adversarial defect
+
+Command: `rg -n -i 'hardcoded|demo|dummy|stub|TODO|fixture|seed|mock|fake|sample|simulat' app`.
+Current hits (each retained for the reason shown):
+
+| File:line | Reason |
+|---|---|
+| app/config.py:282 | Rejects historical recording/timing environment settings, including `.env`; no enabling branch. |
+| app/workers/service.py:145-146 | Redundant recording/timing refusal before constructing the genuine provider client. |
+| app/core/runtime_policy.py:27-28 | Rejects the obsolete policy timing key. |
+| app/integrations/airwallex.py:1 | Documentation explicitly excluding simulation and fixture loading. |
+| app/workers/executor.py:5 | Documentation explicitly excluding a fixture loader/test signer. |
+| app/core/statemachine.py:187 | Explains a real sandbox cancellation reason string; no status simulation endpoint is called. |
+
+There are no stub/TODO/fake business-data implementations in the product tree.
+Money limits, policy floors, protocol/status/currency codes, default localhost port,
+and audit/idempotency constants remain real controls rather than fixture values.
+
+The new compliance-failure executor test reproduced a genuine defect: a validated
+`TM_SUSPENDED` provider failure suspended the destination but did not trip halt.
+`app/core/transfer_tracking.py::observe` now trips the persistent global halt,
+sets the bank and obligation to compliance hold, and voids unused payment packets
+for that bank version in the same transaction. Polling/reconciliation still run
+while halted, and clearing halt alone does not remove the bank's compliance hold.
+The first-failure fields remain preserved and raw observations remain encrypted.
+
+`tests/unit/test_execution_adversaries.py` adds real SQL/crypto/executor tests for
+unsigned callback evidence, tampered cooling deadline, provider clock skew, corrupt
+beneficiary last-four, IST day partitioning, ambiguous cross-run replanning, memo
+uploads with false phone-confirmation claims, and webhook hints contradicting GET.
+HTTP-boundary barriers deterministically interleave cancel and execution in both
+orders; a halt or policy replacement (including a newly signed policy) after claim
+prevents the money POST. No production function is replaced by a test double.
+
+`tests/support/money_crash_worker.py --pause-before-call` stops at the first HTTP
+lookup after the TRANSFER intent has committed, before a payout POST. Its parent
+test kills the actual owned worker process tree, restarts, and verifies one
+consumption with zero payout POSTs. Recovery remains AMBIGUOUS/lookup-only when
+there is no authoritative provider result; it does not claim the absent response
+proved failure. Existing lost-response tests verify the same request ID resolves
+one accepted payout without a second POST; actual concurrent-worker tests remain.

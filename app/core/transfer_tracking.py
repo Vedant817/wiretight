@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import uuid4
 
-from app.core import audit, db, statemachine
+from app.core import audit, db, killswitch, statemachine
 from app.core.bank_details import DetailVault
 from app.core.operators import utcnow
 
@@ -28,6 +28,10 @@ def observe(conn: db.Connection, vault: DetailVault, data: dict[str, Any]) -> No
         )
         state = statemachine.wt_next(row["wt_state"], awx_status=folded.awx_status)
         failed = data["status"] in {"FAILED", "CANCELLED"}
+        compliance = failed and any(
+            killswitch.is_compliance_failure(value)
+            for value in (data.get("failure_type"), folded.failure_type)
+        )
         if failed and row["wt_state"] in {"FINAL", "PRESUMED_SETTLED", "REOPENED"}:
             state = "REOPENED"
         now = utcnow().isoformat()
@@ -88,6 +92,25 @@ def observe(conn: db.Connection, vault: DetailVault, data: dict[str, Any]) -> No
                 "UPDATE payee_version SET status=CASE WHEN status='COMPLIANCE_HOLD' THEN status "
                 "ELSE 'SUSPENDED' END,updated_at=? WHERE id=?",
                 (now, row["payee_version_id"]),
+            )
+        if compliance:
+            # A provider restriction cannot be cleared by a generic retry or a
+            # local halt clear. Keep the destination blocked independently.
+            conn.execute(
+                "UPDATE payee_version SET status='COMPLIANCE_HOLD',updated_at=? WHERE id=?",
+                (now, row["payee_version_id"]),
+            )
+            conn.execute(
+                "UPDATE obligation SET state='HOLD: COMPLIANCE_HOLD',updated_at=? WHERE id=?",
+                (now, row["obligation_id"]),
+            )
+            conn.execute(
+                "UPDATE approval_packet SET state='VOID' WHERE state IN ('OPEN','APPROVED') "
+                "AND json_extract(canonical_json,'$.items[0].payee_version_id')=?",
+                (row["payee_version_id"],),
+            )
+            killswitch.trip(
+                conn, "Provider payout compliance restriction", origin="provider_compliance"
             )
         audit.append(
             conn,

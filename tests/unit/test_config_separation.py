@@ -137,6 +137,7 @@ _REFUSED: tuple[tuple[dict[str, str], str], ...] = (
 
 @pytest.mark.compliance("T-09b")
 @pytest.mark.parametrize(("env", "expected"), _REFUSED)
+@pytest.mark.compliance("T-09")
 def test_sandbox_guard_is_exact_on_both_variables(env: dict[str, str], expected: str) -> None:
     """Case, whitespace and trailing slash are all refused.
 

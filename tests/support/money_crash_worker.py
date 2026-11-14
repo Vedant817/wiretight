@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import time
 from pathlib import Path
 
 import httpx
@@ -19,6 +20,7 @@ def main():
     for flag in ("db", "keys", "seals", "policy", "lock", "halt", "state", "at", "packet"):
         parser.add_argument("--" + flag, required=True)
     parser.add_argument("--crash", action="store_true")
+    parser.add_argument("--pause-before-call", action="store_true")
     parser.add_argument("--job-id")
     args = parser.parse_args()
     state_path = Path(args.state)
@@ -31,6 +33,22 @@ def main():
                 setattr(self, key, value[key])
 
         def handle(self, request):
+            if args.pause_before_call and request.url.path.endswith("/transfers"):
+                with db.Database(args.db) as observed:
+                    claimed = (
+                        observed.connection()
+                        .execute(
+                            "SELECT 1 FROM execution_intent "
+                            "WHERE kind='TRANSFER' AND state='PREPARED'"
+                        )
+                        .fetchone()
+                    )
+                if claimed:
+                    state_path.with_suffix(".claimed").write_text(
+                        "durable claim; no payout POST", encoding="utf-8"
+                    )
+                    while True:
+                        time.sleep(0.05)
             response = super().handle(request)
             value = {
                 key: getattr(self, key)

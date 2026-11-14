@@ -216,3 +216,24 @@ def test_real_validation_ack_and_exact_decimal_rate_basis():
     assert client.validate_beneficiary({"beneficiary": {}}) is True
     assert client.usd_rates({"USD", "EUR"})["EUR"] == Decimal("10000.10") / Decimal("9000.01")
     client.close()
+
+
+@pytest.mark.compliance("T-09")
+def test_redirect_is_never_followed_and_ambient_proxy_is_not_used(monkeypatch):
+    monkeypatch.setenv("HTTPS_PROXY", "http://untrusted.invalid:9")
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        if request.url.path.endswith("/authentication/login"):
+            return httpx.Response(201, json=login_response())
+        return httpx.Response(302, headers={"location": "https://untrusted.invalid/steal"})
+
+    client = client_for(handler)
+    try:
+        assert not client._http.trust_env
+        with pytest.raises(ProviderError):
+            client.get_balances()
+    finally:
+        client.close()
+    assert seen == ["api.sandbox.airwallex.com", "api.sandbox.airwallex.com"]

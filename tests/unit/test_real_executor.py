@@ -367,6 +367,7 @@ def test_old_balance_observation_cannot_be_refreshed_by_slow_later_guard_reads(e
     assert provider.posts == []
 
 
+@pytest.mark.compliance("T-04c")
 def test_approved_payment_executes_once_and_uses_real_boundaries(execution):
     executor, provider, packet_id, terms = execution
     assert executor.execute(packet_id) == "SUBMITTED"
@@ -407,6 +408,7 @@ def test_restart_after_lost_process_looks_up_instead_of_posting(execution):
     assert len([row for row in provider.posts if row[0] == "/transfers/create"]) == 1
 
 
+@pytest.mark.compliance("T-24")
 def test_insufficient_balance_refuses_before_any_mutation(execution):
     executor, provider, packet_id, _ = execution
     provider.balance = "10.00"
@@ -415,6 +417,7 @@ def test_insufficient_balance_refuses_before_any_mutation(execution):
     assert provider.posts == []
 
 
+@pytest.mark.compliance("T-04")
 def test_bank_terms_changed_after_signing_refuses_all_mutations(execution):
     executor, provider, packet_id, _ = execution
     executor.database.connection().execute(
@@ -480,6 +483,7 @@ def test_concurrent_executors_never_create_two_payouts(execution):
     assert len([row for row in provider.posts if row[0] == "/transfers/create"]) == 1
 
 
+@pytest.mark.compliance("T-23")
 def test_approved_status_without_valid_signature_cannot_move_money(execution):
     executor, provider, packet_id, _ = execution
     conn = executor.database.connection()
@@ -508,6 +512,7 @@ def test_untrusted_roster_change_refuses_all_mutations(execution):
     assert provider.posts == []
 
 
+@pytest.mark.compliance("T-R4b")
 def test_provider_history_counts_toward_caps_even_when_not_in_local_ledger(execution):
     executor, provider, packet_id, _ = execution
     provider.transfers["external"] = {

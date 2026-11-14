@@ -161,12 +161,15 @@ def test_settled_fx_funds_the_real_payout_including_fee_reservation(execution):
     assert len(boundary.posts) == 1 and len(execution[1].transfers) == 1
 
 
-def test_quote_expiry_requires_new_quote_and_new_human_approval(execution):
+@pytest.mark.parametrize("seconds_left", [-1, 60])
+@pytest.mark.compliance("T-12")
+@pytest.mark.compliance("T-32")
+def test_quote_expiry_requires_new_quote_and_new_human_approval(execution, seconds_left):
     executor, boundary, packet, devices = setup(execution)
     approve(executor, packet, devices)
     # The provider can shorten/withdraw a quote before the local approval expiry.
     quote = next(iter(boundary.quotes.values()))
-    quote["valid_to_at"] = (operators.utcnow() - timedelta(seconds=1)).isoformat()
+    quote["valid_to_at"] = (operators.utcnow() + timedelta(seconds=seconds_left)).isoformat()
     with pytest.raises(fx.FXBlockedError, match="Quote expired"):
         fx.execute(executor, packet)
     assert boundary.posts == []
@@ -179,6 +182,7 @@ def test_quote_expiry_requires_new_quote_and_new_human_approval(execution):
 
 
 @pytest.mark.parametrize("fault", ["market_rate", "locked_amount", "wallet_amount", "cooling_bank"])
+@pytest.mark.compliance("T-12")
 def test_rate_amount_or_bank_drift_blocks_conversion(execution, fault):
     executor, boundary, packet, devices = setup(execution)
     approve(executor, packet, devices)
@@ -197,6 +201,7 @@ def test_rate_amount_or_bank_drift_blocks_conversion(execution, fault):
     assert boundary.posts == []
 
 
+@pytest.mark.compliance("T-25")
 def test_conversion_lost_response_is_resolved_without_second_post(execution):
     executor, boundary, packet, devices = setup(execution)
     approve(executor, packet, devices)

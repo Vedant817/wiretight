@@ -4,13 +4,18 @@
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
+import pytest
+
 from app.core import operators
+from app.local import stop_child
 from tests.unit.test_operators_signing import domain  # noqa: F401
 from tests.unit.test_real_executor import execution  # noqa: F401
 
 
+@pytest.mark.compliance("T-15")
 def test_real_worker_process_death_then_restart_never_reposts(execution, tmp_path):
     executor, provider, packet_id, _ = execution
     conn = executor.database.connection()
@@ -143,3 +148,57 @@ def test_two_actual_worker_processes_cannot_double_execute(execution, tmp_path):
         .fetchone()[0]
         == 1
     )
+
+
+@pytest.mark.compliance("T-15")
+def test_kill_after_durable_claim_before_money_post_recovers_lookup_only(execution, tmp_path):
+    executor, provider, packet_id, _ = execution
+    state = tmp_path / "before-call-state.json"
+    state.write_text(
+        json.dumps(
+            {k: getattr(provider, k) for k in ("balance", "beneficiaries", "transfers", "posts")}
+        ),
+        encoding="utf-8",
+    )
+    command = [sys.executable, "-m", "tests.support.money_crash_worker"]
+    values = {
+        "db": executor.database.path,
+        "keys": executor.key_dir,
+        "seals": executor.seal_dir,
+        "policy": executor.policy_path,
+        "lock": executor.lock_file,
+        "halt": executor.halt_file,
+        "state": state,
+        "at": operators.utcnow().isoformat(),
+        "packet": packet_id,
+    }
+    for flag, value in values.items():
+        command.extend(["--" + flag, str(value)])
+    with (tmp_path / "before-call.log").open("wb") as log:
+        worker = subprocess.Popen(
+            [*command, "--pause-before-call"],
+            stdout=log,
+            stderr=log,
+            cwd=Path(__file__).parents[2],
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        )
+        try:
+            deadline = time.monotonic() + 30
+            while not state.with_suffix(".claimed").exists() and time.monotonic() < deadline:
+                assert worker.poll() is None, "Worker exited before claim barrier"
+                time.sleep(0.05)
+            assert state.with_suffix(".claimed").exists(), "Durable claim not reached"
+            conn = executor.database.connection()
+            assert conn.execute("SELECT COUNT(*) FROM approval_consumption").fetchone()[0] == 1
+            assert json.loads(state.read_text(encoding="utf-8"))["transfers"] == {}
+        finally:
+            stop_child(worker)
+    recovered = subprocess.run(
+        command, capture_output=True, text=True, timeout=45, cwd=Path(__file__).parents[2]
+    )
+    assert recovered.returncode == 0, recovered.stderr
+    assert recovered.stdout.strip() == "AMBIGUOUS"
+    durable = json.loads(state.read_text(encoding="utf-8"))
+    assert durable["transfers"] == {}
+    assert not any(path == "/transfers/create" for path, _ in durable["posts"])
+    assert conn.execute("SELECT COUNT(*) FROM approval_consumption").fetchone()[0] == 1

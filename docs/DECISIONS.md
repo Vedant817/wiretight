@@ -951,3 +951,14 @@ requests make upgrade fail atomically, preserving all records for explicit opera
 resolution; the migrator never picks a winning bank version. Regression tests use
 both fresh database connections and a legacy version-4 database with conflicting
 requests. Supplier changes and their encrypted versions commit or roll back together.
+
+
+## Production assignment: historical acceptance scope
+
+The supervisor authorized deletion of obsolete placeholder tests. The per-ID
+disposition table in PROD-AUDIT.md records all 36: 12 deleted for unsupported or
+removed features; 24 replaced by actual behavior tests. Mandatory human approval
+supersedes T0 automation; no document/LLM extraction, shared multi-item FX, seeded
+history, recording-caption checks, or bank-ownership verification is claimed.
+Active safety controls retain executable tests. Deleted cases are not passing
+original-spec acceptance and no not-written skip exemption remains.

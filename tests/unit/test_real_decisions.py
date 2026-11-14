@@ -167,6 +167,8 @@ def test_no_answer_can_be_followed_by_a_confirmed_callback(domain):
     assert callbacks.verify_callback(conn, keys, payee_version_id="payee")["outcome"] == "CONFIRMED"
 
 
+@pytest.mark.compliance("T-10")
+@pytest.mark.compliance("T-29")
 def test_callback_cannot_use_recent_or_requester_contact(domain):
     database, _ = domain
     conn = database.connection()
