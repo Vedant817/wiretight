@@ -591,3 +591,132 @@ test-only HTTP fixtures. This addition follows the 871-pass full-suite checkpoin
 it has the targeted result above, not a newly claimed full-suite result. Run opening
 and reconciliation still need complete service/API orchestration. FX and real OS
 crash acceptance remain unfinished. No live provider/arrival proof is claimed.
+
+## Stretch 9 — locked FX, authenticated jobs and actual process-crash proof
+
+Done/not-done checklist for the supervisor's current assignment:
+
+- [x] Locked-quote FX execution through the actual sandbox HTTP client. Only USD
+  funding of a genuinely approved GBP/EUR payment shortfall is supported. Unsupported
+  directions are refused. The quote binds currencies, date, CLIENT amounts, rate,
+  expiry and maximum USD sale. Funding includes the signed fee reservation/native
+  reserve floor; it is not an arbitrary speculative conversion.
+- [x] Two real passkey approvals for the CONVERSION packet, independently of the
+  underlying payment approvals. Requester separation, current roster, bank/callback,
+  cooling, policy, balances, reserve/caps and expiry are checked again on the server.
+- [x] Expired quotes require a fresh quote and re-approval. Changing the database's
+  expiry column cannot extend the signed deadline. Locked quote changes, funding
+  amount changes and market drift above the signed tolerance block execution.
+- [x] Authenticated/CSRF-protected QUOTE and EXECUTE request routes backed by migration
+  7 and durable jobs. The worker verifies approvals again. Duplicate requests coalesce;
+  uncertain money outcomes remain lookup-only and PENDING rather than being reported
+  as completed. Scheduled/overdue FX cannot silently fund a payout.
+- [x] Every hard scenario listed below has a passing real test. The provider transport
+  fixtures are confined to tests; product entry points construct the real client.
+- [x] Scanned all of app/ for the requested terms. PROD-AUDIT.md indexes every match
+  and its retained justification. Legacy helper/recording relocation is not falsely
+  represented as deletion. A static boundary check verifies no product imports of
+  recording/test modules, mock transport construction or legacy signing authority.
+- [x] Full suite, ruff and mypy rerun, with actual output below.
+- [ ] Live Airwallex contract/payment acceptance: keys remain absent; explicitly skipped.
+- [ ] Overall production application: complete run/planning/reconciliation orchestration,
+  operational UI/full-app launcher, real-device/browser acceptance and remaining
+  compliance-index milestones are still unfinished. Readiness remains false.
+
+Hard-scenario evidence (all included in the final full-suite run):
+
+| Scenario | Actual test location |
+|---|---|
+| Direct API bypass and self-approval | tests/unit/test_execution_requests.py::test_direct_api_cannot_bypass_approval_and_self_approval_is_refused |
+| Replayed/forged assertion | tests/unit/test_execution_requests.py::test_replayed_or_forged_assertion_does_not_approve_or_queue |
+| Approval expiry during cooling | tests/unit/test_real_executor.py::test_approval_expiring_during_renewed_cooling_cannot_execute |
+| Bank terms changed during cooling | tests/unit/test_execution_requests.py::test_bank_change_during_renewed_cooling_refuses_queued_execution |
+| Concurrent actual worker processes | tests/unit/test_worker_process_crash.py::test_two_actual_worker_processes_cannot_double_execute |
+| Duplicate execution requests/idempotency | tests/unit/test_execution_requests.py::test_duplicate_execution_requests_and_worker_retry_create_one_payout |
+| Provider timeout, retry, no duplicate payout | tests/unit/test_real_executor.py::test_timeout_after_provider_commit_resolves_without_second_payout |
+| Provider PAID but missing attempt and journal | tests/unit/test_reconciliation_runtime.py::test_provider_paid_payout_missing_attempt_and_journal_are_recovered_from_evidence |
+| Actual OS process death with PENDING job, then restart | tests/unit/test_worker_process_crash.py::test_real_worker_process_death_then_restart_never_reposts |
+| Quote expires between approval/execution | tests/unit/test_fx_execution.py::test_elapsed_quote_window_cannot_be_reused_even_if_database_expiry_is_extended |
+| Fresh quote and new approvals | tests/unit/test_fx_execution.py::test_quote_expiry_requires_new_quote_and_new_human_approval |
+| Rate/amount/bank drift | tests/unit/test_fx_execution.py::test_rate_amount_or_bank_drift_blocks_conversion |
+| Conversion timeout recovery | tests/unit/test_fx_execution.py::test_conversion_lost_response_is_resolved_without_second_post |
+| FX funds an actual payout including fee reservation | tests/unit/test_fx_execution.py::test_settled_fx_funds_the_real_payout_including_fee_reservation |
+
+The crash test now really exits the worker process with os._exit after its test-only
+provider commits, retaining PENDING job/PREPARED intent state. A new process resolves
+that same request without another payout POST. This is stronger than the earlier
+SystemExit-only test, but it remains an offline provider-transport test, not live
+Airwallex crash acceptance. Recovery now restores a missing attempt's USD risk basis
+from its original sealed INTENT; it never invents a replacement basis.
+
+The two-process test initially exposed a Windows race: a losing worker wrote an
+initial marker into byte zero after the winning worker had locked it, raising
+PermissionError before normal lock contention handling. Removed the unnecessary
+marker write; Windows supports locking beyond EOF. Both exclusion and actual process
+crash/restart tests then passed. Initial API test setup also tried to duplicate an
+approval hash, correctly hitting the database uniqueness constraint; the test now
+constructs distinct canonical terms and their real hash without weakening the index.
+An early FX fixture omitted rate currency fields and correctly failed validation;
+the fixture was corrected to the provider protocol.
+
+Added real outbound rolling budgets (20 requests globally and 10 per resource per
+second). The shared client remains serialized, so concurrency is at most one.
+Booked USD risk-rate selection compares timezone-aware dates and explicitly requests
+history rather than assuming the provider's default 31-day listing is complete.
+Execution observation age now starts before its first read, preventing later slow
+guard reads from making an old balance appear fresh. Its regression test passed.
+Removed the diagnostic page's static claim that no supplier/balance data is loaded,
+and corrected stale read-only-worker documentation. The final diagnostic copy was
+separately exercised by the separate-process HTTP smoke harness while the full
+suite ran; no financial behavior changed after that full run began.
+
+Actual final command output:
+
+```
+uv run pytest tests -q --timeout=180
+891 passed, 37 skipped in 270.69s (0:04:30)
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+97 files already formatted
+uv run mypy app
+Success: no issues found in 55 source files
+uv run python -m tests.support.audit_runtime_imports
+PASS: 50 product modules; no recording/test imports, mock transport or legacy authority calls
+uv run python -m tests.support.http_smoke
+PASS: separate-process HTTP login, evidence, supplier, invoice, duplicate/CSRF, logout
+PASS: health remains unready; no provider, device or payment acceptance claimed
+git diff --check
+exit 0
+```
+
+An earlier full run before the observation-age correction reported exactly
+`890 passed, 37 skipped in 271.91s`. The new freshness regression plus rate-budget
+test then reported `2 passed in 5.39s`, followed by the final full run above.
+Other actual focused runs included `25 passed in 47.03s` (FX/client),
+`5 passed in 24.14s` (direct API), `4 passed in 16.25s` (process/lock), and
+`1 passed in 6.08s` (missing payout ledger recovery). These are not added together
+or presented as live acceptance. The 37 skips remain the 36 legacy compliance-index
+placeholders and the unconfirmed live test.
+
+Explicit live guard invocation and actual result:
+
+```
+uv run python -c "import os, pytest; os.environ['CONFIRM_LIVE']='1'; raise SystemExit(pytest.main(['tests/live/test_airwallex_read.py','-q','-rs']))"
+SKIPPED [1] tests\live\test_airwallex_read.py:21: AWX_CLIENT_ID and AWX_API_KEY are not configured
+1 skipped in 0.65s
+```
+
+The native terminal launcher returned Access is denied (OS error 5), so verification
+used the same local executables through the Node process tool. A PowerShell launcher
+also lacked uv on its PATH; the explicit live guard above succeeded through uv's
+Python entry point. Neither failed launcher is reported as passing.
+
+Vedant still must supply real sandbox credentials, genuine business/master inputs,
+real-device enrollment and signed policy/roster approvals before live acceptance.
+No account signup, external message, push, PR, publication or demo/ media edit.
+Keys were not printed, logged or committed. No claim of overall production readiness.
+
+Protocol references: [locked quotes](https://www.airwallex.com/docs/api/transactional_fx/quotes/create),
+[conversion request/lookup](https://www.airwallex.com/docs/api/transactional_fx/conversion/create),
+[Windows byte-range locking](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/locking?view=msvc-170).

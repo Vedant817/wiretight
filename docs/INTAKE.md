@@ -1,8 +1,8 @@
 # Authenticated intake
 
-These are working intake APIs, not a complete payment application. The worker loop,
-planning endpoints, reconciliation, FX execution and operator screens are still
-unfinished; `/ready` remains 503. Uploads and operator assertions do not prove that
+These are working APIs, not a complete payment application. Full run/planning and
+reconciliation orchestration and operator screens remain unfinished; `/ready`
+remains 503. Uploads and operator assertions do not prove that
 an invoice, bank instruction, compliance check or telephone call is genuine.
 
 Every route below requires the `wt_session` cookie issued by `/api/login`.
@@ -69,6 +69,23 @@ sandbox balance reads. Use `--once` for one attempt. Without a running configure
 worker, jobs remain PENDING; failed reads mark jobs FAILED and retain the original
 observation timestamp. Successful refreshes do not authorize payments or make the
 application ready. Neither endpoint fabricates provider results.
+
+`POST /api/approvals/{packet_id}/quote` requests an actual locked FX quote for an
+already approved payment's shortfall. Currently only USD funding for GBP/EUR is
+supported. The amount includes the signed policy's fee reservation and native
+reserve floor. It returns a job ID; the worker's result contains a new CONVERSION
+packet requiring two actual approvers. No conversion is authorized by quote creation.
+
+`POST /api/approvals/{packet_id}/execute` queues a durable execution request after
+checking actual passkey approvals, session/CSRF and requester separation. The worker
+checks them again with current bank, cooling, policy, balance, reserve and cap data.
+Conversion execution locks quote identity, currencies, date, amounts, rate and
+expiry; expired/changed quotes require a new quote and new human approval. Current
+market drift beyond the signed tolerance blocks execution. An ambiguous money
+request remains lookup-only, including after a worker process dies. An execution
+job reporting PENDING/AMBIGUOUS is not a successful or settled payout. A DONE job
+means the request was processed; inspect its `execution_state` and tracked provider
+status rather than interpreting DONE as funds arrival.
 
 The web process needs `APP_DB_PATH`, `APP_POLICY_PATH`, `APP_KEY_DIR` and the WebAuthn
 origin settings to match local setup. Defaults are documented in `.env.example`;

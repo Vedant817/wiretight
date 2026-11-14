@@ -313,3 +313,17 @@ Live check explicitly skipped for missing AWX_CLIENT_ID/AWX_API_KEY. Settlement
 finalization, FX execution/expiry, complete worker orchestration, actual process
 crash proof and legacy demo/signer cleanup remain unfinished. Exact commands,
 failure history and limits are in PROD-STATUS.md. Local commits only; demo/ untouched.
+
+## 14 November 2026 - locked FX and hard-scenario closure
+
+Added locked-quote USD funding of approved GBP/EUR payment shortfalls, two-person
+conversion approvals, expiry/re-approval, amount/rate drift guards and durable
+QUOTE/EXECUTE API jobs. Actual subprocess crash/job restart and two-process
+concurrency tests passed; fixed a Windows marker-write race exposed by them.
+Missing payout attempts/journal rows recover from audited/provider evidence without
+reposting. Added outbound request budgets and corrected stale observation timing.
+Final full run: 891 passed, 37 skipped in 270.69s; ruff clean, 97 formatted files,
+mypy clean in 55 source files. Source-match register and done/not-done matrix are
+in PROD-AUDIT.md and PROD-STATUS.md. Live tests explicitly skip for absent keys.
+Full run orchestration/UI, live/device acceptance and legacy relocation remain
+unfinished; no overall production-readiness claim. Local commits only.

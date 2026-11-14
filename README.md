@@ -19,12 +19,13 @@ transactions is still being built; the application is not ready for payment oper
 service includes readiness, webhooks, authenticated operator sessions and passkey
 approval APIs, plus signed policy, callback and halt-clear decisions. A guarded
 payout dispatcher and authenticated supplier/invoice/evidence intake now exist with
-offline tests; the service loop, conversion
-execution, reconciliation and operational UI are unfinished. See
+offline tests. The worker handles approved payout/FX jobs, polling and durable
+recovery; full run/planning/reconciliation orchestration and operational UI remain
+unfinished. See
 [the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
 The real sandbox HTTP client has offline fault tests; it has no live acceptance yet.
-The 36 skipped compliance-index tests correspond to missing milestones (including
-approvals, execution, reconciliation, and operator UI); they are known gaps.
+The 36 skipped compliance-index placeholders remain known acceptance gaps; passing
+new focused tests does not make those broader product milestones complete.
 
 From a fresh checkout with Python 3.12 and uv installed, run this single command
 to install pinned dependencies and start the diagnostic service on localhost:
@@ -44,10 +45,12 @@ Current service variables (set in its process environment): `AWX_ENV=sandbox`,
 of the web process. Worker/client credentials are `AWX_CLIENT_ID` and `AWX_API_KEY`,
 read by `WorkerSettings` from environment or a gitignored `.env`; optional
 `AWX_LOGIN_AS`, `AWX_API_VERSION`, `AWX_HTTP_TIMEOUT_S` configure the client.
-The read-only refresh worker runs with `uv run python -m app.workers.service`
-(or `--once` for one attempt). It consumes REFRESH jobs and persists actual balance
-observations. Missing keys cause exit 2 and a setup-error heartbeat; failed reads
-preserve older observations. It does not dispatch payments or make readiness true.
+The sandbox worker runs with `uv run python -m app.workers.service`
+(or `--once` for one iteration). It consumes REFRESH, QUOTE and EXECUTE requests,
+persists actual balance observations, polls existing payouts/conversions and executes
+only through server-side human-approval, cooling, funding, reserve and drift guards.
+Missing keys cause exit 2 and a setup-error heartbeat. Failed reads preserve older
+observations. Complete operational readiness remains false.
 No production-host mode is supported.
 
 Run offline checks with `uv run --extra dev pytest tests -q --timeout=180`,
