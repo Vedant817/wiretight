@@ -21,6 +21,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from app.api import access
 from app.api.intake import router as intake_router
 from app.api.operations import router as operations_router
 from app.api.operators import router
@@ -108,6 +109,18 @@ def create_app() -> FastAPI:
 
     @application.middleware("http")
     async def boundary(request: Request, call_next: Any) -> Any:
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            try:
+                if request.url.path == "/api/login":
+                    access.same_origin(request, passkeys.origin)
+                    if request.headers.get("content-type", "").split(";")[0] != "application/json":
+                        return JSONResponse({"detail": "Login requires JSON"}, status_code=415)
+                elif request.url.path.startswith("/api/"):
+                    # Central protection runs before body validation or handlers,
+                    # including for future routes that omit their local check.
+                    access.identity(request, database, passkeys.origin, mutate=True)
+            except HTTPException as exc:
+                return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
         if request.method in {"POST", "PUT", "PATCH"}:
             chunks = bytearray()
             async for chunk in request.stream():
@@ -140,7 +153,10 @@ def create_app() -> FastAPI:
             response = JSONResponse({"detail": "Service unavailable; retry later"}, status_code=503)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        )
         logging.getLogger("wiretight").info(
             {
                 "event": "http.completed",
@@ -149,6 +165,22 @@ def create_app() -> FastAPI:
                 "status": response.status_code,
             }
         )
+        return response
+
+    @application.middleware("http")
+    async def security_headers(request: Request, call_next: Any) -> Any:
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        )
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
         return response
 
     def setup_errors() -> list[str]:

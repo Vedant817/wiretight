@@ -22,6 +22,7 @@ Three rules, enforced here:
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, Decimal, InvalidOperation
 from typing import Any, Final
@@ -152,7 +153,10 @@ def exponent_for(currency: str) -> int:
 
 def _quantizer(currency: str) -> Decimal:
     """The step size at ``currency``'s exponent: 0.01 USD, 1 JPY, 0.001 KWD."""
-    return Decimal(1).scaleb(-exponent_for(currency))
+    exponent = exponent_for(currency)
+    if not is_known_currency(currency):
+        raise ValueError("Unknown currency has no monetary serialization precision")
+    return Decimal(1).scaleb(-exponent)
 
 
 def parse_money(value: str) -> Decimal:
@@ -197,7 +201,17 @@ def parse_money(value: str) -> Decimal:
     # Decimal("NaN") and Decimal("Infinity") parse successfully but poison sums.
     if not amount.is_finite():
         raise ValueError(f"money amount must be finite, got {value!r}")
+    if not re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?", text):
+        raise ValueError("Money must use an ASCII decimal wire spelling")
     return amount
+
+
+def _round(amount: Decimal, currency: str, rounding: str) -> Decimal:
+    if not isinstance(amount, Decimal):
+        raise TypeError("Monetary rounding requires Decimal, never float")
+    if not amount.is_finite():
+        raise ValueError("Monetary rounding requires a finite amount")
+    return amount.quantize(_quantizer(currency), rounding=rounding)
 
 
 def quantize_money(amount: Decimal, currency: str) -> Decimal:
@@ -206,7 +220,7 @@ def quantize_money(amount: Decimal, currency: str) -> Decimal:
     The accounting default. It avoids the systematic upward drift that
     ROUND_HALF_UP introduces when a large number of amounts are summed.
     """
-    return amount.quantize(_quantizer(currency), rounding=ROUND_HALF_EVEN)
+    return _round(amount, currency, ROUND_HALF_EVEN)
 
 
 def floor_money(amount: Decimal, currency: str) -> Decimal:
@@ -216,7 +230,7 @@ def floor_money(amount: Decimal, currency: str) -> Decimal:
     currency, rounded down". Rounding down guarantees the first payment can never
     exceed the first-payment cap.
     """
-    return amount.quantize(_quantizer(currency), rounding=ROUND_FLOOR)
+    return _round(amount, currency, ROUND_FLOOR)
 
 
 def ceil_money(amount: Decimal, currency: str) -> Decimal:
@@ -225,7 +239,7 @@ def ceil_money(amount: Decimal, currency: str) -> Decimal:
     Used for FX aggregation (§4.6): "rounded **up** to the exponent", so the
     converted amount covers the planned outflow and the wallet is never short.
     """
-    return amount.quantize(_quantizer(currency), rounding=ROUND_CEILING)
+    return _round(amount, currency, ROUND_CEILING)
 
 
 def to_money_string(amount: Decimal, currency: str) -> str:

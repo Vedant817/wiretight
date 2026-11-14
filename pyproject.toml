@@ -27,7 +27,7 @@ dependencies = [
     "tzdata==2026.2",
     # Week 2 optional ingest (cut item 3). No OCR.
     "pdfplumber==0.11.10",
-    "pypdf==6.19.0",
+    "pypdf==6.21.4",
     # Week 2 optional LLM, behind LLMProvider, off by default, never in the money path.
     "anthropic==1.12.1",
 ]
@@ -150,4 +150,13 @@ extra_checks = true
 [dependency-groups]
 dev = [
     "playwright>=1.65.1",
+]
+
+# Security floors for transitive dependencies; retain exact reproducible pins.
+[tool.uv]
+constraint-dependencies = [
+    "certifi==2026.10.19",
+    "opentelemetry-api==1.45.2",
+    "pillow==13.0.0",
+    "pyasn1==0.6.5",
 ]

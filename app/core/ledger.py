@@ -55,6 +55,11 @@ class Leg:
                 "in the pinned ISO 4217 exponent table. A posting in an unknown "
                 "currency would balance inside a bucket no reconciliation reads."
             )
+        for value in (self.debit, self.credit):
+            if value is not None:
+                amount = parse_money(value)
+                if amount < 0 or parse_money(to_money_string(amount, self.currency)) != amount:
+                    raise ValueError("Ledger legs must be nonnegative exact currency minor units")
 
 
 def _now_iso() -> str:

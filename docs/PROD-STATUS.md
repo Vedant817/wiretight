@@ -1,6 +1,147 @@
-# Production status — 2026-11-14
+# Production status — 2026-11-15
 
-**Not production-ready. Do not use for real payments.** The overnight checklist is
+## Active stretch: money properties, credential separation and live sandbox acceptance
+
+Status: **implemented, verified offline and against the Airwallex sandbox, committed
+locally, not pushed.** No production-readiness claim is made.
+
+Credential separation: the real sandbox `AWX_CLIENT_ID`/`AWX_API_KEY` that had been
+written into `.env.example` were moved into the gitignored `.env`
+(`git check-ignore -v .env` → `.gitignore:4:.env`). `.env.example` now holds only
+placeholders (`git diff --stat .env.example` → 2 insertions, 2 deletions, and a
+structure-masked comparison against HEAD shows only those two lines changed). No key
+value was printed, echoed, logged, diffed or pasted; every check used length/metadata
+only.
+
+History: the two live values appear in **no branch or tag commit**. A raw scan of every
+object plus `git grep` across the 56 commits reachable from branches/tags found zero
+occurrences (`commits_scanned=56 value_leaks_outside_checkpoints=0`), and gitleaks over
+all refs flagged `.env.example` in exactly one commit — the T3 auto-checkpoint
+`062cb2f` under `refs/t3/orchestration-v2/checkpoints/.../ordinal/21`, created by T3
+when the file was edited. That ref is local-only, is not an ancestor of any branch, and
+a normal `git push` does not include it. It was not rewritten or deleted; Vedant decides
+whether to drop that ref or rotate the key. The same checkpoint blob is what allowed the
+values to be restored after a bug in the move script briefly wrote their lengths instead
+of their values; the restored `.env` was verified byte-for-byte against that blob.
+
+The earlier runner outage (`Access is denied (os error 5)`) did not block this pass: a
+few concurrent PowerShell spawns failed intermittently and were retried sequentially.
+Every gate below actually ran; none is inferred.
+
+### Live sandbox acceptance — verified
+
+Read-only authentication and balance read against `https://api.sandbox.airwallex.com`
+with the real sandbox keys from `.env`. Exact output:
+
+```text
+$env:CONFIRM_LIVE='1'; uv run pytest tests/live -m live -v
+collected 1 item
+tests/live/test_airwallex_read.py::test_sandbox_auth_and_balances PASSED [100%]
+1 passed in 2.28s
+```
+
+Production-host refusal with settings-shaped mappings (no socket opened):
+
+```text
+REFUSED: AWX_BASE_URL is 'https://api.airwallex.com', expected exactly 'https://api.sandbox.airwallex.com'. Wiretight refuses to start against anything but the sandbox.
+REFUSED: AWX_ENV is 'production', expected 'sandbox'. Wiretight refuses to start against anything but the sandbox.
+REFUSED: AWX_ENV is 'sandbox ', expected 'sandbox'. Wiretight refuses to start against anything but the sandbox.
+ok: https://api.sandbox.airwallex.com
+```
+
+`AirwallexClient` also hardcodes `SANDBOX_BASE_URL` with `trust_env=False`, so it cannot
+be redirected. This is provider authentication/read acceptance only; no money moved, no
+signup, and no Airwallex account setting was changed.
+
+### Final gates
+
+```text
+uv run pytest -q
+SKIPPED [1] tests\live\test_airwallex_read.py:19: Read-only sandbox test requires CONFIRM_LIVE=1
+939 passed, 1 skipped in 666.24s (0:11:06)
+uv run ruff check app scripts tests eval
+All checks passed!
+uv run ruff format --check app scripts tests eval
+119 files already formatted
+uv run mypy app
+Success: no issues found in 53 source files
+```
+
+The live test is the single skip in the default run; it passed when explicitly confirmed
+above. `uv run pytest eval -q` collects no tests (`no tests ran`); `eval` is a package
+runner, not a pytest suite. Before formatting, `ruff format --check` reported four
+pre-existing unformatted demo scripts under the updated formatter pin
+(`scripts/demo_timeline.py`, `make_vo_track.py`, `make_voiceover.py`, `record_demo.py`);
+they were reformatted mechanically and the check now passes. No product logic changed.
+
+### Gitleaks verdict — seven historical hits
+
+Values were never printed. Each hit is a `"token": "..."` literal inside captured
+Airwallex documentation under `docs/spec/raw/`. All seven are documentation samples, not
+credentials for this project: each appears only in those raw doc files, no product or
+test code references them, none equals either live key, and the JWT-shaped pair sits
+beside an explicit example marker. Repeated rows are separate identical matches, as
+gitleaks reports them.
+
+| Path | Rule | Commit | Verdict |
+| --- | --- | --- | --- |
+| docs/spec/raw/doc_benef.txt | generic-api-key | 19be8481eac9361ac567996eb322c5906f041810 | placeholder / doc sample |
+| docs/spec/raw/doc_benef.txt | generic-api-key | 19be8481eac9361ac567996eb322c5906f041810 | placeholder / doc sample |
+| docs/spec/raw/doc_create_transfer.txt | generic-api-key | 19be8481eac9361ac567996eb322c5906f041810 | placeholder / doc sample |
+| docs/spec/raw/doc_list_transfers.txt | generic-api-key | 19be8481eac9361ac567996eb322c5906f041810 | placeholder / doc sample |
+| docs/spec/raw/doc_verify.txt | generic-api-key | 19be8481eac9361ac567996eb322c5906f041810 | placeholder / doc sample |
+| docs/spec/raw/doc_failure_types.txt | jwt | 19be8481eac9361ac567996eb322c5906f041810 | placeholder / doc sample |
+| docs/spec/raw/doc_failure_types.txt | jwt | 19be8481eac9361ac567996eb322c5906f041810 | placeholder / doc sample |
+
+Gitleaks stances: tracked working tree → 7 findings (the table above); staged files →
+0 findings; history over all refs → 78 occurrences, i.e. the same seven doc lines
+re-flagged in successive checkpoint snapshots plus the one `.env.example` checkpoint
+blob. No value from `.env` was found in any branch, tag or tracked file.
+
+Completed commands before the earlier runner failure:
+
+```text
+uv run --extra dev pytest tests/property/test_money_markets.py tests/unit/test_money.py tests/property/test_trust_substrate.py -q --timeout=180 --tb=short
+81 passed in 25.91s
+```
+
+The new tests reproduced acceptance of non-wire numeric spellings, unknown-currency
+serialization, and sub-minor-unit ledger legs. Money/ledger boundaries were tightened
+and the command above passed. Payout corridors remain USD/GBP/EUR; arithmetic tests
+for JPY/KRW/KWD/BHD do not claim provider integration for those corridors.
+
+The 2026-11-15 pass reran gitleaks 8.30.1 with full redaction. The seven historical
+hits are the captured-documentation samples classified in the verdict table above
+(commit 19be8481e): five generic-api-key matches and two JWT matches. Values were never
+printed. `git check-ignore .env` returns `.env`, and the `.env.example` credential
+slots are placeholders again.
+
+The pinned dependency export was audited using uvx pip-audit 2.10.1 with no account.
+Initial result: `Found 67 known vulnerabilities in 5 packages`, exit 1:
+certifi 2026.7.22 (2), opentelemetry-api 1.45.1 (1), pillow 12.3.0 (42),
+pyasn1 0.6.4 (4), pypdf 6.19.0 (18). Pins/constraints and uv.lock were updated to
+certifi 2026.10.19, opentelemetry-api 1.45.2, pillow 13.0.0, pyasn1 0.6.5,
+pypdf 6.21.4. Re-audit has NOT run; no vulnerability-free result is claimed.
+
+A central unsafe-API CSRF check and outer security-header middleware were edited in this
+stretch. The 2026-11-15 full suite plus ruff/mypy gates above cover them, and the stretch
+is committed locally. No fresh-clone setup was run.
+
+- [x] Add/test monetary parsing, minor-unit and directional-rounding properties.
+- [ ] Random approve/cancel/execute ledger tie-out property.
+- [x] Classify history scanner findings without exposing values (documentation samples;
+      no suppression added, so gitleaks will keep reporting them).
+- [ ] Re-run dependency audit after updated pins.
+- [x] Route-CSRF/header/cookie and HTTP changes verified by the full suite and gates.
+- [ ] Literal README setup in fresh temporary local clone and cleanup.
+- [x] Live acceptance runner exercised against the sandbox, with production-host refusal.
+- [x] Full suite, ruff check, ruff format --check, mypy and local commit.
+
+Raw redacted/metadata-only scanner outputs and audit JSON are local ignored artifacts
+under output/playwright/production-basics/. Prior completed stretches below are
+historical evidence; the current stretch's results are recorded above.
+
+**Not production-ready. Do not use for real payments.** The open items above remain
 unfinished. This document distinguishes implemented source from provider acceptance.
 
 ## Stretch 1
@@ -1115,3 +1256,12 @@ registry guarantees, exact scenario run, and six killed-and-reverted mutations.
 `git diff --check` returned exit 0. Root demo files remain unchanged from bf575fd.
 Only the two key/device/owner-dependent open items listed above remain. No push,
 PR, publication, signup, outside-team message or secret disclosure.
+## Earlier verification stop: PTY runner failure (2026-11-14) — superseded
+
+That pass stopped because native exec and PTY both failed with
+`CreateProcessW ... Access is denied. (os error 5)` and the Node runner with
+`failed to write kernel assets ... (os error 3)`. The stop is historical: execution
+recovered, the 2026-11-15 section above completed live sandbox acceptance and all
+gates, and the work is committed locally. The earlier provisional gitleaks table for
+these seven hits is replaced by the verdict table above; values were never printed and
+no history was rewritten.
