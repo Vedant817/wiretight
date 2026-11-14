@@ -113,6 +113,9 @@ def begin_record(
                 (now + timedelta(minutes=5)).isoformat(),
             ),
         )
+        conn.execute(
+            "UPDATE signing_challenge SET record_json=? WHERE id=?", (canonical, ceremony_id)
+        )
         return {
             "ceremony_id": ceremony_id,
             "record": record,
@@ -282,9 +285,12 @@ def verify_records(
                 or user["sign_count"] < verified.new_sign_count
             ):
                 raise SigningError("Decision ceremony evidence is invalid")
-            if (
-                purpose == "CLEAR"
-                and datetime.fromisoformat(row["signed_at"]) + timedelta(hours=4) <= utcnow()
+            if purpose == "CLEAR" and (
+                not record.get("expires_at")
+                or datetime.fromisoformat(record["expires_at"]) <= utcnow()
+                or datetime.fromisoformat(record["expires_at"])
+                > datetime.fromisoformat(record["created_at"]) + timedelta(hours=4)
+                or datetime.fromisoformat(record["created_at"]) > utcnow() + timedelta(seconds=120)
             ):
                 raise SigningError("Halt clearing approval expired")
         except (WebAuthnException, ValueError, KeyError, TypeError):

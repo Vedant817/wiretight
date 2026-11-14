@@ -143,6 +143,7 @@ def execution(domain, tmp_path):
             account_name="Fixture supplier",
             account_number="123456789",
             routing_value="021000021",
+            bank_account_category="Checking",
         )
         vault = DetailVault(key_dir / "details.key")
         details_id = vault.store(conn, bank)
@@ -229,9 +230,18 @@ def execution(domain, tmp_path):
         conn.execute(
             "INSERT INTO "
             "compliance_review(id,payee_version_id,recorded_by,result,"
-            "source,evidence_sha256,checked_at,created_at) "
-            "VALUES('review','payee',?,'CLEAR','fixture manual review',?,?,?)",
-            (ids[3], hashlib.sha256(b"fixture screening").hexdigest(), now, now),
+            "source,evidence_sha256,checked_at,created_at,payee_fingerprint,details_sha256) "
+            "VALUES('review','payee',?,'CLEAR','fixture manual review',?,?,?,?,?)",
+            (
+                ids[3],
+                hashlib.sha256(b"fixture screening").hexdigest(),
+                now,
+                now,
+                bank.fingerprint(),
+                conn.execute(
+                    "SELECT sha256 FROM protected_details WHERE id=?", (details_id,)
+                ).fetchone()[0],
+            ),
         )
         review = conn.execute("SELECT * FROM compliance_review WHERE id='review'").fetchone()
         record = packets.compliance_terms(review)

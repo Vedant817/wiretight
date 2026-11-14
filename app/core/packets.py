@@ -95,6 +95,8 @@ def compliance_terms(row: db.sqlite3.Row) -> dict[str, Any]:
                 "evidence_sha256",
                 "checked_at",
                 "created_at",
+                "payee_fingerprint",
+                "details_sha256",
             )
         },
     }
@@ -109,6 +111,17 @@ def review_clear(conn: db.Connection, payee_id: str, passkeys: Passkeys) -> None
     ).fetchone()
     if not row or not row["enabled"] or row["role"] != "ops" or row["result"] != "CLEAR":
         raise PaymentBlockedError("A current independent operator compliance review is required")
+    payee = conn.execute(
+        "SELECT p.fingerprint,d.sha256 FROM payee_version p "
+        "JOIN protected_details d ON d.id=p.details_ref WHERE p.id=?",
+        (payee_id,),
+    ).fetchone()
+    if (
+        not payee
+        or row["payee_fingerprint"] != payee["fingerprint"]
+        or row["details_sha256"] != payee["sha256"]
+    ):
+        raise PaymentBlockedError("Compliance review does not cover this bank-detail version")
     checked = datetime.fromisoformat(row["checked_at"])
     if checked > utcnow() or utcnow() - checked > timedelta(days=1):
         raise PaymentBlockedError("Compliance review is expired")

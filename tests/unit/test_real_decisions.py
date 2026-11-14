@@ -236,6 +236,55 @@ def test_halt_signature_is_bound_to_exact_reason(domain):
     assert conn.execute("SELECT halted FROM killswitch_state WHERE id=1").fetchone()[0]
 
 
+def test_expired_halt_clear_round_requires_new_signatures_even_with_same_reason(domain):
+    import time_machine
+
+    database, _ = domain
+    conn = database.connection()
+    with time_machine.travel("2026-11-10T12:00:00Z", tick=False) as clock:
+        killswitch.trip(conn, "Test halt")
+        keys = signing.Passkeys(rp_id="localhost", origin="http://localhost:8000")
+        users = [registered(conn, index, keys) for index in (1, 2)]
+        old_subject, old_record = runtime_halt.clear_record(conn, "Issue resolved")
+        user, device = users[0]
+        options = record_signing.begin_record(
+            conn, user, keys, purpose="CLEAR", subject_id=old_subject, record=old_record
+        )
+        assert not runtime_halt.finish_clear(
+            conn,
+            user,
+            keys,
+            reason="Issue resolved",
+            ceremony_id=options["ceremony_id"],
+            credential=device.sign(options["publicKey"]),
+        )
+        clock.shift(timedelta(hours=4, minutes=1))
+        with pytest.raises(signing.SigningError, match="expired"):
+            record_signing.verify_records(
+                conn, keys, purpose="CLEAR", subject_id=old_subject, record=old_record, required=1
+            )
+        subject, record = runtime_halt.clear_record(conn, "Issue resolved")
+        assert subject != old_subject and record["round_id"] != old_record["round_id"]
+        outcomes = []
+        for user, device in users:
+            current_subject, current = runtime_halt.clear_record(conn, "Issue resolved")
+            # begin_record persists the proposed round for the second signer.
+            options = record_signing.begin_record(
+                conn, user, keys, purpose="CLEAR", subject_id=current_subject, record=current
+            )
+            outcomes.append(
+                runtime_halt.finish_clear(
+                    conn,
+                    user,
+                    keys,
+                    reason="Issue resolved",
+                    ceremony_id=options["ceremony_id"],
+                    credential=device.sign(options["publicKey"]),
+                )
+            )
+        assert outcomes == [False, True]
+
+
 @pytest.fixture
 def decision_service(domain, monkeypatch, request):
     monkeypatch.setenv("APP_DB_PATH", str(domain[0].path))

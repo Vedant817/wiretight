@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from datetime import datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 from app.core import audit, db, record_signing
 from app.core.operators import Session, utcnow
@@ -20,6 +23,29 @@ def clear_record(conn: db.Connection, reason: str) -> tuple[str, dict[str, Any]]
     if not trip or trip["cleared_at"]:
         raise SigningError("Active halt references missing or already-cleared trip evidence")
     record = {"kind": "CLEAR", "trip_id": active["trip_id"], "reason": reason.strip()}
+    candidates = conn.execute(
+        "SELECT canonical_json AS record_json FROM signed_record WHERE purpose='CLEAR' "
+        "UNION ALL SELECT record_json FROM signing_challenge "
+        "WHERE purpose='CLEAR' AND consumed_at IS NULL"
+    ).fetchall()
+    for candidate in candidates:
+        if not candidate["record_json"]:
+            continue
+        prior = json.loads(candidate["record_json"])
+        if (
+            prior.get("trip_id") == record["trip_id"]
+            and prior.get("reason") == record["reason"]
+            and prior.get("expires_at")
+            and datetime.fromisoformat(prior["expires_at"]) > utcnow()
+        ):
+            record = prior
+            break
+    else:
+        record.update(
+            round_id=str(uuid4()),
+            created_at=utcnow().isoformat(),
+            expires_at=(utcnow() + timedelta(hours=4)).isoformat(),
+        )
     subject = (
         str(active["trip_id"])
         + ":"

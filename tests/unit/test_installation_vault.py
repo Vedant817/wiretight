@@ -53,6 +53,7 @@ def test_vault_round_trip_is_encrypted_and_authentication_failure_is_closed(doma
         account_name="Fixture account",
         account_number="123456789",
         routing_value="021000021",
+        bank_account_category="Checking",
     )
     identifier = vault.store(conn, bank)
     raw = conn.execute(
@@ -84,6 +85,7 @@ def test_unsupported_or_malformed_bank_destination_refused(changes):
                 "account_name": "Fixture account",
                 "account_number": "123456789",
                 "routing_value": "021000021",
+                "bank_account_category": "Checking",
                 **changes,
             }
         )

@@ -73,6 +73,17 @@ def build_record(
     ).fetchone()
     if not contact or contact["kind"] != "phone":
         raise SigningError("Select an independent phone contact from the supplier master")
+    if (
+        body.attachment_sha256
+        and not conn.execute(
+            "SELECT 1 FROM evidence_file WHERE sha256=?", (body.attachment_sha256,)
+        ).fetchone()
+    ):
+        raise SigningError("Upload the callback attachment before signing its hash")
+    if "phone_sha256:" + hashlib.sha256(contact["value_norm"].encode()).hexdigest() in json.loads(
+        request["evidence"]
+    ):
+        raise SigningError("A phone supplied in the change request cannot independently confirm it")
     received = datetime.fromisoformat(request["received_at"])
     called = datetime.fromisoformat(body.called_at)
     now = utcnow()

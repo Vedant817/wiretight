@@ -28,10 +28,12 @@ class BankDetails(BaseModel):
     routing_value: str = Field(default="", max_length=9)
     bank_name: str = Field(default="", max_length=200)
     swift_code: str = Field(default="", max_length=11)
-    bank_account_category: Literal["Checking", "Savings"] = "Checking"
+    bank_account_category: Literal["Checking", "Savings"] | None = None
 
     @model_validator(mode="after")
     def valid_corridor(self) -> Self:
+        if self.country == "US" and self.bank_account_category is None:
+            raise ValueError("Select the actual US bank account category")
         if (self.country, self.currency) not in {
             ("US", "USD"),
             ("GB", "GBP"),
@@ -102,7 +104,7 @@ class BankDetails(BaseModel):
                 account_routing_type1="aba" if self.country == "US" else "sort_code",
                 account_routing_value1=re.sub(r"[^0-9]", "", self.routing_value),
             )
-        if self.country == "US":
+        if self.country == "US" and self.bank_account_category is not None:
             bank["bank_account_category"] = self.bank_account_category
         if self.bank_name:
             bank["bank_name"] = self.bank_name
@@ -156,6 +158,8 @@ class BankDetails(BaseModel):
                 != expected["account_routing_value1"]
             ):
                 return False
+        if self.country == "US" and bank.get("bank_account_category") != self.bank_account_category:
+            return False
         return not (self.method == "SWIFT" and bank.get("swift_code") != self.swift_code)
 
 
@@ -165,6 +169,12 @@ class DetailVault:
 
     def encrypt_json(self, value: dict[str, Any]) -> str:
         return self._cipher.encrypt(audit.canonical_json(value).encode()).decode()
+
+    def encrypt_bytes(self, value: bytes) -> bytes:
+        return self._cipher.encrypt(value)
+
+    def decrypt_bytes(self, value: bytes) -> bytes:
+        return self._cipher.decrypt(value)
 
     def decrypt_json(self, value: str) -> dict[str, Any]:
         decoded: dict[str, Any] = json.loads(self._cipher.decrypt(value.encode()))
