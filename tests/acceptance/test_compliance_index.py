@@ -143,6 +143,11 @@ def test_active_case_has_a_collected_behavior_test(test_id, request):
 def test_registry_has_no_silent_or_deferred_cases():
     ids = [row[0] for row in SPEC_INDEX]
     assert len(ids) == len(set(ids))
+    historical = {f"T-{number:02d}" for number in range(1, 35)}
+    historical |= {"T-04b", "T-04c", "T-10b", "T-21b"}
+    historical |= {f"T-R4{suffix}" for suffix in "abcde"}
+    assert set(ids) | REMOVED.keys() == historical
+    assert all(milestone and description.strip() for _, milestone, description in SPEC_INDEX)
     assert not set(ids) & REMOVED.keys()
     marked = marked_tests()
     assert not set(marked) - set(ids) - {"T-09a", "T-09b", "T-09c", "T-09d"}

@@ -412,3 +412,40 @@ def test_webhook_claims_do_not_override_provider_get_and_forgery_is_refused(
     executor.poll()
     assert conn.execute("SELECT awx_status FROM transfer_attempt").fetchone()[0] == "SENT"
     assert len(provider.transfers) == 1
+
+
+def test_timeout_recovery_and_retry_keep_the_original_idempotency_key(execution, request):
+    import json
+
+    executor, provider, packet, terms = execution
+    keys = []
+
+    def intercept(call):
+        if call.url.path.endswith("/transfers/create"):
+            keys.append(json.loads(call.content)["request_id"])
+        elif call.url.path.endswith("/transfers") and "request_id" in call.url.params:
+            keys.append(call.url.params["request_id"])
+
+    transport(execution, request, intercept)
+    provider.fault = "timeout_after_create"
+    assert executor.execute(packet) == "SUBMITTED"
+    assert executor.execute(packet) == "SUBMITTED"
+    assert len(keys) >= 3
+    assert set(keys) == {terms.items[0].request_id}
+    assert len(provider.transfers) == 1
+    assert len([path for path, _ in provider.posts if path == "/transfers/create"]) == 1
+
+
+def test_ops_cannot_queue_a_fully_approved_packet(execution, execution_service):
+    executor, provider, packet, _ = execution
+    headers = login(execution_service, 3)
+    for action in ("execute", "quote"):
+        response = execution_service.post(f"/api/approvals/{packet}/{action}", headers=headers)
+        assert response.status_code == 403, response.text
+    conn = executor.database.connection()
+    assert (
+        conn.execute("SELECT state FROM approval_packet WHERE id=?", (packet,)).fetchone()[0]
+        == "APPROVED"
+    )
+    assert conn.execute("SELECT COUNT(*) FROM provider_job").fetchone()[0] == 0
+    assert provider.posts == []

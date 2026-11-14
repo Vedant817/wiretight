@@ -1,0 +1,87 @@
+[
+  [
+    "replayed approval or WebAuthn assertion",
+    [
+      "tests/unit/test_operators_signing.py::test_real_passkey_two_person_approval_and_reverification"
+    ]
+  ],
+  [
+    "cooling-off bypass",
+    [
+      "tests/unit/test_execution_adversaries.py::test_tampered_cooling_deadline_cannot_override_signed_callback_window"
+    ]
+  ],
+  [
+    "clock skew",
+    [
+      "tests/unit/test_execution_adversaries.py::test_provider_clock_skew_refuses_before_any_create"
+    ]
+  ],
+  [
+    "kill between claim and POST",
+    [
+      "tests/unit/test_worker_process_crash.py::test_kill_after_durable_claim_before_money_post_recovers_lookup_only"
+    ]
+  ],
+  [
+    "timeout plus retry with the same idempotency key",
+    [
+      "tests/unit/test_execution_adversaries.py::test_timeout_recovery_and_retry_keep_the_original_idempotency_key"
+    ]
+  ],
+  [
+    "duplicate webhook",
+    [
+      "tests/unit/test_execution_adversaries.py::test_webhook_claims_do_not_override_provider_get_and_forgery_is_refused"
+    ]
+  ],
+  [
+    "out-of-order webhook",
+    [
+      "tests/unit/test_execution_adversaries.py::test_webhook_claims_do_not_override_provider_get_and_forgery_is_refused"
+    ]
+  ],
+  [
+    "forged webhook signature",
+    [
+      "tests/unit/test_execution_adversaries.py::test_webhook_claims_do_not_override_provider_get_and_forgery_is_refused"
+    ]
+  ],
+  [
+    "stale FX quote",
+    [
+      "tests/unit/test_fx_execution.py::test_quote_expiry_requires_new_quote_and_new_human_approval[-1-GBP]"
+    ]
+  ],
+  [
+    "concurrent workers racing",
+    [
+      "tests/unit/test_worker_process_crash.py::test_two_actual_worker_processes_cannot_double_execute"
+    ]
+  ],
+  [
+    "policy change between approval and execution",
+    [
+      "tests/unit/test_execution_adversaries.py::test_control_change_after_claim_prevents_the_money_post[signed_policy]"
+    ]
+  ],
+  [
+    "halt mid-execution",
+    [
+      "tests/unit/test_execution_adversaries.py::test_control_change_after_claim_prevents_the_money_post[halt]"
+    ]
+  ],
+  [
+    "cancel racing execute",
+    [
+      "tests/unit/test_execution_adversaries.py::test_cancel_racing_executor_has_one_transactional_winner[before_claim]",
+      "tests/unit/test_execution_adversaries.py::test_cancel_racing_executor_has_one_transactional_winner[after_claim]"
+    ]
+  ],
+  [
+    "compliance failure tripping halt",
+    [
+      "tests/unit/test_execution_adversaries.py::test_compliance_failure_trips_halt_and_holds_the_destination"
+    ]
+  ]
+]
