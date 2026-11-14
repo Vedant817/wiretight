@@ -286,8 +286,9 @@ def test_expired_halt_clear_round_requires_new_signatures_even_with_same_reason(
 
 
 @pytest.fixture
-def decision_service(domain, monkeypatch, request):
+def decision_service(domain, monkeypatch, request, tmp_path):
     monkeypatch.setenv("APP_DB_PATH", str(domain[0].path))
+    monkeypatch.setenv("APP_POLICY_PATH", str(tmp_path / "policy.yaml"))
     return request.getfixturevalue("service")
 
 
