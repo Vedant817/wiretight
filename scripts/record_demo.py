@@ -27,15 +27,16 @@ def main() -> None:
     layout_checks = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1920, "height": 1080},
-                                device_scale_factor=1)
+        page = browser.new_page(viewport={"width": 1920, "height": 1080}, device_scale_factor=1)
         page.goto("http://127.0.0.1:8765/?capture", wait_until="load")
         page.evaluate("document.fonts.ready")
         for scene in timeline:
             page.evaluate("s => { __wt.flip(s.flipped); __wt.go(s.frame); }", scene)
             page.wait_for_timeout(450)  # settle the cold-open CSS pop before capture
-            footer = ("Synthetic company data · Airwallex API responses simulated · "
-                      "cooling-off shortened for recording")
+            footer = (
+                "Synthetic company data · Airwallex API responses simulated · "
+                "cooling-off shortened for recording"
+            )
             assert page.locator("#cap").inner_text() == footer
             assert page.locator("#cap").is_visible()
             assert page.locator("#badge").count() == 0
@@ -69,10 +70,12 @@ def main() -> None:
                 }
                 return hits;
             }""")
-            layout_checks.append({"scene": scene["id"], "title": scene["title"],
-                                  "overlaps": overlaps})
+            layout_checks.append(
+                {"scene": scene["id"], "title": scene["title"], "overlaps": overlaps}
+            )
             (take / "layout-checks.json").write_text(
-                json.dumps(layout_checks, indent=2) + "\n", encoding="utf-8",
+                json.dumps(layout_checks, indent=2) + "\n",
+                encoding="utf-8",
             )
             png = take / f"scene{scene['id']:02d}.png"
             page.screenshot(path=str(png))
@@ -82,17 +85,60 @@ def main() -> None:
     for scene in timeline:
         png = take / f"scene{scene['id']:02d}.png"
         clip = take / f"scene{scene['id']:02d}.mp4"
-        run(["ffmpeg", "-y", "-loop", "1", "-framerate", "25", "-i", str(png),
-             "-frames:v", str(scene["frames"]), "-c:v", "libx264", "-preset", "fast",
-             "-crf", "18", "-pix_fmt", "yuv420p", str(clip)])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-loop",
+                "1",
+                "-framerate",
+                "25",
+                "-i",
+                str(png),
+                "-frames:v",
+                str(scene["frames"]),
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "18",
+                "-pix_fmt",
+                "yuv420p",
+                str(clip),
+            ]
+        )
         clips.append(f"file '{clip.as_posix()}'")
     filelist = take / "concat.txt"
     filelist.write_text("\n".join(clips), encoding="utf-8")
     rendered = take / "wiretight-demo-v4.mp4"
-    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(filelist),
-         "-i", str(OUT / "wiretight-vo.wav"), "-map", "0:v", "-map", "1:a",
-         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart",
-         str(rendered)])
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(filelist),
+            "-i",
+            str(OUT / "wiretight-vo.wav"),
+            "-map",
+            "0:v",
+            "-map",
+            "1:a",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
+            str(rendered),
+        ]
+    )
     shutil.copy2(rendered, final)
     TIMELINE.write_text(json.dumps(timeline, indent=2) + "\n", encoding="utf-8")
     print(f"Saved {final}")
