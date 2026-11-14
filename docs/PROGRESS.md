@@ -176,8 +176,7 @@ bank fingerprint. xtra shadowing the fingerprint's account. A currency table wi
 exponents (KRW overstated 100x). A floor row that consulted only a type and so could not fail.
 Negative money limits. Row 22's conjunction. Case-sensitive failure-type lookup routing a
 compliance failure to the shrug handler. LIKE without ESCAPE in reconciliation. An unvalidated
-ledger currency. mask_account disclosing whole short accounts. 
-gb() evading the hidden-text
+ledger currency. mask_account disclosing whole short accounts. gb() evading the hidden-text
 detector.
 
 **Environment.** 	zdata added and pinned: ZoneInfo("Asia/Kolkata") raised, so the IST daily
@@ -231,6 +230,7 @@ git commit                             -> 37ca500
 `
 
 Nothing was built against the sandbox or sent anywhere. No number in this file is estimated.
+
 # 14 November 2026 — production assignment, stretches 1–2
 
 See PROD-AUDIT.md for baseline findings and PROD-STATUS.md for current evidence,
