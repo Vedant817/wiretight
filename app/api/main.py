@@ -122,10 +122,24 @@ def create_app() -> FastAPI:
             errors.append("Set AWX_ENV=sandbox")
         if os.environ.get("AWX_BASE_URL") != SANDBOX_BASE_URL:
             errors.append("Set AWX_BASE_URL to the documented sandbox URL")
-        # The web process intentionally cannot see money credentials. Worker
-        # readiness will eventually attest successful auth and current balances.
-        if not os.environ.get("AWX_CLIENT_ID") or not os.environ.get("AWX_API_KEY"):
-            errors.append("Airwallex credentials are not configured for this process")
+        # Credentials belong to the worker. A web process must never require
+        # them merely to render setup/health or accept authenticated intake.
+        if os.environ.get("AWX_CLIENT_ID") or os.environ.get("AWX_API_KEY"):
+            errors.append("Remove Airwallex credentials from the web process")
+        observation = (
+            database.connection().execute("SELECT * FROM worker_health WHERE id=1").fetchone()
+        )
+        if not observation:
+            errors.append("Worker credentials/config have not supplied a readiness observation")
+        elif "credentials" in observation["detail"]:
+            errors.append("Worker sandbox credentials or configuration are unavailable")
+        else:
+            checked = datetime.fromisoformat(observation["checked_at"])
+            age = (datetime.now(UTC) - checked).total_seconds()
+            if age < -120 or age > 120:
+                errors.append("Worker readiness observation is stale or invalid")
+            if not observation["ready"]:
+                errors.append("Worker reports incomplete operational readiness")
         if os.environ.get("DEMO_MODE") or os.environ.get("APP_DEMO_TIMING", "").lower() in {
             "1",
             "true",
@@ -133,9 +147,7 @@ def create_app() -> FastAPI:
             errors.append("Demo settings are forbidden in the product service")
         if os.environ.get("AWX_MODE", "live") != "live":
             errors.append("Product requires AWX_MODE=live")
-        errors.append(
-            "Execution unavailable: durable worker and live guard verification are not implemented"
-        )
+        errors.append("Run planning and complete reconciliation orchestration are not ready")
         return errors
 
     @application.get("/health")
@@ -154,9 +166,11 @@ def create_app() -> FastAPI:
     def home() -> str:
         return (
             "<!doctype html><html><head><title>Wiretight setup</title></head><body>"
-            "<h1>Wiretight</h1><p>Payment execution is unavailable while setup and approval "
-            "controls are incomplete.</p><p><a href='/ready'>Readiness and setup errors</a></p>"
-            "<p>No supplier or balance data has been loaded. See README.md for setup.</p>"
+            "<h1>Wiretight</h1><p>Run orchestration and the operational UI are incomplete. "
+            "Authenticated API requests require the documented approval controls.</p>"
+            "<p><a href='/ready'>Readiness and setup errors</a></p>"
+            "<p>Supplier and financial records require operator authentication. "
+            "See README.md for setup.</p>"
             "</body></html>"
         )
 

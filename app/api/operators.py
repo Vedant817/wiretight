@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api import access
 from app.core import (
+    audit,
     callbacks,
     db,
     killswitch,
@@ -152,6 +154,52 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
             )
         except signing.SigningError as exc:
             raise HTTPException(409, str(exc)) from None
+
+    def queue_action(packet_id: str, request: Request, kind: str) -> dict[str, str]:
+        session = identity(request, mutate=True)
+        try:
+            with database.transaction() as conn:
+                operators.require_active(conn, session)
+                packet = signing.packet(conn, packet_id)
+                passkeys.verify_stored(conn, packet_id)
+                if kind == "QUOTE" and packet["kind"] != "PAYMENT":
+                    raise signing.SigningError("FX funding requires an approved payment")
+                payload = audit.canonical_json({"packet_id": packet_id})
+                prior = conn.execute(
+                    "SELECT id FROM provider_job WHERE kind=? AND request_json=? "
+                    "AND state='PENDING'",
+                    (kind, payload),
+                ).fetchone()
+                identifier = prior["id"] if prior else str(uuid4())
+                if not prior:
+                    now = operators.utcnow().isoformat()
+                    conn.execute(
+                        "INSERT INTO provider_job(id,kind,requested_by,request_json,state,"
+                        "created_at,updated_at) "
+                        "VALUES(?,?,?,?,'PENDING',?,?)",
+                        (identifier, kind, session.user_id, payload, now, now),
+                    )
+                    audit.append(
+                        conn,
+                        "execution.requested",
+                        {
+                            "job_id": identifier,
+                            "packet_id": packet_id,
+                            "kind": kind,
+                            "by": session.user_id,
+                        },
+                    )
+                return {"job_id": identifier, "state": "PENDING"}
+        except signing.SigningError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @routes.post("/approvals/{packet_id}/execute", status_code=202)
+    def execution_request(packet_id: str, request: Request) -> dict[str, str]:
+        return queue_action(packet_id, request, "EXECUTE")
+
+    @routes.post("/approvals/{packet_id}/quote", status_code=202)
+    def quote_request(packet_id: str, request: Request) -> dict[str, str]:
+        return queue_action(packet_id, request, "QUOTE")
 
     def current_policy() -> tuple[Any, dict[str, Any]]:
         try:

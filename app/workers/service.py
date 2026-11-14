@@ -1,7 +1,7 @@
-"""Real sandbox balance-refresh service; payment automation stays unready.
+"""Sandbox worker for refresh, polling and explicitly approved execution jobs.
 
-REFRESH jobs are read-only and safe to replay after a crash. This service does
-not dispatch approved payments until polling/reconciliation are integrated.
+REFRESH jobs are read-only and safe to replay after a crash. EXECUTE jobs recheck
+human approval and all money guards. Complete run orchestration remains unready.
 """
 
 from __future__ import annotations
@@ -99,7 +99,7 @@ def refresh(database: db.Database, client: AirwallexClient) -> bool:
                     "refresh_jobs": [job["id"] for job in jobs if job["enabled"]],
                 },
             )
-        heartbeat(database, "provider_connected; execution_polling_reconciliation_incomplete")
+        heartbeat(database, "provider_connected; run_orchestration_incomplete")
         return True
     except (ProviderError, ValidationError) as exc:
         category = exc.category if isinstance(exc, ProviderError) else "invalid_response"
@@ -152,7 +152,11 @@ def main() -> int:
                 okay = refresh(database, client)
                 if (
                     database.connection()
-                    .execute("SELECT 1 FROM execution_intent WHERE kind='TRANSFER' LIMIT 1")
+                    .execute(
+                        "SELECT 1 FROM execution_intent WHERE kind IN ('TRANSFER','CONVERSION') "
+                        "UNION ALL SELECT 1 FROM provider_job "
+                        "WHERE kind IN ('EXECUTE','QUOTE') AND state='PENDING' LIMIT 1"
+                    )
                     .fetchone()
                 ):
                     from app.workers.executor import Executor
@@ -167,6 +171,9 @@ def main() -> int:
                         lock_file=Path(settings.app_db_path).with_suffix(".execution.lock"),
                     )
                     executor.poll()
+                    from app.workers.jobs import process_actions
+
+                    process_actions(executor)
                 if args.once:
                     return 0 if okay else 1
                 stop.wait(settings.poll_interval_s)
