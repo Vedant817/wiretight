@@ -109,3 +109,31 @@ those helpers. No media under demo/ was edited.
 The current supervisor requirement permits removal **or justification** of each
 match. That audit is complete; remaining relocation is still listed rather than
 being misrepresented as completed production cleanup. No root demo/ file changed.
+
+
+## 2026-11-14: legacy authority physically removed from the product tree
+
+The older retained-code dispositions below are superseded by these moves:
+
+- `app/demo/{__init__,mock_airwallex,page,seed,server}.py` ->
+  `tests/support/recording/`. Root `demo/` media and scripts remain untouched.
+- HMAC policy loader/signers -> `tests/support/legacy_policy.py`.
+  `app/core/policy.py` contains shared value types and safe YAML parsing only.
+- HMAC halt clear/signers -> `tests/support/legacy_killswitch.py`; it imports
+  the real production trip/read controls for historical tests.
+- Raw Ed25519 callback fixtures -> `tests/support/legacy_oob.py`.
+  Product callback verification uses registered WebAuthn credentials.
+- Obsolete PID lock -> `tests/support/legacy_singlewriter.py`.
+- Obsolete demonstration timing shape/override labels were removed from the
+  real safety floor; runtime policy accepts no shortened cooling window.
+
+Proof: `uv run python -m tests.support.audit_runtime_imports` scans every Python
+module under `app/` (no archive exclusions), rejects test/script/recording
+imports, then imports the web, worker, executor and CLI in four fresh Python
+interpreters with an import finder that raises on archived dependencies. It
+also asserts the legacy signer attributes are absent from the shared modules.
+`tests/unit/test_runtime_boundary.py` runs that same check in the full suite.
+Observed output: `PASS: 49 product modules scanned; 4 isolated entry imports; archive imports and legacy signers forbidden`.
+Targeted legacy/control regression command:
+`uv run pytest tests/acceptance/test_b_policy_floor.py tests/acceptance/test_b_killswitch.py tests/unit/test_oob.py tests/unit/test_singlewriter.py tests/unit/test_real_decisions.py -q --timeout=180`
+Observed final line: `289 passed in 104.74s (0:01:44)`.

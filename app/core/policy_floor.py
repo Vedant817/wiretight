@@ -116,7 +116,6 @@ SCHEMA: dict[str, Any] = {
         "fee_reservation_usd": FREEMAP,
     },
     "vendor_category_reason": FREEMAP,
-    "demo_timing": BOOL,
 }
 
 #: §4.15 row 3: contact provenance must come from an invoice at least this old.
@@ -183,7 +182,6 @@ class FloorRow:
     control: str
     source: str
     constraints: tuple[Constraint, ...] = ()
-    demo_override: str = "None"
 
     def describe(self) -> str:
         return f"r{self.number} ({self.control}) in FINAL.md {self.source}"
@@ -208,14 +206,12 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
         "Cooling-off for new or changed details",
         "§4.15 r1 / §4.5.3",
         (_min("bank_change.cooling_off_hours", 72),),
-        "2 min, only if AWX_ENV=sandbox + host pin + APP_DEMO_TIMING=true; labelled",
     ),
     FloorRow(
         2,
         "Callback contact age",
         "§4.15 r2 / §4.5.2",
         (_min("bank_change.callback_contact_min_age_days", 30),),
-        "None (seed the fixture contact as old)",
     ),
     # Row 3 names three things: the validity window, the recorder rule (structural,
     # enforced in validate_shape) and the contact provenance age.
@@ -230,7 +226,6 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
                 MIN_CONTACT_PROVENANCE_INVOICE_AGE_DAYS,
             ),
         ),
-        "None",
     ),
     FloorRow(
         4,
@@ -240,16 +235,9 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
             _max("bank_change.first_payment_cap_usd", "2500.00"),
             _max("bank_change.first_payment_cap_median_fraction", "0.50"),
         ),
-        "None",
     ),
-    FloorRow(5, "Cap lift", "§4.15 r5", (_min("bank_change.cap_lift_final_payments", 2),), "None"),
-    FloorRow(
-        6,
-        "T0 per-payment limit",
-        "§4.15 r6",
-        (_max("t0.per_payment_limit_usd", "2000.00"),),
-        "None",
-    ),
+    FloorRow(5, "Cap lift", "§4.15 r5", (_min("bank_change.cap_lift_final_payments", 2),)),
+    FloorRow(6, "T0 per-payment limit", "§4.15 r6", (_max("t0.per_payment_limit_usd", "2000.00"),)),
     # Row 7 names three: the count, the fraction of the limit, and how long the
     # bank details must be unchanged. Only the count was checked before.
     FloorRow(
@@ -261,11 +249,8 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
             _min("t0.min_payment_fraction_of_limit", "0.25"),
             _min("t0.bank_details_unchanged_days", 60),
         ),
-        "None (history seeded and labelled)",
     ),
-    FloorRow(
-        8, "T0 amount band", "§4.15 r8", (_max("t0.max_multiple_of_payee_median", "1.5"),), "None"
-    ),
+    FloorRow(8, "T0 amount band", "§4.15 r8", (_max("t0.max_multiple_of_payee_median", "1.5"),)),
     FloorRow(
         9,
         "T0 disqualifiers",
@@ -287,15 +272,8 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
                 ],
             ),
         ),
-        "None",
     ),
-    FloorRow(
-        10,
-        "T0 enabled by default",
-        "§4.15 r10",
-        (_exact("t0.enabled", False),),
-        "policy.demo.yaml turns it on, signed, labelled",
-    ),
+    FloorRow(10, "T0 enabled by default", "§4.15 r10", (_exact("t0.enabled", False),)),
     # Rows 11 and 12. Both name the boundary below which ONE sign-off is enough.
     # That boundary is a CEILING: raising it would let a USD 400,000 payment
     # fall under it and get T1 instead of T2. (D-B11, corrected.)
@@ -304,14 +282,12 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
         "T1 band ceiling (below which one sign-off suffices)",
         "§4.15 r11",
         (_max("tiers.t2_threshold_usd", "10000.00"),),
-        "None",
     ),
     FloorRow(
         12,
         "T2 payee 7-day aggregate threshold",
         "§4.15 r12",
         (_max("tiers.t2_payee_7d_aggregate_usd", "10000.00"),),
-        "None",
     ),
     FloorRow(
         13,
@@ -322,7 +298,6 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
             _max("limits.per_run.all_usd", "50000.00"),
             _max("limits.per_run.max_payments", 40),
         ),
-        "None",
     ),
     FloorRow(
         14,
@@ -335,56 +310,40 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
             _max("limits.per_day.max_runs", 2),
             _max("limits.per_day.max_new_beneficiaries", 5),
         ),
-        "None",
     ),
     FloorRow(
         15,
         "Per-payee rolling 7 days",
         "§4.15 r15",
         (_max("limits.per_payee_7d.t0_usd", "2000.00"),),
-        "None",
     ),
     FloorRow(
         16,
         "Per-payee 24 h velocity",
         "§4.15 r16",
-        (
-            _max("limits.per_payee_24h.max_t0", 1),
-            _max("limits.per_payee_24h.max_payments", 3),
-        ),
-        "None",
+        (_max("limits.per_payee_24h.max_t0", 1), _max("limits.per_payee_24h.max_payments", 3)),
     ),
     FloorRow(
         17,
         "Per-approver daily total",
         "§4.15 r17",
         (_max("limits.per_approver_day_usd", "30000.00"),),
-        "None",
     ),
     FloorRow(
         18,
         "Approval expiry and challenge",
         "§4.15 r18",
-        (
-            _max("approvals.max_validity_hours", 4),
-            _max("approvals.challenge_ttl_seconds", 300),
-        ),
-        "None",
+        (_max("approvals.max_validity_hours", 4), _max("approvals.challenge_ttl_seconds", 300)),
     ),
     FloorRow(
-        19,
-        "Quote safety margin",
-        "§4.15 r19",
-        (_min("fx.quote_safety_margin_seconds", 120),),
-        "None",
+        19, "Quote safety margin", "§4.15 r19", (_min("fx.quote_safety_margin_seconds", 120),)
     ),
-    FloorRow(20, "FX drift tolerance", "§4.15 r20", (_max("fx.drift_bp", 25),), "None"),
+    FloorRow(20, "FX drift tolerance", "§4.15 r20", (_max("fx.drift_bp", 25),)),
     FloorRow(
         21,
         "Reserve floor",
         "§4.15 r21",
         (Constraint("reserve_floor", Direction.MINIMUM, {"USD": "8000.00"}),),
-        "missing -> executor refuses to start",
     ),
     FloorRow(
         22,
@@ -392,36 +351,28 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
         "§4.15 r22",
         tuple(
             _min(f"settlement.{rail}.min_hours", MIN_SETTLE_HOURS)
-            # SWIFT is excluded on purpose: it is never FINAL by timer, so
-            # it has no min_hours. It is bounded instead by requiring
-            # final_by_timer: false and a >= 10-business-day presumed window,
-            # checked in _check_settlement.
             for rail in sorted(set(SETTLE_FLOOR))
         ),
-        "not used (FINAL is never shortened)",
     ),
-    FloorRow(
-        23, "AMBIGUOUS escalation", "§4.15 r23", (_min("ambiguous.escalate_after_days", 6),), "None"
-    ),
-    FloorRow(
-        24, "Trip: clock skew", "§4.15 r24", (_max("killswitch.clock_skew_seconds", 120),), "None"
-    ),
-    # Row 25's demo-visible knob is the SEPA fee *reservation*, a MINIMUM: reducing
+    FloorRow(23, "AMBIGUOUS escalation", "§4.15 r23", (_min("ambiguous.escalate_after_days", 6),)),
+    FloorRow(24, "Trip: clock skew", "§4.15 r24", (_max("killswitch.clock_skew_seconds", 120),)),
+    # Row 25's configurable control is the SEPA fee *reservation*, a MINIMUM: reducing
     # it would let the planner promise a reserve the wallet does not hold.
     FloorRow(
         25,
         "Trip on first occurrence",
         "§4.15 r25",
         tuple(
-            _min(f"rails.fee_reservation_usd.{rail}", value)
-            for rail, value in (
-                ("SEPA", "5.00"),
-                ("FPS", "5.00"),
-                ("ACH", "5.00"),
-                ("SWIFT", "30.00"),
+            (
+                _min(f"rails.fee_reservation_usd.{rail}", value)
+                for rail, value in (
+                    ("SEPA", "5.00"),
+                    ("FPS", "5.00"),
+                    ("ACH", "5.00"),
+                    ("SWIFT", "30.00"),
+                )
             )
         ),
-        "None",
     ),
     FloorRow(
         26,
@@ -431,21 +382,18 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
             _max("killswitch.ambiguous_creates_per_run", 2),
             _max("killswitch.ambiguous_creates_rolling_24h", 2),
         ),
-        "None",
     ),
     FloorRow(
         27,
         "Trip: FAILED transfers",
         "§4.15 r27",
         (_max("killswitch.failed_transfers_rolling_1h", 3),),
-        "None",
     ),
     FloorRow(
         28,
         "LLM vs parser identifier mismatch",
         "§4.15 r28",
         (_max("killswitch.extraction_conflicts_rolling_24h", 3),),
-        "None",
     ),
     # Row 29: never shorten a rail's flight time.
     FloorRow(
@@ -453,17 +401,14 @@ FLOOR_ROWS: tuple[FloorRow, ...] = (
         "Trip on first occurrence (added)",
         "§4.15 r29",
         tuple(
-            _min(f"rails.flight_business_days.{rail}", value)
-            for rail, value in (("SEPA", 2), ("FPS", 1), ("ACH", 2), ("SWIFT", 3))
+            (
+                _min(f"rails.flight_business_days.{rail}", value)
+                for rail, value in (("SEPA", 2), ("FPS", 1), ("ACH", 2), ("SWIFT", 3))
+            )
         ),
-        "None",
     ),
     FloorRow(
-        30,
-        "Clearing the kill switch",
-        "§4.15 r30",
-        (_min("killswitch.clear_signatures", 2),),
-        "None",
+        30, "Clearing the kill switch", "§4.15 r30", (_min("killswitch.clear_signatures", 2),)
     ),
 )
 
@@ -693,7 +638,7 @@ def _check_exact(row: FloorRow, policy: Mapping[str, Any]) -> list[str]:
             f"{constraint.where()} is {value!r}; the shipped floor is "
             f"{constraint.value!r}. Turning auto-pay on is permitted only by a "
             "policy carrying two distinct approver signatures "
-            "(FINAL.md §4.15 r10, §6.4) — see policy.demo.yaml",
+            "(FINAL.md §4.15 r10, §6.4) — see the signed policy",
         )
         # load_policy() looks for this to decide whether signatures clear it.
         return [f"{message}{REQUIRES_SIGNATURES_MARKER}"]

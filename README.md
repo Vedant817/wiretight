@@ -140,7 +140,7 @@ are recorded in `docs/DECISIONS.md`.
 ## Demo mode (simulated)
 
 The branch `demo/video` carries a labelled demo mode used for the pitch recording. Run it with
-`make demo-video` (or `DEMO_MODE=video uv run python -m app.demo.server --port 8765`). The server
+`make demo-video` (or `DEMO_MODE=video uv run python -m tests.support.recording.server --port 8765`). The server
 refuses to start without `DEMO_MODE=video` and refuses to start if Airwallex credentials are
 visible in its environment. Nothing in it talks to the network.
 
@@ -153,7 +153,7 @@ tie-out, and the audit hash chain.
 
 What is simulated: the company (Halden Robotics), people (Arun, Priya, Meera, Kabir), suppliers,
 emails, IBANs, amounts and every Airwallex response — produced by a mocked
-`MockAirwallexClient` (`app/demo/mock_airwallex.py`) that returns documented-shape responses from
+`MockAirwallexClient` (`tests/support/recording/mock_airwallex.py`) that returns documented-shape responses from
 a script and never opens a socket. The UI pages are demo-only HTML, not the product UI; the
 executor, poller and passkey flows are not exercised. A persistent on-screen badge reads
 `SIMULATED DEMO DATA · Airwallex sandbox calls mocked`, and synthetic items carry

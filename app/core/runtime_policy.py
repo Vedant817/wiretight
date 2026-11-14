@@ -28,7 +28,7 @@ def validated_policy(conn: db.Connection, path: str | Path) -> tuple[LoadedPolic
         raise PolicyError("Demo-only configuration is forbidden in runtime policy files")
     # The historical floor validator also serves frozen-package tests. Its
     # obsolete marker is supplied only to that adapter, never to runtime config.
-    floor_data = {**data, "demo_timing": False}
+    floor_data = data
     if validate_shape(floor_data) or not check_policy_against_floor(floor_data).ok:
         raise PolicyError("Policy shape or safety floor is invalid")
     if data["t0"]["enabled"]:

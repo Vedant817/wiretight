@@ -16,8 +16,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
 from app.config import AIRWALLEX_SECRET_VARS
-from app.demo.page import render_page
-from app.demo.seed import build_demo_payload
+from tests.support.recording.page import render_page
+from tests.support.recording.seed import build_demo_payload
 
 _OK = 200
 _SERVER_ERROR = 500
@@ -57,7 +57,7 @@ class _DemoHandler(BaseHTTPRequestHandler):
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="python -m app.demo.server",
+        prog="python -m tests.support.recording.server",
         description="Serve the labelled demo mode (DEMO_MODE=video).",
     )
     parser.add_argument("--port", type=int, default=8765)

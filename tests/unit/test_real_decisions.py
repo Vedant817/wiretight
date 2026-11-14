@@ -381,7 +381,7 @@ def test_real_policy_callback_and_halt_http_flows(domain, decision_service, tmp_
 def test_public_hmac_test_seed_cannot_authorize_runtime_decision(domain):
     from webauthn.helpers.bytes_to_base64url import bytes_to_base64url
 
-    from app.core.policy import sign_policy_bytes
+    from tests.support.legacy_policy import sign_policy_bytes
 
     database, _ = domain
     conn = database.connection()

@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 from app.core import db
-from app.core import killswitch as ks
+from tests.support import legacy_killswitch as ks
 
 
 @pytest.fixture()

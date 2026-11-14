@@ -183,7 +183,7 @@ demo:
 # deliberate act.
 .PHONY: demo-video
 demo-video:
-	env -u AWX_CLIENT_ID -u AWX_API_KEY DEMO_MODE=video $(PY) -m app.demo.server \
+	env -u AWX_CLIENT_ID -u AWX_API_KEY DEMO_MODE=video $(PY) -m tests.support.recording.server \
 		--port $${DEMO_PORT:-8765}
 
 .PHONY: shadow-report

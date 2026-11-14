@@ -15,8 +15,9 @@ from pathlib import Path
 
 import pytest
 
-from app.core import db, singlewriter
-from app.core.singlewriter import ExecutorLockHeldError
+from app.core import db
+from tests.support import legacy_singlewriter as singlewriter
+from tests.support.legacy_singlewriter import ExecutorLockHeldError
 
 
 @pytest.fixture()

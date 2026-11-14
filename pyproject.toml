@@ -122,7 +122,7 @@ ignore = [
 "tests/**" = ["ARG001", "ARG002", "S101", "PLR2004", "N806"]
 "scripts/**" = ["S603", "S607"]
 # The demo page is one embedded HTML document: template lines are not code.
-"app/demo/page.py" = ["E501", "RUF001"]
+"tests/support/recording/page.py" = ["E501", "RUF001"]
 # The soft authenticator exists only in tests/support and is import-guarded (T-R4a).
 
 [tool.mypy]

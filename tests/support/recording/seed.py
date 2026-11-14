@@ -5,7 +5,7 @@ are computed by the real core modules - vendor matching, duplicate detection,
 IBAN fingerprints, out-of-band callback rules, the payout state machine, the
 ledger and the audit hash chain - so the demo shows what the code enforces,
 against synthetic data. Every mocked Airwallex response comes from
-:class:`~app.demo.mock_airwallex.MockAirwallexClient` and carries its
+:class:`~tests.support.recording.mock_airwallex.MockAirwallexClient` and carries its
 ``mock_label``.
 """
 
@@ -17,7 +17,8 @@ from typing import Any, Final
 
 from app.core import audit, dupes, ledger, oob, parsers, statemachine, vendors
 from app.core.ledger import Leg
-from app.demo.mock_airwallex import MOCK_LABEL, MockAirwallexClient
+from tests.support import legacy_oob
+from tests.support.recording.mock_airwallex import MOCK_LABEL, MockAirwallexClient
 
 #: The fictional "today" the whole recording runs on. Fixed, not ``date.today``,
 #: so the demo is reproducible frame by frame.
@@ -345,8 +346,8 @@ def _signed_callback_record(
         "readback_name_ok": True,
     }
     signing_key = audit.generate_key()
-    signature = signing_key.sign(oob._digest_input(record))
-    method = oob.verify_recorder_signature(
+    signature = signing_key.sign(legacy_oob._digest_input(record))
+    method = legacy_oob.verify_recorder_signature(
         record=record,
         public_key=signing_key.public_key().public_bytes_raw(),
         signature=signature,

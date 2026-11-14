@@ -23,6 +23,7 @@ import pytest
 
 from app.core import oob
 from app.core.oob import Contact
+from tests.support import legacy_oob
 
 
 def _dt(year: int, month: int, day: int) -> datetime:
@@ -326,18 +327,20 @@ class TestSignature:
         Not "unverified" - absent. Treating it as weak-but-present would let a
         directly-inserted row take the place of a real confirmation.
         """
-        with pytest.raises(oob.UnsignedCallbackError, match="no callback"):
-            oob.verify_recorder_signature(record=self._record(), public_key=None, signature=b"")
+        with pytest.raises(legacy_oob.UnsignedCallbackError, match="no callback"):
+            legacy_oob.verify_recorder_signature(
+                record=self._record(), public_key=None, signature=b""
+            )
 
     def test_a_replayed_nonce_is_refused(self) -> None:
         """A reused challenge would be indistinguishable from a fresh signature."""
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
         key = Ed25519PrivateKey.generate()
-        signature = key.sign(oob._digest_input(self._record()))
+        signature = key.sign(legacy_oob._digest_input(self._record()))
 
-        with pytest.raises(oob.UnsignedCallbackError, match="single"):
-            oob.verify_recorder_signature(
+        with pytest.raises(legacy_oob.UnsignedCallbackError, match="single"):
+            legacy_oob.verify_recorder_signature(
                 record=self._record(),
                 public_key=key.public_key().public_bytes_raw(),
                 signature=signature,
@@ -349,10 +352,10 @@ class TestSignature:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
         key = Ed25519PrivateKey.generate()
-        signature = key.sign(oob._digest_input({"change_request_id": "different"}))
+        signature = key.sign(legacy_oob._digest_input({"change_request_id": "different"}))
 
-        with pytest.raises(oob.UnsignedCallbackError, match="does not match"):
-            oob.verify_recorder_signature(
+        with pytest.raises(legacy_oob.UnsignedCallbackError, match="does not match"):
+            legacy_oob.verify_recorder_signature(
                 record=self._record(),
                 public_key=key.public_key().public_bytes_raw(),
                 signature=signature,
@@ -364,7 +367,7 @@ class TestSignature:
         A plain json.dumps would differ on key order, and the signature would verify
         in one place and not in the other.
         """
-        assert oob.record_hash(self._record()) == oob.record_hash(
+        assert legacy_oob.record_hash(self._record()) == legacy_oob.record_hash(
             dict(reversed(list(self._record().items())))
         )
 
@@ -372,8 +375,8 @@ class TestSignature:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
         key = Ed25519PrivateKey.generate()
-        signature = key.sign(oob._digest_input(self._record()))
-        method = oob.verify_recorder_signature(
+        signature = key.sign(legacy_oob._digest_input(self._record()))
+        method = legacy_oob.verify_recorder_signature(
             record=self._record(),
             public_key=key.public_key().public_bytes_raw(),
             signature=signature,

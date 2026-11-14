@@ -24,12 +24,6 @@ import pytest
 import yaml
 
 from app.core import db
-from app.core.policy import (
-    LoadedPolicy,
-    PolicyError,
-    load_policy,
-    sign_policy_bytes,
-)
 from app.core.policy_floor import (
     FLOOR_ROWS,
     REQUIRES_SIGNATURES_MARKER,
@@ -39,6 +33,12 @@ from app.core.policy_floor import (
     check_policy_against_floor,
     has_signature_gated_violation,
     without_signature_gated,
+)
+from tests.support.legacy_policy import (
+    LoadedPolicy,
+    PolicyError,
+    load_policy,
+    sign_policy_bytes,
 )
 
 #: The shipped default, exactly as §4.17 writes it. T-27 mutates a copy of this.
