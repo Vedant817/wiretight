@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <title>Wiretight · Operations</title>
+  <link rel="stylesheet" href="/assets/operations.css">
+  <script src="/assets/operations.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to operations</a>
+<header><a class="wordmark" href="/">Wiretight<span> / Operations</span></a><span class="environment">Airwallex sandbox</span><span id="identity"></span><button id="logout" hidden>Sign out</button></header>
+<main id="main">
+  <div class="heading"><div><p class="eyebrow">Payment control desk</p><h1>Review. Approve. Follow through.</h1></div><button id="refresh">Refresh status</button></div>
+  <section class="dependency" aria-labelledby="dependency-title"><h2 id="dependency-title">Dependency status</h2><p id="readiness" role="status">Checking service dependencies…</p><ul id="setup-errors"></ul></section>
+  <p id="error" class="error" role="alert" hidden></p><p id="notice" role="status" hidden></p>
+  <section id="login-panel" class="login" aria-labelledby="login-title"><p class="eyebrow">Operator access</p><h2 id="login-title">Sign in to your workspace</h2><p>Use your provisioned operator account. Payment approvals require your registered passkey.</p><form id="login"><label>Email<input name="email" type="email" autocomplete="username" required maxlength="254"></label><label>Password<input name="password" type="password" autocomplete="current-password" required maxlength="256"></label><button class="primary" type="submit">Sign in</button></form></section>
+  <div id="workspace" hidden>
+    <nav aria-label="Workspace"><a href="#approvals">Approval queue</a><a href="#cooling">Bank changes</a><a href="#payments">Execution</a><a href="#reconciliation">Reconciliation</a><a href="#runs">Runs & planning</a><a href="#account">Account & policy</a></nav>
+    <section id="approvals"><div class="section-heading"><div><p class="eyebrow">Human decisions</p><h2>Approval queue</h2></div><span id="approval-count" class="muted"></span></div><p>Review the recipient, amount, evidence and expiry before signing. FX funding requires its own approval. Cancellation voids an unclaimed approval; it cannot recall a submitted payment.</p><div id="approval-list" class="cards"></div></section>
+    <section id="cooling"><p class="eyebrow">Destination controls</p><h2>Bank changes & cooling-off</h2><p>New or changed bank details wait at least 72 hours after the independent callback. Server checks decide whether a payment can proceed.</p><div id="cooling-list"></div></section>
+    <section id="payments"><p class="eyebrow">Provider observations</p><h2>Execution status</h2><p>Submission, payment and settlement are separate states. A provisional payment can still fail or return.</p><div id="payment-list"></div><details><summary>Durable execution jobs</summary><div id="job-list"></div></details></section>
+    <section id="reconciliation"><p class="eyebrow">Ledger & wallet</p><h2>Reconciliation exceptions</h2><p>Residuals and unmapped transactions require investigation. A missing observation is never treated as a balanced ledger.</p><div id="tie-out-list"></div><div id="exception-list"></div></section>
+    <section id="runs"><p class="eyebrow">Controlled execution</p><h2>Runs & planning</h2><div class="toolbar"><button id="open-run" data-approver>Open a run from provider balances</button><button id="provider-refresh">Refresh wallet observation</button></div><div id="run-list"></div><form id="plan" data-approver><h3>Prepare an invoice for approval</h3><p>Planning reads the current policy, bank evidence and provider state. It does not send money.</p><div class="fields"><label>Open run<select name="run_id" required></select></label><label>Invoice<select name="obligation_id" required></select></label><label>Bank destination<select name="payee_id" required></select></label><label>Tranche<select name="tranche_no"><option value="1">First</option><option value="2">Remainder, after first is final</option></select></label></div><button type="submit">Prepare approval</button></form></section>
+    <section id="account"><p class="eyebrow">Trust & identity</p><h2>Account & policy</h2><div class="toolbar"><button id="register">Register this account’s passkey</button><button id="policy-sign" data-approver>Review and sign policy</button></div><div id="policy"></div><p class="muted">Provision operators and import historical contact evidence through the documented local setup. A callback records an operator’s attestation; it does not prove a call took place.</p></section>
+    <p class="muted" id="observed-at"></p>
+  </div>
+</main>
+<dialog id="cancel-dialog"><form id="cancel-form"><h2>Cancel this approval</h2><p>The recipient and terms remain in the audit trail. A stale browser tab cannot approve it after cancellation.</p><label>Reason<textarea name="reason" required maxlength="1000" rows="3"></textarea></label><div class="toolbar"><button type="button" id="cancel-back">Keep approval</button><button type="submit" class="danger">Cancel approval</button></div></form></dialog>
+<noscript>This operations desk requires JavaScript. The authenticated API and readiness endpoint remain available.</noscript>
+</body>
+</html>

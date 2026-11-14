@@ -1,7 +1,7 @@
 """Sandbox worker for refresh, polling and explicitly approved execution jobs.
 
 REFRESH jobs are read-only and safe to replay after a crash. EXECUTE jobs recheck
-human approval and all money guards. Complete run orchestration remains unready.
+human approval and all money guards. Planning and reconciliation use durable, authenticated jobs.
 """
 
 from __future__ import annotations
@@ -15,20 +15,21 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from app.config import SandboxGuardError, WorkerSettings
+from app.config import SandboxGuardError, WorkerSettings, validate_product
 from app.core import audit, db
 from app.core.operators import utcnow
 from app.core.process_lock import ProcessLockHeldError, exclusive_process
 from app.integrations.airwallex import AirwallexClient, ProviderError
+from app.logging_config import configure_logging
 
 
-def heartbeat(database: db.Database, detail: str) -> None:
+def heartbeat(database: db.Database, detail: str, *, ready: bool = False) -> None:
     with database.transaction() as conn:
         conn.execute(
-            "INSERT INTO worker_health(id,ready,detail,checked_at) VALUES(1,0,?,?) "
-            "ON CONFLICT(id) DO UPDATE SET ready=0,detail=excluded.detail,"
+            "INSERT INTO worker_health(id,ready,detail,checked_at) VALUES(1,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET ready=excluded.ready,detail=excluded.detail,"
             "checked_at=excluded.checked_at",
-            (detail, utcnow().isoformat()),
+            (int(ready), detail, utcnow().isoformat()),
         )
 
 
@@ -99,7 +100,7 @@ def refresh(database: db.Database, client: AirwallexClient) -> bool:
                     "refresh_jobs": [job["id"] for job in jobs if job["enabled"]],
                 },
             )
-        heartbeat(database, "provider_connected; run_orchestration_incomplete")
+        heartbeat(database, "provider_connected; installation_checks_pending")
         return True
     except (ProviderError, ValidationError) as exc:
         category = exc.category if isinstance(exc, ProviderError) else "invalid_response"
@@ -123,6 +124,15 @@ def main() -> int:
     stop = threading.Event()
     try:
         settings = WorkerSettings()
+        validate_product(settings)
+        configure_logging(
+            {
+                **os.environ,
+                "AWX_API_KEY": settings.awx_api_key,
+                "AWX_CLIENT_ID": settings.awx_client_id,
+            },
+            level=settings.log_level,
+        )
         database = db.Database(settings.app_db_path)
         environment = {
             **os.environ,
@@ -150,30 +160,53 @@ def main() -> int:
         with exclusive_process(Path(settings.app_db_path).with_suffix(".refresh.lock")):
             while not stop.is_set():
                 okay = refresh(database, client)
-                if (
-                    database.connection()
-                    .execute(
-                        "SELECT 1 FROM execution_intent WHERE kind IN ('TRANSFER','CONVERSION') "
-                        "UNION ALL SELECT 1 FROM provider_job "
-                        "WHERE kind IN ('EXECUTE','QUOTE') AND state='PENDING' LIMIT 1"
-                    )
-                    .fetchone()
-                ):
+                if okay:
+                    from app.core import killswitch, runtime_policy
                     from app.workers.executor import Executor
-
-                    executor = Executor(
-                        database,
-                        client,
-                        policy_path=Path(settings.app_policy_path),
-                        key_dir=Path(settings.app_key_dir),
-                        seal_dir=Path(settings.app_audit_checkpoint_dir),
-                        halt_file=Path(settings.app_halt_file),
-                        lock_file=Path(settings.app_db_path).with_suffix(".execution.lock"),
-                    )
-                    executor.poll()
                     from app.workers.jobs import process_actions
+                    from app.workers.operations import reconcile_open_runs
 
-                    process_actions(executor)
+                    try:
+                        executor = Executor(
+                            database,
+                            client,
+                            policy_path=Path(settings.app_policy_path),
+                            key_dir=Path(settings.app_key_dir),
+                            seal_dir=Path(settings.app_audit_checkpoint_dir),
+                            halt_file=Path(settings.app_halt_file),
+                            lock_file=Path(settings.app_db_path).with_suffix(".execution.lock"),
+                            rp_id=settings.webauthn_rp_id,
+                            origin=settings.webauthn_origin,
+                        )
+                        # Provider observations continue even while the money controls are halted.
+                        executor.poll()
+                        process_actions(executor)
+                        matched = reconcile_open_runs(executor)
+                        conn = database.connection()
+                        executor._trust(conn)
+                        runtime_policy.load_runtime_policy(
+                            conn, executor.policy_path, executor.passkeys
+                        )
+                        killswitch.load(conn, executor.halt_file).guard()
+                        heartbeat(
+                            database,
+                            "provider_connected; ready" if matched else "reconciliation_mismatch",
+                            ready=matched,
+                        )
+                    except Exception as exc:
+                        # No secret-bearing exception text crosses the logging boundary.
+                        import logging
+
+                        logging.getLogger("wiretight").warning(
+                            {
+                                "event": "worker.controls_unavailable",
+                                "error_type": type(exc).__name__,
+                            }
+                        )
+                        heartbeat(
+                            database, "installation_trust_policy_or_reconciliation_unavailable"
+                        )
+                        okay = False
                 if args.once:
                     return 0 if okay else 1
                 stop.wait(settings.poll_interval_s)

@@ -1,4 +1,4 @@
--- Durable human decisions and execution intents; no seeded runtime data.
+-- Durable human decisions and execution intents; no automatic business records.
 CREATE TABLE signed_record (
     id TEXT PRIMARY KEY,
     purpose TEXT NOT NULL CHECK(purpose IN ('POLICY','CALLBACK','CLEAR')),

@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 FORBIDDEN = ("tests", "scripts", "app.demo", "unittest.mock")
-ROOTS = ("app.api.main", "app.workers.service", "app.workers.executor", "app.cli")
+ROOTS = ("app.api.main", "app.workers.service", "app.workers.executor", "app.cli", "app.local")
 
 
 def check_source(root: Path) -> int:

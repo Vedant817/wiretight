@@ -21,7 +21,7 @@ counts as **no callback at all** (T-10b), which is a stronger default than
 "unverified" - it is "does not exist".
 
 Rule 6 is the honesty rule and has no test, because it is a statement about what the
-README and the demo caption say. It is recorded here so that it is not mistaken for
+README says. It is recorded here so that it is not mistaken for
 something missing.
 """
 
@@ -46,7 +46,7 @@ CONTACT_CHANGED_WITHIN_DAYS: Final[int] = 30
 #: Rule 3: the callback must land within this many days of the request.
 CALLBACK_VALIDITY_DAYS: Final[int] = 7
 
-#: §4.5.3: the cooling-off, in hours. Not 2 minutes - that is a demo override.
+#: §4.5.3: the minimum cooling-off, in hours.
 COOLING_OFF_HOURS: Final[int] = 72
 
 #: §4.5.4: the cap's floor for a vendor with no history.
@@ -363,7 +363,7 @@ def cooling_off_until(
     The **later**, not the earlier. A callback that arrives quickly would otherwise
     shorten the window, and the point of the window is that a fast confirmation is
     the one most likely to have been manufactured. Configuration may tighten
-    the window, never reduce the 72-hour floor. No runtime demo override exists.
+    the window, never reduce the 72-hour floor. Runtime configuration cannot shorten this minimum.
     """
     if type(cooling_off_hours) is not int or cooling_off_hours < COOLING_OFF_HOURS:
         raise ValueError("cooling_off_hours must be an integer of at least 72")

@@ -486,7 +486,7 @@ CATEGORY_REASONS: Final[dict[str, str]] = {
 # ---------------------------------------------------------------------------
 # Failure types (§4.11)
 # ---------------------------------------------------------------------------
-#: Every simulator ``failure_type`` and the playbook group it belongs to.
+#: Every documented sandbox ``failure_type`` and the playbook group it belongs to.
 #: ``INBOUND_BENEFICIARY_VALIDATION_ERROR`` is misspelled upstream and is
 #: matched byte for byte; correcting it would silently miss the failure.
 FAILURE_TYPES: Final[dict[str, str]] = {
@@ -533,7 +533,7 @@ FAILURE_TYPES: Final[dict[str, str]] = {
     "DEFAULT": "H",
 }
 
-#: Documented numeric reason codes, shown verbatim on the demo caption (§4.12).
+#: Documented numeric reason codes, preserved verbatim for operator investigation (§4.12).
 FAILURE_REASON_CODES: Final[dict[str, str]] = {
     "ACCOUNT_CLOSED": "90701",
     "ACCOUNT_INACTIVE_OR_DORMANT": "90702",

@@ -65,13 +65,15 @@ class Executor:
         seal_dir: Path,
         halt_file: Path,
         lock_file: Path,
+        rp_id: str | None = None,
+        origin: str | None = None,
     ) -> None:
         self.database, self.client = database, client
         self.policy_path, self.key_dir, self.seal_dir = policy_path, key_dir, seal_dir
         self.halt_file, self.lock_file = halt_file, lock_file
         self.passkeys = signing.Passkeys(
-            rp_id=os.environ.get("WEBAUTHN_RP_ID", "localhost"),
-            origin=os.environ.get("WEBAUTHN_ORIGIN", "http://localhost:8000"),
+            rp_id=rp_id or os.environ.get("WEBAUTHN_RP_ID", "localhost"),
+            origin=origin or os.environ.get("WEBAUTHN_ORIGIN", "http://localhost:8000"),
         )
         self.key = audit.load_private_key(key_dir / "audit_ed25519.pem")
         self.public = Ed25519PublicKey.from_public_bytes((key_dir / "audit.public").read_bytes())

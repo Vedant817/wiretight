@@ -25,7 +25,9 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from typing import Any, Final
+from urllib.parse import urlsplit
 
+from dotenv import dotenv_values
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -154,6 +156,8 @@ class WebSettings(_BaseWiretightSettings):
     app_host: str = Field(default="127.0.0.1", alias="APP_HOST")
     app_port: int = Field(default=8000, alias="APP_PORT")
     app_policy_path: str = Field(default="policy.yaml", alias="APP_POLICY_PATH")
+    app_key_dir: str = Field(default="var/keys", alias="APP_KEY_DIR")
+    awx_webhook_secret: str = Field(default="", alias="AWX_WEBHOOK_SECRET", repr=False)
     app_policy_sig_path: str = Field(default="var/policy.sig.json", alias="APP_POLICY_SIG_PATH")
     signing_mode: str = Field(default="webauthn", alias="SIGNING_MODE")
 
@@ -191,6 +195,8 @@ class WorkerSettings(_BaseWiretightSettings):
 
     awx_client_id: str = Field(default="", alias="AWX_CLIENT_ID")
     app_key_dir: str = Field(default="var/keys", alias="APP_KEY_DIR")
+    webauthn_rp_id: str = Field(default="localhost", alias="WEBAUTHN_RP_ID")
+    webauthn_origin: str = Field(default="http://localhost:8000", alias="WEBAUTHN_ORIGIN")
     awx_api_key: str = Field(default="", alias="AWX_API_KEY")
     awx_login_as: str = Field(default="", alias="AWX_LOGIN_AS")
     awx_api_version: str = Field(default="", alias="AWX_API_VERSION")
@@ -260,8 +266,39 @@ def log_settings_safely(settings: Any) -> dict[str, Any]:
     """
     out: dict[str, Any] = {}
     for name, value in settings.model_dump().items():
-        if name in {"awx_api_key", "awx_client_id"}:
-            out[name] = _redact(str(value)) if value else ""
+        if any(part in name for part in ("key", "secret", "password", "token", "client_id")):
+            out[name] = "[REDACTED]" if value else ""
         else:
             out[name] = value
     return out
+
+
+def validate_product(settings: WebSettings | WorkerSettings) -> None:
+    """No permissive recording modes, shortened controls or unsafe browser origins."""
+    check_sandbox_guard({"AWX_ENV": settings.awx_env, "AWX_BASE_URL": settings.awx_base_url})
+    if settings.awx_mode != "live" or settings.signing_mode != "webauthn" or settings.shadow_mode:
+        raise SandboxGuardError("Product requires live sandbox mode and WebAuthn")
+    environment = {**dotenv_values(".env"), **os.environ}
+    if environment.get("DEMO_MODE") or environment.get("APP_DEMO_TIMING"):
+        raise SandboxGuardError("Recording settings are forbidden in the product")
+    origin = urlsplit(settings.webauthn_origin)
+    if (
+        origin.scheme not in {"http", "https"}
+        or not origin.hostname
+        or origin.username
+        or origin.password
+        or origin.query
+        or origin.fragment
+        or origin.path not in {"", "/"}
+        or origin.hostname != settings.webauthn_rp_id
+        or (origin.scheme != "https" and origin.hostname not in {"localhost", "127.0.0.1"})
+    ):
+        raise SandboxGuardError("Configure an HTTPS origin and matching WebAuthn RP, or localhost")
+    if settings.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+        raise SandboxGuardError("Invalid LOG_LEVEL")
+    if isinstance(settings, WebSettings) and not 1 <= settings.app_port <= 65535:
+        raise SandboxGuardError("Invalid APP_PORT")
+    if isinstance(settings, WorkerSettings) and (
+        not 1 <= settings.poll_interval_s <= 60 or not 1 <= settings.awx_http_timeout_s <= 120
+    ):
+        raise SandboxGuardError("Invalid worker polling interval or timeout")

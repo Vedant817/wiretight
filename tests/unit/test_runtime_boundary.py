@@ -1,4 +1,5 @@
 """Archive import isolation is an enforced runtime property."""
+
 from tests.support.audit_runtime_imports import main
 
 

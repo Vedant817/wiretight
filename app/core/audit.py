@@ -33,7 +33,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 
 from app.core import db
 
-#: ``prev_hash`` of the very first entry. A fixed, obviously-fake value, so a
+#: ``prev_hash`` of the very first entry. The standard zero hash sentinel, so a
 #: truncated chain cannot pass as a complete one.
 GENESIS_PREV_HASH: Final[str] = "0" * 64
 

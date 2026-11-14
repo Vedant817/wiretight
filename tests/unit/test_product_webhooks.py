@@ -27,6 +27,7 @@ def service(monkeypatch):
             raise AssertionError("Outbound sockets forbidden in product tests")
 
     monkeypatch.setattr(socket, "socket", LocalSocket)
+    monkeypatch.setenv("AWX_MODE", "live")
     monkeypatch.setenv("AWX_WEBHOOK_SECRET", "test-signing-secret")
     with TestClient(create_app()) as client:
         yield client
@@ -84,7 +85,9 @@ def test_bad_signature_and_malformed_input(service):
 def test_oversized_body_and_missing_secret(service, monkeypatch):
     assert service.post("/webhooks/airwallex", content=b"x" * 262145).status_code == 413
     monkeypatch.delenv("AWX_WEBHOOK_SECRET")
-    assert service.post("/webhooks/airwallex", content=b"{}").status_code == 503
+    # Configuration is fixed at startup; rotation/removal requires a new service.
+    with TestClient(create_app()) as missing_secret:
+        assert missing_secret.post("/webhooks/airwallex", content=b"{}").status_code == 503
 
 
 def test_expired_signed_event():

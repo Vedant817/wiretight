@@ -47,3 +47,7 @@ demo/vo-segments/
 demo/raw-take/
 demo/raw-take-v3/
 demo/raw-take-v4/
+
+# Local browser verification artifacts
+.playwright-cli/
+output/playwright/

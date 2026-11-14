@@ -68,10 +68,21 @@ def snapshot(client: AirwallexClient) -> tuple[dict[str, Decimal], dict[str, dic
     return before, settled
 
 
-def open_run(conn: db.Connection, client: AirwallexClient) -> str:
+def open_run(
+    conn: db.Connection, client: AirwallexClient, *, operation_id: str | None = None
+) -> str:
+    # Durable job identity survives a crash after baseline commit but before acknowledgement.
+    if operation_id and conn.execute("SELECT 1 FROM run WHERE id=?", (operation_id,)).fetchone():
+        if not conn.execute(
+            "SELECT 1 FROM audit_log WHERE kind='run.opened' "
+            "AND json_extract(payload_json,'$.run_id')=?",
+            (operation_id,),
+        ).fetchone():
+            raise ReconciliationError("Run baseline has no audit evidence")
+        return operation_id
     db.assert_no_write_lock(conn, doing="capture opening cash and financial history")
     balances, rows = snapshot(client)
-    identifier = str(uuid4())
+    identifier = operation_id or str(uuid4())
     now = utcnow().isoformat()
     with db.transaction(conn):
         if conn.execute("SELECT 1 FROM run WHERE state='OPEN'").fetchone():
@@ -225,11 +236,12 @@ def reconcile(conn: db.Connection, client: AirwallexClient, run_id: str) -> bool
             residual = balances[currency] - computed
             clean = residual == 0 and not unexplained
             okay = okay and clean
+            tie_out_id = str(uuid4())
             conn.execute(
                 "INSERT INTO tie_out(id,run_id,currency,b_open,b_close_computed,b_actual,residual,"
                 "state,explanation,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
                 (
-                    str(uuid4()),
+                    tie_out_id,
                     run_id,
                     currency,
                     str(opening[currency]),
@@ -241,6 +253,19 @@ def reconcile(conn: db.Connection, client: AirwallexClient, run_id: str) -> bool
                     now,
                 ),
             )
+            if not clean:
+                conn.execute(
+                    "INSERT INTO recon_exception(id,tie_out_id,kind,source_id,reason,created_at) "
+                    "VALUES(?,?,'AMOUNT_MISMATCH',NULL,?,?)",
+                    (
+                        str(uuid4()),
+                        tie_out_id,
+                        audit.canonical_json(
+                            {"residual": str(residual), "unmapped_payouts": unexplained}
+                        ),
+                        now,
+                    ),
+                )
         ledger.assert_ledger_balances(conn)
         audit.append(
             conn, "run.reconciled", {"run_id": run_id, "matched": okay, "observed_at": now}

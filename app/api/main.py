@@ -1,4 +1,4 @@
-"""Product service. No imports from app.demo; unavailable operations fail closed."""
+"""Authenticated operations service; provider writes run only in the worker."""
 
 from __future__ import annotations
 
@@ -12,18 +12,22 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.api.intake import router as intake_router
+from app.api.operations import router as operations_router
 from app.api.operators import router
-from app.config import SANDBOX_BASE_URL
+from app.config import SandboxGuardError, WebSettings, validate_product
 from app.core import audit, db, signing
 from app.core.operators import AuthenticationError
+from app.logging_config import configure_logging
 
 
 class WebhookEvent(BaseModel):
@@ -44,23 +48,46 @@ def verify_webhook(body: bytes, timestamp: str, signature: str, secret: str) -> 
 
 
 def create_app() -> FastAPI:
-    database = db.Database(os.environ.get("APP_DB_PATH", "var/app.sqlite"))
+    try:
+        settings = WebSettings()
+    except ValidationError:
+        raise RuntimeError(
+            "Invalid web configuration; check documented environment variables"
+        ) from None
+    database = db.Database(settings.app_db_path)
     rate_lock = threading.Lock()
     rate_window = [0.0, 0.0]
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        try:
+            validate_product(settings)
+            settings.check_startup(
+                {**os.environ, "AWX_ENV": settings.awx_env, "AWX_BASE_URL": settings.awx_base_url}
+            )
+        except SandboxGuardError:
+            raise RuntimeError(
+                "Unsafe web configuration; check sandbox mode, origin and secret separation"
+            ) from None
+        configure_logging(
+            {**os.environ, "AWX_WEBHOOK_SECRET": settings.awx_webhook_secret},
+            level=settings.log_level,
+        )
         database.connection()
         yield
         database.close()
 
     application = FastAPI(title="Wiretight", lifespan=lifespan, docs_url=None, redoc_url=None)
     passkeys = signing.Passkeys(
-        rp_id=os.environ.get("WEBAUTHN_RP_ID", "localhost"),
-        origin=os.environ.get("WEBAUTHN_ORIGIN", "http://localhost:8000"),
+        rp_id=settings.webauthn_rp_id,
+        origin=settings.webauthn_origin,
     )
-    application.include_router(router(database, passkeys))
-    application.include_router(intake_router(database, passkeys))
+    application.include_router(router(database, passkeys, settings))
+    application.include_router(intake_router(database, passkeys, settings))
+
+    application.include_router(operations_router(database, passkeys))
+    static = Path(__file__).with_name("static")
+    application.mount("/assets", StaticFiles(directory=static), name="assets")
 
     @application.exception_handler(RequestValidationError)
     async def invalid_request(_: Request, exc: RequestValidationError) -> JSONResponse:
@@ -114,18 +141,18 @@ def create_app() -> FastAPI:
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+        logging.getLogger("wiretight").info(
+            {
+                "event": "http.completed",
+                "method": request.method,
+                "route": getattr(request.scope.get("route"), "path", "unmatched"),
+                "status": response.status_code,
+            }
+        )
         return response
 
     def setup_errors() -> list[str]:
         errors = []
-        if os.environ.get("AWX_ENV") != "sandbox":
-            errors.append("Set AWX_ENV=sandbox")
-        if os.environ.get("AWX_BASE_URL") != SANDBOX_BASE_URL:
-            errors.append("Set AWX_BASE_URL to the documented sandbox URL")
-        # Credentials belong to the worker. A web process must never require
-        # them merely to render setup/health or accept authenticated intake.
-        if os.environ.get("AWX_CLIENT_ID") or os.environ.get("AWX_API_KEY"):
-            errors.append("Remove Airwallex credentials from the web process")
         observation = (
             database.connection().execute("SELECT * FROM worker_health WHERE id=1").fetchone()
         )
@@ -139,23 +166,35 @@ def create_app() -> FastAPI:
             if age < -120 or age > 120:
                 errors.append("Worker readiness observation is stale or invalid")
             if not observation["ready"]:
-                errors.append("Worker reports incomplete operational readiness")
-        if os.environ.get("DEMO_MODE") or os.environ.get("APP_DEMO_TIMING", "").lower() in {
-            "1",
-            "true",
-        }:
-            errors.append("Demo settings are forbidden in the product service")
-        if os.environ.get("AWX_MODE", "live") != "live":
-            errors.append("Product requires AWX_MODE=live")
-        errors.append("Run planning and complete reconciliation orchestration are not ready")
+                errors.append(
+                    "Worker reports incomplete operational readiness: " + observation["detail"]
+                )
+        snapshot = (
+            database.connection()
+            .execute(
+                "SELECT observed_at FROM provider_snapshot "
+                "WHERE kind='BALANCES' AND subject='wallet'"
+            )
+            .fetchone()
+        )
+        if not snapshot:
+            errors.append("No provider balance observation is available")
+        else:
+            observed = datetime.fromisoformat(snapshot["observed_at"])
+            age = (datetime.now(UTC) - observed).total_seconds()
+            if age < -120 or age > 120:
+                errors.append("Provider balance observation is stale or invalid")
+        if not settings.awx_webhook_secret:
+            errors.append("Set AWX_WEBHOOK_SECRET for authenticated provider webhooks")
         return errors
 
     @application.get("/health")
     @application.get("/ready")
     def health() -> JSONResponse:
-        errors = setup_errors()
+        errors = []
         try:
             database.connection().execute("SELECT 1").fetchone()
+            errors.extend(setup_errors())
         except Exception:
             errors.append("Database unavailable")
         return JSONResponse(
@@ -164,19 +203,11 @@ def create_app() -> FastAPI:
 
     @application.get("/", response_class=HTMLResponse)
     def home() -> str:
-        return (
-            "<!doctype html><html><head><title>Wiretight setup</title></head><body>"
-            "<h1>Wiretight</h1><p>Run orchestration and the operational UI are incomplete. "
-            "Authenticated API requests require the documented approval controls.</p>"
-            "<p><a href='/ready'>Readiness and setup errors</a></p>"
-            "<p>Supplier and financial records require operator authentication. "
-            "See README.md for setup.</p>"
-            "</body></html>"
-        )
+        return (static / "index.html").read_text(encoding="utf-8")
 
     @application.post("/webhooks/airwallex")
     async def webhook(request: Request) -> dict[str, bool]:
-        secret = os.environ.get("AWX_WEBHOOK_SECRET", "")
+        secret = settings.awx_webhook_secret
         if not secret:
             raise HTTPException(503, "Webhook secret is not configured")
         body = bytearray()

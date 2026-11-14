@@ -14,20 +14,27 @@ if TYPE_CHECKING:
 
 
 def process_actions(executor: Executor) -> None:
+    from pydantic import ValidationError
+
+    from app.core.killswitch import HaltedError
     from app.core.packets import PaymentBlockedError
+    from app.core.policy import PolicyError
+    from app.core.reconciliation import ReconciliationError
     from app.core.signing import SigningError
-    from app.workers import fx
+    from app.workers import fx, operations
     from app.workers.executor import ExecutionBlockedError
 
     conn = executor.database.connection()
     for row in conn.execute(
         "SELECT * FROM provider_job WHERE state='PENDING' "
-        "AND kind IN ('EXECUTE','QUOTE') ORDER BY created_at,id"
+        "AND kind IN ('EXECUTE','QUOTE','PLAN') ORDER BY created_at,id"
     ).fetchall():
         actor = conn.execute(
-            "SELECT enabled FROM operator_auth WHERE user_id=?", (row["requested_by"],)
+            "SELECT a.enabled,u.role FROM operator_auth a JOIN user u ON u.id=a.user_id "
+            "WHERE user_id=?",
+            (row["requested_by"],),
         ).fetchone()
-        if not actor or not actor["enabled"]:
+        if not actor or not actor["enabled"] or actor["role"] != "approver":
             with executor.database.transaction() as tx:
                 tx.execute(
                     "UPDATE provider_job SET state='FAILED',error='requester_revoked',"
@@ -37,6 +44,11 @@ def process_actions(executor: Executor) -> None:
             continue
         try:
             request = json.loads(row["request_json"])
+            if not isinstance(request, dict):
+                raise SigningError("Malformed job request")
+            if row["kind"] == "PLAN":
+                operations.perform(executor, row["id"], request)
+                continue
             if set(request) != {"packet_id"} or not isinstance(request["packet_id"], str):
                 raise SigningError("Malformed execution job")
             packet_id = request["packet_id"]
@@ -74,6 +86,11 @@ def process_actions(executor: Executor) -> None:
             ExecutionBlockedError,
             fx.FXBlockedError,
             ProviderError,
+            ReconciliationError,
+            PolicyError,
+            HaltedError,
+            ValidationError,
+            ValueError,
         ) as exc:
             category = (
                 exc.category

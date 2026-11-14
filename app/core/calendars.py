@@ -1,4 +1,4 @@
-"""Bank-business-day arithmetic from pinned holiday rules, never demo dates."""
+"""Bank-business-day arithmetic from pinned holiday rules, using actual payment dates."""
 
 from datetime import date, timedelta
 

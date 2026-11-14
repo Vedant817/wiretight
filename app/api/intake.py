@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -13,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 
 from app.api import access
 from app.api.operators import CeremonyBody
+from app.config import WebSettings
 from app.core import (
     audit,
     db,
@@ -28,7 +28,7 @@ from app.core.bank_details import DetailVault
 from app.core.policy import PolicyError
 
 
-def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
+def router(database: db.Database, passkeys: signing.Passkeys, settings: WebSettings) -> APIRouter:
     routes = APIRouter(prefix="/api")
 
     def identity(request: Request, *, mutate: bool = False) -> operators.Session:
@@ -36,7 +36,7 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
 
     def vault() -> DetailVault:
         try:
-            return DetailVault(Path(os.environ.get("APP_KEY_DIR", "var/keys")) / "details.key")
+            return DetailVault(Path(settings.app_key_dir) / "details.key")
         except (OSError, ValueError):
             raise HTTPException(
                 503, "Installation encryption key unavailable; complete local setup"
@@ -92,7 +92,7 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
         session = identity(request, mutate=True)
         try:
             policy, _ = runtime_policy.validated_policy(
-                database.connection(), os.environ.get("APP_POLICY_PATH", "policy.yaml")
+                database.connection(), settings.app_policy_path
             )
             identifier = intake.add_vendor(database.connection(), session, body, policy)
         except (OSError, PolicyError):

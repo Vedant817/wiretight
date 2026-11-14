@@ -2,7 +2,7 @@
 
 FINAL.md §8.3-§8.4. No I/O here. The poller and the executor call these; they
 never write to the database themselves, which is what makes the rules testable
-without a fake.
+without provider I/O.
 
 Two ideas do most of the work:
 
@@ -152,7 +152,7 @@ def _present(value: str | None) -> str | None:
 
     The distinction matters, and it was found by a property test rather than by
     reading. ``failure_type`` must be in exactly one of two states - absent, or a
-    real type - because "never nulled" (§4.11) and the demo caption (§4.12) both
+    real type - because "never nulled" (§4.11) and the failure playbook (§4.12) both
     read from it. A third state, an empty string, is neither: it is truthy to a
     ``is not None`` check, so a code path reading the column concludes a failure
     *was* recorded while ``playbook_for("")`` reports an unknown type. And an

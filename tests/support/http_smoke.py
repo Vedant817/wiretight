@@ -7,6 +7,7 @@ Run: uv run python -m tests.support.http_smoke
 
 from __future__ import annotations
 
+import argparse
 import os
 import socket
 import subprocess
@@ -18,9 +19,13 @@ from pathlib import Path
 import httpx
 
 from app.core import db, installation, operators
+from app.local import stop_child
 
 
 def run() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--launcher", action="store_true")
+    args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="wiretight-http-") as temporary:
         root = Path(temporary)
         with socket.socket() as listener:
@@ -56,6 +61,7 @@ def run() -> None:
             }
         }
         environment.update(
+            APP_PORT=str(port),
             APP_DB_PATH=str(root / "app.sqlite"),
             APP_KEY_DIR=str(root / "keys"),
             APP_POLICY_PATH=str(root / "policy.yaml"),
@@ -67,7 +73,9 @@ def run() -> None:
         )
         with (root / "server.log").open("wb") as log:
             process = subprocess.Popen(
-                [
+                [sys.executable, "-m", "app.local"]
+                if args.launcher
+                else [
                     sys.executable,
                     "-m",
                     "uvicorn",
@@ -79,6 +87,7 @@ def run() -> None:
                     "--no-access-log",
                 ],
                 env=environment,
+                cwd=root,
                 stdin=subprocess.DEVNULL,
                 stdout=log,
                 stderr=log,
@@ -162,8 +171,12 @@ def run() -> None:
                     "no provider, device or payment acceptance claimed"
                 )
             finally:
-                process.terminate()
-                process.wait(timeout=15)
+                stop_child(process)
+        if args.launcher:
+            print(
+                "PASS: one-command launcher serves real HTTP with missing-key readiness; "
+                "owned children stopped"
+            )
 
 
 if __name__ == "__main__":

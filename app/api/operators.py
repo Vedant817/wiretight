@@ -1,4 +1,4 @@
-"""Authenticated operator and passkey routes. No money mutations here."""
+"""Authenticated operator, approval and durable execution request routes."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api import access
+from app.config import WebSettings
 from app.core import (
     audit,
     callbacks,
@@ -49,7 +50,7 @@ class ClearFinish(CeremonyBody):
     reason: str = Field(min_length=1, max_length=1000)
 
 
-def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
+def router(database: db.Database, passkeys: signing.Passkeys, settings: WebSettings) -> APIRouter:
     routes = APIRouter(prefix="/api")
 
     def same_origin(request: Request) -> None:
@@ -148,15 +149,18 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
 
     @routes.post("/approvals/{packet_id}/options")
     def approval_options(packet_id: str, request: Request) -> dict[str, Any]:
+        session = identity(request, mutate=True)
+        if session.role != "approver":
+            raise HTTPException(403, "Approver role required")
         try:
-            return passkeys.begin(
-                database.connection(), identity(request, mutate=True), packet_id=packet_id
-            )
+            return passkeys.begin(database.connection(), session, packet_id=packet_id)
         except signing.SigningError as exc:
             raise HTTPException(409, str(exc)) from None
 
     def queue_action(packet_id: str, request: Request, kind: str) -> dict[str, str]:
         session = identity(request, mutate=True)
+        if session.role != "approver":
+            raise HTTPException(403, "Approver role required")
         try:
             with database.transaction() as conn:
                 operators.require_active(conn, session)
@@ -201,11 +205,49 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
     def quote_request(packet_id: str, request: Request) -> dict[str, str]:
         return queue_action(packet_id, request, "QUOTE")
 
+    @routes.post("/approvals/{packet_id}/cancel")
+    def cancel(packet_id: str, body: ReasonBody, request: Request) -> dict[str, str]:
+        session = identity(request, mutate=True)
+        if session.role != "approver":
+            raise HTTPException(403, "Approver role required")
+        with database.transaction() as conn:
+            operators.require_active(conn, session)
+            row = conn.execute(
+                "SELECT state FROM approval_packet WHERE id=?", (packet_id,)
+            ).fetchone()
+            if not row:
+                raise HTTPException(404, "Approval packet not found")
+            if conn.execute(
+                "SELECT 1 FROM approval_consumption WHERE packet_id=? UNION ALL "
+                "SELECT 1 FROM execution_intent WHERE packet_id=?",
+                (packet_id, packet_id),
+            ).fetchone():
+                raise HTTPException(
+                    409, "Execution already claimed; cancellation cannot recall money"
+                )
+            if row["state"] not in {"OPEN", "APPROVED", "VOID"}:
+                raise HTTPException(409, "Approval is unavailable")
+            conn.execute("UPDATE approval_packet SET state='VOID' WHERE id=?", (packet_id,))
+            # A stale tab's finish re-reads this state inside the signing transaction.
+            conn.execute(
+                "UPDATE signing_challenge SET consumed_at=? WHERE purpose='APPROVE' "
+                "AND subject_id=? AND consumed_at IS NULL",
+                (operators.utcnow().isoformat(), packet_id),
+            )
+            audit.append(
+                conn,
+                "approval.cancelled",
+                {
+                    "packet_id": packet_id,
+                    "by": session.user_id,
+                    "reason": body.reason,
+                },
+            )
+        return {"state": "VOID"}
+
     def current_policy() -> tuple[Any, dict[str, Any]]:
         try:
-            return runtime_policy.validated_policy(
-                database.connection(), os.environ.get("APP_POLICY_PATH", "policy.yaml")
-            )
+            return runtime_policy.validated_policy(database.connection(), settings.app_policy_path)
         except (OSError, ValueError, PolicyError):
             raise HTTPException(
                 503, "Policy missing, invalid, or inconsistent with the installation roster"
@@ -238,6 +280,8 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
     @routes.post("/policy/options")
     def policy_options(request: Request) -> dict[str, Any]:
         session = identity(request, mutate=True)
+        if session.role != "approver":
+            raise HTTPException(403, "Approver role required")
         policy, record = current_policy()
         try:
             return record_signing.begin_record(
@@ -254,6 +298,8 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
     @routes.post("/policy/finish")
     def policy_finish(body: CeremonyBody, request: Request) -> dict[str, bool]:
         session = identity(request, mutate=True)
+        if session.role != "approver":
+            raise HTTPException(403, "Approver role required")
         policy, record = current_policy()
         try:
             record_signing.finish_record(
@@ -324,7 +370,7 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
     @routes.get("/halt")
     def halt_view(request: Request) -> dict[str, Any]:
         identity(request)
-        state = killswitch.load(database.connection(), os.environ.get("APP_HALT_FILE", "var/HALT"))
+        state = killswitch.load(database.connection(), settings.app_halt_file)
         return {
             "halted": state.is_halted(),
             "trip_id": state.active_trip_id(),
@@ -368,9 +414,7 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
             raise HTTPException(409, str(exc)) from None
         return {
             "database_halt_cleared": cleared,
-            "local_halt_marker_present": os.path.lexists(
-                os.environ.get("APP_HALT_FILE", "var/HALT")
-            ),
+            "local_halt_marker_present": os.path.lexists(settings.app_halt_file),
         }
 
     return routes

@@ -1,4 +1,4 @@
-"""Explicit local installation: real entity/roster, caller-chosen reserve, no seed."""
+"""Explicit local installation with real entity/roster and caller-chosen reserve."""
 
 from __future__ import annotations
 
