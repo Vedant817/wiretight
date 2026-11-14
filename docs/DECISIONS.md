@@ -889,3 +889,19 @@ Cooling configuration now accepts integer hours at least 72, based on the later
 of callback and request. It cannot silently shorten the window. Seven new tests
 cover tightening and malformed/reduced values. The user explicitly forbids demo
 shortcuts in the product path; historical media remain untouched.
+
+## Production decision - 14 November 2026: authenticated policy and callback evidence
+
+Legacy policy and halt clearing used public test-derived HMAC seeds; the legacy
+callback verifier used raw Ed25519 signatures while returning a UI-passkey label.
+The production APIs now use domain-separated WebAuthn signed records with exact
+terms, user verification, session/nonce binding and executor-side re-verification.
+The legacy helpers remain isolated from these runtime paths and are recorded as
+pending relocation in PROD-AUDIT.md. They are not acceptable production evidence.
+The real business entity and reserve floor must be entered by an operator; never
+substitute a demo company or silently pick a reserve on the operator's behalf.
+A database halt clear never deletes a filesystem HALT marker: automatic deletion
+could remove an independent human stop created while clearing. Two sign-offs clear
+the database trip; local marker removal remains explicit and readiness stays halted
+until it is removed. Schema-version assertions now use SCHEMA_VERSION so migration
+preservation tests follow supported upgrades rather than assuming version 2 forever.

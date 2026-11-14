@@ -256,3 +256,15 @@ check. Kernel subprocess tests: 2 passed in 0.61s. Ruff clean, 62 files formatte
 mypy clean in 34 source files. See PROD-STATUS.md for exact commands, the shared
 SQLite reader failure/fix, software-authenticator limitations and remaining work.
 No live provider calls, demo/ edits, push, PR, publication or external messages.
+
+## 14 November 2026 - production stretch 4
+
+Implemented actual WebAuthn-signed policy/callback/halt decisions and protected
+HTTP routes, with version-3 schema migration. Runtime policy rejects public test
+HMAC signatures, automatic T0 and reduced cooling. Callback verification rechecks
+master-contact provenance, recorder independence and exact signed fields. Halt
+clearing requires two fresh passkeys and preserves any filesystem HALT marker.
+Real API flow test passed; full suite 825 passed, 37 skipped in 105.51s. Ruff,
+formatting (67 files), mypy (38 source files), diff whitespace checks passed.
+See PROD-STATUS.md for exact commands and limits. No executor or live-provider
+acceptance claimed; no demo/ edit, push, PR, publication or message.

@@ -57,8 +57,9 @@ vectors are synthetic HTTP-boundary tests, **not recorded Airwallex contract fix
   and exactly-once approval consumption are not built. Passkey assertion re-verification
   is implemented but is not yet wired to an executor.
 - Operator session authentication, authorization, passkey enrollment and packet
-  approval APIs are built (stretch 3). Callback workflow, supplier/invoice ingestion,
-  packet construction and the operational UI are not built.
+  approval APIs are built (stretch 3). Callback and policy decision APIs are built
+  (stretch 4). Supplier/invoice ingestion, packet construction, first-run entity/policy
+  setup and the operational UI are not built.
 - Ledger-to-provider reconciliation, settlement windows, incident handling and poller
   are not built. Existing core tests do not certify those missing integrations.
 - Runtime configuration still has historical replay/demo vocabulary; the product
@@ -200,3 +201,71 @@ Remaining: construct real packets from supplier/invoice data, connect signed cal
 and policy workflows, build the executor/recovery/reconciliation and UI, and run the
 full hard-scenario/live matrix. Credentials are still absent; no provider calls,
 media edits, pushes, PRs, publication or external messages were made.
+
+## Stretch 4 — real policy, callback and halt decisions
+
+Implemented runtime paths:
+
+- Domain-separated WebAuthn signed records for policy, callbacks and halt clearing.
+  Immutable records bind the acting identity/session, exact canonical terms, nonce,
+  origin and audited registered credential. A public legacy HMAC signature is
+  explicitly tested as rejected. There is no runtime HMAC fallback in these paths.
+- Runtime policy loading validates the safety floor, actual installation entity and
+  enabled operator roster, then requires two independent passkey signatures over
+  the exact file hash. T0 automatic payments and shortened cooling are refused.
+  YAML anchors/aliases are refused. Policy API reports cryptographic verification
+  separately from the raw signature count.
+- Callback recording uses the real supplier-master contact and change request,
+  enforces independent ops identity, contact age/provenance, recent-contact changes,
+  readback and timing. Signed fields are checked again on verification. Confirmation
+  stores the real minimum 72-hour cooling deadline; denial rejects proposed details.
+  A NO_ANSWER can be followed by a separately signed confirmation. These records are
+  evidence of a human's callback account; they cannot prove the phone call occurred.
+- Database halt clearing requires two fresh passkeys over the same active trip and
+  exact reason. It never removes a local HALT marker, which remains an independent
+  stop requiring explicit local removal. Missing/corrupt active-trip evidence refuses
+  clear. Protected authenticated routes expose these decisions.
+- Version-3 migration adds signed records, immutable execution-intent terms,
+  protected-detail storage and worker-health tables. Version-2 upgrade preservation
+  is tested. Execution-intent tables are foundations, **not a working executor**.
+
+Verification (actual commands and results):
+
+```
+uv run pytest tests/unit/test_real_decisions.py::test_real_policy_callback_and_halt_http_flows -q
+1 passed in 7.66s
+uv run pytest tests/unit/test_real_decisions.py -q
+10 passed in 26.47s
+uv run pytest tests -q --timeout=180
+825 passed, 37 skipped in 105.51s
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+67 files already formatted
+uv run mypy app
+Success: no issues found in 38 source files
+git diff --check
+exit 0
+```
+
+The full run includes the final callback-row consistency, policy-alias and halt-trip
+checks. The HTTP test drives the real FastAPI routes and real crypto verifier using
+the test-only software authenticator. It is not browser/device acceptance or a live
+provider call. One interim test run failed from misplaced test lines (`body` was
+undefined); corrected the test layout and reran it and the full suite.
+
+Follow-up audit found public test-derived policy/clear HMAC helpers in legacy core
+modules, plus the legacy raw-Ed25519 callback helper. The new runtime routes bypass
+those helpers. Their relocation/removal, along with historical app/demo fixtures,
+remains required cleanup; do not mistake old core-library tests for production
+authentication evidence. First registration fingerprints are authoritative; appended
+registration entries cannot silently replace the trusted credential.
+
+Still absent: first-run business/entity and reserve-policy setup, supplier/invoice
+ingestion, canonical payment/conversion packet construction, executor live guards,
+durable dispatch/recovery, polling, reconciliation and the operational UI. Startup
+must ultimately anchor operator registrations to verified audit checkpoints before
+any mutation. The worker must use the new kernel lock. No money route is enabled.
+The real business name and reserve floor must come from operator input, not invented
+defaults. Credentials remain absent (presence-only check: no .env or inherited keys).
+No files in demo/ were changed; no push, PR, publication, deployment or messages.

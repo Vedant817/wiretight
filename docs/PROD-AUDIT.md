@@ -22,6 +22,9 @@ The only runnable UI is the pitch demo. There is no runnable product server or e
 | README.md:40 | Synthetic screening is disclosed but there is no real screening integration. | Never claim sanctions clearance. |
 | docs/spec/FINAL.md:938 | Rail cutoffs and settlement return windows are assumptions. | Label assumptions; never infer final settlement from a simulated status. |
 | app/core/singlewriter.py:156 | Age-based stale-file reclamation can evict a still-live executor. | Do not use age alone as authority to take over a money writer. |
+| app/core/policy.py:109,176 | Public `wiretight-ci-key-seed` derives signatures accepted by the historical loader. | New runtime policy loader requires two WebAuthn-signed records; historical helper relocation remains pending. |
+| app/core/killswitch.py:87,311 | Historical clear verifier accepts signatures derived from a public test seed. | Runtime halt-clear routes use two fresh WebAuthn records, never that verifier. Move legacy signer/verifier fixtures out of app/. |
+| app/core/oob.py:105 | Historical callback verifier uses raw Ed25519 test signatures while returning a UI-passkey label. | Runtime callbacks use actual WebAuthn ceremonies and signed-record verification; retain no test signer in the product path. |
 
 No other executable TODO/NotImplemented stub was found in app/. `app/money.py:322`
 returns Python's `NotImplemented` for unsupported comparison operands; that is protocol

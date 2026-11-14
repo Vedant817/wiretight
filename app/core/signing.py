@@ -349,7 +349,7 @@ class Passkeys:
             seen.add(user["id"])
             registration = conn.execute(
                 "SELECT payload_json FROM audit_log WHERE kind='operator.passkey_registered' "
-                "AND json_extract(payload_json,'$.user_id')=? ORDER BY seq DESC LIMIT 1",
+                "AND json_extract(payload_json,'$.user_id')=? ORDER BY seq ASC LIMIT 1",
                 (user["id"],),
             ).fetchone()
             if not registration:

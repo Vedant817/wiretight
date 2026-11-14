@@ -199,7 +199,7 @@ def test_upgrade_preserves_version_one_audit(tmp_path):
     conn.execute("PRAGMA user_version=1")
     audit.append(conn, "before.upgrade", {"value": "preserve"})
     db.migrate(conn)
-    assert db.user_version(conn) == 2
+    assert db.user_version(conn) == db.SCHEMA_VERSION
     assert audit.verify(conn).ok
     assert conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0] == 1
     db.migrate(conn)

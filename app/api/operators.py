@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core import db, operators, signing
+from app.core import (
+    callbacks,
+    db,
+    killswitch,
+    operators,
+    record_signing,
+    runtime_halt,
+    runtime_policy,
+    signing,
+)
+from app.core.policy import PolicyError
 
 
 class LoginBody(BaseModel):
@@ -20,6 +31,19 @@ class CeremonyBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     ceremony_id: str = Field(min_length=1, max_length=36)
     credential: dict[str, Any]
+
+
+class CallbackFinish(CeremonyBody):
+    callback: callbacks.CallbackInput
+
+
+class ReasonBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+class ClearFinish(CeremonyBody):
+    reason: str = Field(min_length=1, max_length=1000)
 
 
 def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
@@ -137,5 +161,177 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
             )
         except signing.SigningError as exc:
             raise HTTPException(409, str(exc)) from None
+
+    def current_policy() -> tuple[Any, dict[str, Any]]:
+        try:
+            return runtime_policy.validated_policy(
+                database.connection(), os.environ.get("APP_POLICY_PATH", "policy.yaml")
+            )
+        except (OSError, ValueError, PolicyError):
+            raise HTTPException(
+                503, "Policy missing, invalid, or inconsistent with the installation roster"
+            ) from None
+
+    @routes.get("/policy")
+    def policy_view(request: Request) -> dict[str, Any]:
+        identity(request)
+        policy, _ = current_policy()
+        signatures = (
+            database.connection()
+            .execute(
+                "SELECT COUNT(*) FROM signed_record WHERE purpose='POLICY' AND subject_id=?",
+                (policy.sha256,),
+            )
+            .fetchone()[0]
+        )
+        try:
+            runtime_policy.load_runtime_policy(database.connection(), policy.path, passkeys)
+            verified = True
+        except signing.SigningError:
+            verified = False
+        return {
+            "sha256": policy.sha256,
+            "policy": policy.policy,
+            "signatures": signatures,
+            "verified": verified,
+        }
+
+    @routes.post("/policy/options")
+    def policy_options(request: Request) -> dict[str, Any]:
+        session = identity(request, mutate=True)
+        policy, record = current_policy()
+        try:
+            return record_signing.begin_record(
+                database.connection(),
+                session,
+                passkeys,
+                purpose="POLICY",
+                subject_id=policy.sha256,
+                record=record,
+            )
+        except signing.SigningError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @routes.post("/policy/finish")
+    def policy_finish(body: CeremonyBody, request: Request) -> dict[str, bool]:
+        session = identity(request, mutate=True)
+        policy, record = current_policy()
+        try:
+            record_signing.finish_record(
+                database.connection(),
+                session,
+                passkeys,
+                purpose="POLICY",
+                subject_id=policy.sha256,
+                record=record,
+                ceremony_id=body.ceremony_id,
+                credential=body.credential,
+            )
+        except signing.SigningError as exc:
+            raise HTTPException(409, str(exc)) from None
+        return {"signed": True}
+
+    @routes.get("/bank-changes")
+    def bank_changes(request: Request) -> list[dict[str, Any]]:
+        identity(request)
+        rows = (
+            database.connection()
+            .execute(
+                "SELECT id,vendor_id,received_at,proposed_masked,proposed_fingerprint,status "
+                "FROM payee_change_request ORDER BY received_at DESC LIMIT 100",
+            )
+            .fetchall()
+        )
+        return [dict(row) for row in rows]
+
+    @routes.post("/bank-changes/{request_id}/callback/options")
+    def callback_options(
+        request_id: str, body: callbacks.CallbackInput, request: Request
+    ) -> dict[str, Any]:
+        try:
+            return callbacks.begin_callback(
+                database.connection(),
+                identity(request, mutate=True),
+                passkeys,
+                request_id=request_id,
+                body=body,
+            )
+        except (ValueError, PermissionError, signing.SigningError):
+            raise HTTPException(
+                409, "Callback refused: check independent contact, recorder, readback and timing"
+            ) from None
+
+    @routes.post("/bank-changes/{request_id}/callback/finish")
+    def callback_finish(request_id: str, body: CallbackFinish, request: Request) -> dict[str, str]:
+        session = identity(request, mutate=True)
+        policy, _ = current_policy()
+        try:
+            callback_id = callbacks.apply_callback(
+                database.connection(),
+                session,
+                passkeys,
+                request_id=request_id,
+                body=body.callback,
+                ceremony_id=body.ceremony_id,
+                credential=body.credential,
+                cooling_hours=policy.policy["bank_change"]["cooling_off_hours"],
+            )
+        except (ValueError, PermissionError, signing.SigningError):
+            raise HTTPException(
+                409, "Callback changed, expired, conflicted or failed signature verification"
+            ) from None
+        return {"callback_id": callback_id}
+
+    @routes.get("/halt")
+    def halt_view(request: Request) -> dict[str, Any]:
+        identity(request)
+        state = killswitch.load(database.connection(), os.environ.get("APP_HALT_FILE", "var/HALT"))
+        return {
+            "halted": state.is_halted(),
+            "trip_id": state.active_trip_id(),
+            "reason": state.reason_text(),
+        }
+
+    @routes.post("/halt")
+    def halt_now(body: ReasonBody, request: Request) -> dict[str, str]:
+        identity(request, mutate=True)
+        record = killswitch.trip(database.connection(), body.reason, origin="human")
+        return {"trip_id": record.id}
+
+    @routes.post("/halt/clear/options")
+    def clear_options(body: ReasonBody, request: Request) -> dict[str, Any]:
+        try:
+            with database.transaction() as conn:
+                subject, record = runtime_halt.clear_record(conn, body.reason)
+                return record_signing.begin_record(
+                    conn,
+                    identity(request, mutate=True),
+                    passkeys,
+                    purpose="CLEAR",
+                    subject_id=subject,
+                    record=record,
+                )
+        except signing.SigningError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @routes.post("/halt/clear/finish")
+    def clear_finish(body: ClearFinish, request: Request) -> dict[str, bool]:
+        try:
+            cleared = runtime_halt.finish_clear(
+                database.connection(),
+                identity(request, mutate=True),
+                passkeys,
+                reason=body.reason,
+                ceremony_id=body.ceremony_id,
+                credential=body.credential,
+            )
+        except signing.SigningError as exc:
+            raise HTTPException(409, str(exc)) from None
+        return {
+            "database_halt_cleared": cleared,
+            "local_halt_marker_present": os.path.lexists(
+                os.environ.get("APP_HALT_FILE", "var/HALT")
+            ),
+        }
 
     return routes

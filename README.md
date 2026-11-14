@@ -17,7 +17,8 @@ financial transactions.
 
 **Production assignment status (14 November 2026): incomplete.** The new product
 service includes readiness, webhooks, authenticated operator sessions and passkey
-approval APIs. The payment workflow and executor are unfinished. See
+approval APIs, plus signed policy, callback and halt-clear decisions. The payment
+workflow and executor are unfinished. See
 [the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
 The real sandbox HTTP client has offline fault tests; it has no live acceptance yet.
 The 36 skipped compliance-index tests correspond to missing milestones (including
@@ -60,6 +61,12 @@ Passkey APIs use `WEBAUTHN_RP_ID` (default `localhost`) and `WEBAUTHN_ORIGIN`
 and first-run enrollment screens are still pending. Password login alone cannot
 approve a payment: sign-off requires a user-verified passkey assertion bound to the
 exact packet hash. No HMAC or test signer is accepted by these product endpoints.
+Runtime policy approval requires two passkeys and an exact match to the configured
+entity and enabled roster. Callback confirmation records the full 72-hour minimum
+cooling window. Clearing a database halt needs two fresh sign-offs; a local `HALT`
+file remains an independent stop. First-run business/policy setup and the operator
+screens are still under construction, so these APIs do not yet form a usable
+payment application.
 
 This repository is being built from `docs/spec/FINAL.md` (v1.0, locked). **Nothing here has been
 run against a live Airwallex sandbox yet.** The readme, the metrics table and the demo script are
