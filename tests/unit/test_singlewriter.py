@@ -97,31 +97,22 @@ class TestStaleLocks:
         assert not singlewriter.reclaim_if_stale(lock_path)
         assert lock_path.exists()
 
-    def test_an_old_lock_with_a_live_pid_is_reclaimed(self, lock_path: Path) -> None:
-        """The age backstop, for a pid check that cannot answer.
-
-        ``os.kill`` answers for a pid on this machine. It cannot answer across a
-        container, a pid namespace, or a reboot - where the old pid may now belong
-        to an unrelated live process. A lock held that long is reclaim
-        because an executor that old has almost certainly died.
-        """
+    def test_an_old_lock_with_a_live_pid_is_preserved(self, lock_path: Path) -> None:
+        """A live long-running worker must exclude a second writer at any age."""
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_path.write_text(
             f"pid={os.getpid()}\nat={time.time() - 100000:.0f}\n", encoding="utf-8"
         )
 
-        assert singlewriter.reclaim_if_stale(lock_path, stale_after_s=60.0)
-        assert not lock_path.exists()
+        assert not singlewriter.reclaim_if_stale(lock_path, stale_after_s=60.0)
+        assert lock_path.exists()
 
-    def test_a_damaged_lock_is_reclaimed(self, lock_path: Path) -> None:
-        """A truncated or unreadable lock file is not a reason to fail closed.
-
-        Failing closed here would mean a single-bit flip in the lock file stops the
-        executor, permanently, with no in-band fix.
-        """
+    def test_a_damaged_lock_is_preserved(self, lock_path: Path) -> None:
+        """A truncated lock may belong to a worker still writing its holder PID."""
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_path.write_text("garbage", encoding="utf-8")
-        assert singlewriter.reclaim_if_stale(lock_path)
+        assert not singlewriter.reclaim_if_stale(lock_path)
+        assert lock_path.exists()
 
     def test_reclaim_on_a_missing_lock_is_false(self, lock_path: Path) -> None:
         assert not singlewriter.reclaim_if_stale(lock_path)
@@ -219,10 +210,6 @@ class TestNeverSignalsTheHolder:
         if platform.system() == "Windows":
             spy.assert_not_called()
 
-    def test_an_unreachable_pid_reads_as_alive(self) -> None:
-        """An unknown pid must not read as dead.
-
-        Reclaiming a live writer is far worse than waiting on a dead one, so an
-        unanswerable question defaults to "alive" and the age timeout decides.
-        """
-        assert singlewriter._pid_alive(0x7FFFFFFF)
+    def test_nonexistent_pid_reads_as_dead(self) -> None:
+        """Windows ERROR_INVALID_PARAMETER proves the PID does not exist."""
+        assert not singlewriter._pid_alive(0x7FFFFFFF)

@@ -19,8 +19,8 @@ interleave writes and be reconciled afterwards.
 **The stale case is the one that matters.** A ``kill -9`` between creating and
 removing the lock leaves it behind, and without a reclaim the executor is dead
 forever with no in-band way out - the same shape as the kill switch's unclearable
-trip (D-B21). So a lock whose holder pid is gone, or whose age exceeds the timeout,
-is reclaimed rather than waited out.
+trip (D-B21). Only a lock whose holder is proven gone may be reclaimed. Age is
+never proof of death: a healthy executor may hold the lock for days.
 
 **Never signal a pid to test it.** ``os.kill(pid, 0)`` is the idiomatic POSIX
 liveness probe, and on Windows CPython implements ``os.kill`` as
@@ -49,7 +49,7 @@ __all__ = [
     "reclaim_if_stale",
 ]
 
-#: A lock older than this whose holder is unverifiable is reclaimed.
+#: Legacy timeout argument default; age no longer authorizes reclamation.
 DEFAULT_STALE_AFTER_S: float = 3600.0
 
 
@@ -76,16 +76,17 @@ def _pid_alive_windows(pid: int) -> bool:
     # ALL_CAPS name made ruff flag it as a module constant.
     process_query_limited = 0x1000
 
-    kernel32 = ctypes.windll.kernel32
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel32.OpenProcess.restype = wintypes.HANDLE
     kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
 
     handle = kernel32.OpenProcess(process_query_limited, False, pid)
     if not handle:
-        # No such pid. An unknown failure must not read as "dead": reclaiming a
-        # live writer is far worse than waiting on a dead one, so when in doubt say
-        # "alive" and let the age timeout decide.
-        return True
+        # ERROR_INVALID_PARAMETER proves the PID does not exist. Access denied
+        # or any unrecognized failure must preserve the writer's lock.
+        return ctypes.get_last_error() != 87
     kernel32.CloseHandle(handle)
     return True
 
@@ -154,25 +155,21 @@ def is_held(path: str | Path) -> bool:
 
 
 def reclaim_if_stale(path: str | Path, *, stale_after_s: float = DEFAULT_STALE_AFTER_S) -> bool:
-    """Remove the lock if its holder is gone, or if it is older than the timeout.
+    """Remove the lock only if its holder is proven gone.
 
     Returns whether it reclaimed. ``False`` means the lock was left alone because
     either there was nothing to reclaim or the holder looked alive.
 
-    The age check is the backstop for a pid check that cannot answer. A pid on this
-    machine is answerable; one across a container, a pid namespace, or a reboot is
-    not - the old pid may now belong to an unrelated live process. A lock that old
-    is reclaimed either way, because an executor holding it that long has almost
-    certainly died.
+    ``stale_after_s`` remains for compatibility but never authorizes eviction.
+    A truncated file may be an acquisition in progress, so it is preserved.
     """
     path = Path(path)
     if not path.exists():
         return False
 
-    pid, taken = _read_holder(path)
-    age = time.time() - taken if taken else float("inf")
-
-    if pid is not None and _pid_alive(pid) and age < stale_after_s:
+    _ = stale_after_s
+    pid, _taken = _read_holder(path)
+    if pid is None or _pid_alive(pid):
         return False
 
     try:
@@ -187,7 +184,7 @@ def executor_lock(path: str | Path | None = None, *, wait_s: float = 0.0) -> Ite
     """Hold the executor lock for the duration of the block.
 
     Acquiring a stale lock is the caller's job: call :func:`reclaim_if_stale` first
-    if a previous executor may have been killed, or rely on the timeout inside it.
+    if a previous executor may have been killed. Age never proves a holder dead.
     Passing ``stale_after_s`` here would be ambiguous about whose timeout applies,
     so it is not a parameter of this function.
     ``wait_s`` waits for a lock that is genuinely held rather than raising. Zero by

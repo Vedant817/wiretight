@@ -15,6 +15,39 @@ financial transactions.
 
 ## ⚠ Status: under construction
 
+**Production assignment status (14 November 2026): incomplete.** The new product
+service is a setup/readiness and webhook surface. It cannot yet approve or execute
+payments. See [the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
+The real sandbox HTTP client has offline fault tests; it has no live acceptance yet.
+The 36 skipped compliance-index tests correspond to missing milestones (including
+approvals, execution, reconciliation, and operator UI); they are known gaps.
+
+From a fresh checkout with Python 3.12 and uv installed, run this single command
+to install pinned dependencies and start the diagnostic service on localhost:
+
+```powershell
+uv run --frozen --extra dev uvicorn app.api.main:app --host 127.0.0.1 --port 8000 --no-access-log
+```
+
+Open `http://127.0.0.1:8000/`. `/health` and `/ready` return HTTP 503 with setup and
+implementation blockers. This command does not create companies, fund accounts,
+simulate transactions or enable money movement.
+
+Current service variables (set in its process environment): `AWX_ENV=sandbox`,
+`AWX_BASE_URL=https://api.sandbox.airwallex.com`, `AWX_MODE=live`,
+`APP_DB_PATH` (optional; defaults to `var/app.sqlite`), and `AWX_WEBHOOK_SECRET`
+(required only for receiving signed webhooks). Keep Airwallex API credentials out
+of the web process. Worker/client credentials are `AWX_CLIENT_ID` and `AWX_API_KEY`,
+read by `WorkerSettings` from environment or a gitignored `.env`; optional
+`AWX_LOGIN_AS`, `AWX_API_VERSION`, `AWX_HTTP_TIMEOUT_S` configure the client.
+There is no functional worker command yet. No production-host mode is supported.
+
+Run offline checks with `uv run --extra dev pytest tests -q --timeout=180`,
+`uv run ruff check app tests`, `uv run ruff format --check app tests` and
+`uv run mypy app`. The read-only sandbox test additionally requires
+`CONFIRM_LIVE=1` and both credentials; otherwise it reports a skip with the reason.
+Do not treat passing HTTP fault tests as recorded sandbox contracts.
+
 This repository is being built from `docs/spec/FINAL.md` (v1.0, locked). **Nothing here has been
 run against a live Airwallex sandbox yet.** The readme, the metrics table and the demo script are
 written when there is something true to put in them — see `docs/PROGRESS.md` for what is real so

@@ -176,7 +176,8 @@ bank fingerprint. xtra shadowing the fingerprint's account. A currency table wi
 exponents (KRW overstated 100x). A floor row that consulted only a type and so could not fail.
 Negative money limits. Row 22's conjunction. Case-sensitive failure-type lookup routing a
 compliance failure to the shrug handler. LIKE without ESCAPE in reconciliation. An unvalidated
-ledger currency. mask_account disclosing whole short accounts. gb() evading the hidden-text
+ledger currency. mask_account disclosing whole short accounts. 
+gb() evading the hidden-text
 detector.
 
 **Environment.** 	zdata added and pinned: ZoneInfo("Asia/Kolkata") raised, so the IST daily
@@ -230,3 +231,14 @@ git commit                             -> 37ca500
 `
 
 Nothing was built against the sandbox or sent anywhere. No number in this file is estimated.
+# 14 November 2026 — production assignment, stretches 1–2
+
+See PROD-AUDIT.md for baseline findings and PROD-STATUS.md for current evidence,
+exact commands and limitations. Added real sandbox HTTP boundary, secure webhook
+ingestion and a deliberately unready diagnostic product service. Preserved live
+and malformed executor locks; added configurable cooling with a 72-hour minimum.
+Final local gate: 798 passed, 37 skipped in 50.63s; ruff and formatting clean;
+mypy clean across 30 source files. No live provider acceptance, payment executor,
+operator authentication, reconciliation or operational UI is claimed. The real
+uvicorn process smoke covered diagnostics only. No demo/ media edits, push, PR,
+publication, deployment or messages. Engineering work remains active.

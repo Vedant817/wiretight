@@ -871,3 +871,21 @@ that is fine.
 `executor_lock` accepted a `stale_after_s` argument it never used. Removed, and
 the docstring now says that reclaiming is the caller's job, so there is no question
 about whose timeout applies.
+# Production correction — 14 November 2026: stale holder and cooling configuration
+
+The overnight production audit found D-B27's age-based reclamation unsafe: a
+live executor becomes reclaimable after an hour, allowing a second money writer.
+Age no longer authorizes eviction. A malformed lock is also preserved because a
+peer can be between file creation and writing its PID. Windows OpenProcess now
+uses last-error capture: ERROR_INVALID_PARAMETER (87) proves no such PID; other
+errors preserve the lock. CloseHandle has explicit pointer-width argument types.
+The three old tests encoded unsafe or incorrect expectations (reclaiming a live
+old holder, reclaiming a partially written file, and treating a provably absent
+PID as alive); they were corrected with these reasons, not weakened for a pass.
+These are bounded repairs: file/PID reclaim still needs an OS-backed locking
+design to eliminate reclaim races before a production executor can rely on it.
+
+Cooling configuration now accepts integer hours at least 72, based on the later
+of callback and request. It cannot silently shorten the window. Seven new tests
+cover tightening and malformed/reduced values. The user explicitly forbids demo
+shortcuts in the product path; historical media remain untouched.

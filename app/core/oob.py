@@ -460,20 +460,22 @@ def check_readback(
 
 
 def cooling_off_until(
-    *, callback_confirmed_at: datetime, change_request_received_at: datetime
+    *,
+    callback_confirmed_at: datetime,
+    change_request_received_at: datetime,
+    cooling_off_hours: int = COOLING_OFF_HOURS,
 ) -> datetime:
     """§4.5.3: 72 hours after the **later** of the two.
 
     The **later**, not the earlier. A callback that arrives quickly would otherwise
     shorten the window, and the point of the window is that a fast confirmation is
-    the one most likely to have been manufactured. The demo override of two minutes
-    is not here: the caller applies it, only under ``AWX_ENV=sandbox`` and
-    ``APP_DEMO_TIMING=true``, and labels every affected screen.
+    the one most likely to have been manufactured. Configuration may tighten
+    the window, never reduce the 72-hour floor. No runtime demo override exists.
     """
-    now = datetime.now(UTC)
-    _ = now  # documented imports are only unused if the caller passes none
+    if type(cooling_off_hours) is not int or cooling_off_hours < COOLING_OFF_HOURS:
+        raise ValueError("cooling_off_hours must be an integer of at least 72")
     base = max(_parse(callback_confirmed_at), _parse(change_request_received_at))
-    return base + timedelta(hours=COOLING_OFF_HOURS)
+    return base + timedelta(hours=cooling_off_hours)
 
 
 def is_cooling_off_complete(*, until: datetime, now: datetime | None = None) -> bool:

@@ -90,3 +90,41 @@ Sources checked: repository raw Airwallex docs, current
 [authentication reference](https://www.airwallex.com/docs/api/authentication/api_access_token),
 [transfer reference](https://www.airwallex.com/docs/api/payouts/transfers), and
 [webhook signature guidance](https://www.airwallex.com/docs/developer-tools/webhooks/listen-for-webhook-events).
+
+## Stretch 2 — safety corrections and process smoke
+
+- Preserved live locks regardless of age and partially written locks regardless
+  of content. Corrected Windows dead-PID detection and CloseHandle pointer typing.
+  Remaining file-reclaim race requires OS-backed locking before worker acceptance.
+- Cooling-off now accepts a configurable integer number of hours, with a hard
+  minimum of 72; tightening to 96 is tested. Historical video paths were not edited.
+- README includes a one-command diagnostic startup, variables and known gaps.
+- Started uvicorn in an owned subprocess with a temporary SQLite database outside
+  the repo. Real HTTP checks: `/` 200, `/health` 503 with ready=false,
+  `POST /transfers` 404, unconfigured `POST /webhooks/airwallex` 503. Stopped that
+  subprocess and removed its temporary directory. This is diagnostic-service
+  evidence, not payment-flow end-to-end acceptance.
+
+Final checks for this stretch:
+
+```
+uv run pytest tests/unit/test_singlewriter.py tests/unit/test_oob.py tests/unit/test_cooling_configuration.py -q
+68 passed in 1.23s
+CONFIRM_LIVE=1 uv run pytest tests/live/test_airwallex_read.py -q
+1 skipped in 0.45s — AWX_CLIENT_ID and AWX_API_KEY are not configured
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+54 files already formatted
+uv run mypy app
+Success: no issues found in 30 source files
+uv run pytest tests -q --timeout=180
+798 passed, 37 skipped in 50.63s
+git diff --check
+exit 0 after removing an extra trailing blank line in DECISIONS.md
+```
+
+The assignment remains active. Next: replace the PID-file lock with kernel-backed
+exclusion, then add authenticated operators and bound human approvals before a
+durable executor can be exposed. Credential absence blocks live acceptance only;
+it does not block continuing the remaining engineering work.
