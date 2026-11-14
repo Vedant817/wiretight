@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.api import access
 from app.core import (
     callbacks,
     db,
@@ -50,20 +51,10 @@ def router(database: db.Database, passkeys: signing.Passkeys) -> APIRouter:
     routes = APIRouter(prefix="/api")
 
     def same_origin(request: Request) -> None:
-        origin = request.headers.get("origin")
-        if origin and origin != passkeys.origin:
-            raise HTTPException(403, "Request origin is not allowed")
+        access.same_origin(request, passkeys.origin)
 
     def identity(request: Request, *, mutate: bool = False) -> operators.Session:
-        same_origin(request)
-        try:
-            return operators.authenticate(
-                database.connection(),
-                request.cookies.get("wt_session", ""),
-                csrf=request.headers.get("x-csrf-token", "") if mutate else None,
-            )
-        except operators.AuthenticationError as exc:
-            raise HTTPException(401, str(exc)) from None
+        return access.identity(request, database, passkeys.origin, mutate=mutate)
 
     @routes.post("/login")
     def login(body: LoginBody, request: Request, response: Response) -> dict[str, Any]:

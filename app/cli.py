@@ -78,6 +78,28 @@ def build_parser() -> argparse.ArgumentParser:
     pin.add_argument(
         "--seals", default=os.environ.get("APP_AUDIT_CHECKPOINT_DIR", "var/audit-checkpoints")
     )
+    contact = sub.add_parser(
+        "import-contact", help="import an existing supplier-master phone with dated source evidence"
+    )
+    contact.add_argument("--db", default=os.environ.get("APP_DB_PATH", "var/app.sqlite"))
+    contact.add_argument("--key-dir", default=os.environ.get("APP_KEY_DIR", "var/keys"))
+    contact.add_argument("--operator-email", required=True)
+    contact.add_argument("--vendor-id", required=True)
+    contact.add_argument("--phone", required=True, help="existing master number in +E164 format")
+    contact.add_argument(
+        "--master-created-at", required=True, help="actual ISO timestamp with timezone"
+    )
+    contact.add_argument(
+        "--source", required=True, help="path to genuine historical source evidence"
+    )
+    contact.add_argument(
+        "--media-type",
+        choices=("text/plain", "application/json", "message/rfc822", "application/pdf"),
+        required=True,
+    )
+    contact.add_argument(
+        "--provenance", choices=("contract", "prior_invoice", "website", "registry"), required=True
+    )
 
     verify = sub.add_parser(
         "verify-audit",
@@ -199,6 +221,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "operator-disable": cmd_operator_disable,
         "init-installation": cmd_init_installation,
         "trust-operators": cmd_trust_operators,
+        "import-contact": cmd_import_contact,
     }
     handler = handlers[args.command]
     return handler(args)
@@ -281,6 +304,64 @@ def cmd_trust_operators(args: argparse.Namespace) -> int:
         print("Trust pin refused: check operator enrollment and audit integrity", file=sys.stderr)
         return EXIT_REFUSED
     print("Enabled operator credentials pinned outside the database; audit checkpoint written.")
+    return EXIT_OK
+
+
+def cmd_import_contact(args: argparse.Namespace) -> int:
+    import getpass
+    from datetime import datetime
+
+    from app.core import evidence, intake, operators
+    from app.core.bank_details import DetailVault
+
+    password = getpass.getpass("Existing operator password: ")
+    try:
+        source = Path(args.source)
+        # Read with a bound even for local input; do not load an arbitrary file
+        # into memory just because the administrator selected it.
+        with source.open("rb") as stream:
+            content = stream.read(evidence.MAX_BYTES + 1)
+        created = datetime.fromisoformat(args.master_created_at)
+        vault = DetailVault(Path(args.key_dir) / "details.key")
+        with db.Database(args.db) as database:
+            conn = database.connection()
+            token, csrf = operators.login(
+                conn, email=args.operator_email, password=password, source="local-contact-import"
+            )
+            session = operators.authenticate(conn, token, csrf=csrf)
+            try:
+                with db.transaction(conn):
+                    result = evidence.store(
+                        conn,
+                        vault,
+                        session,
+                        content=content,
+                        filename=source.name,
+                        media_type=args.media_type,
+                    )
+                    intake.add_contact(
+                        conn,
+                        session,
+                        args.vendor_id,
+                        intake.ContactInput(
+                            phone=args.phone,
+                            provenance=args.provenance,
+                            evidence_sha256=str(result["sha256"]),
+                        ),
+                        historical_created_at=created,
+                    )
+            finally:
+                operators.logout(conn, session)
+    except (OSError, ValueError, operators.AuthenticationError):
+        print(
+            "Contact import refused: check operator, source evidence, phone and actual master date",
+            file=sys.stderr,
+        )
+        return EXIT_REFUSED
+    print(
+        "Existing master contact imported with source hash and actual import time. "
+        "No callback was recorded."
+    )
     return EXIT_OK
 
 

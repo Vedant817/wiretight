@@ -19,6 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from app.api.intake import router as intake_router
 from app.api.operators import router
 from app.config import SANDBOX_BASE_URL
 from app.core import audit, db, signing
@@ -54,15 +55,12 @@ def create_app() -> FastAPI:
         database.close()
 
     application = FastAPI(title="Wiretight", lifespan=lifespan, docs_url=None, redoc_url=None)
-    application.include_router(
-        router(
-            database,
-            signing.Passkeys(
-                rp_id=os.environ.get("WEBAUTHN_RP_ID", "localhost"),
-                origin=os.environ.get("WEBAUTHN_ORIGIN", "http://localhost:8000"),
-            ),
-        )
+    passkeys = signing.Passkeys(
+        rp_id=os.environ.get("WEBAUTHN_RP_ID", "localhost"),
+        origin=os.environ.get("WEBAUTHN_ORIGIN", "http://localhost:8000"),
     )
+    application.include_router(router(database, passkeys))
+    application.include_router(intake_router(database, passkeys))
 
     @application.exception_handler(RequestValidationError)
     async def invalid_request(_: Request, exc: RequestValidationError) -> JSONResponse:
@@ -87,7 +85,7 @@ def create_app() -> FastAPI:
             chunks = bytearray()
             async for chunk in request.stream():
                 chunks.extend(chunk)
-                if len(chunks) > 262144:
+                if len(chunks) > (4194304 if request.url.path == "/api/evidence" else 262144):
                     return JSONResponse({"detail": "Request exceeds size limit"}, status_code=413)
             # Starlette's cached-request middleware replays this bounded body to
             # the downstream parser. Chunked requests get the same size limit.
