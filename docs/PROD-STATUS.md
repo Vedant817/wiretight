@@ -1007,3 +1007,111 @@ it is not a claim that deleted historical scenarios passed.
 no paths under root `demo/`. Code/test/audit decision commit: `e360a20`.
 No push, PR, publication, signup, external message, or secret disclosure. Live
 Airwallex and owner/physical-device acceptance remain the open items above.
+
+
+## Acceptance evidence review: counts, exact nodes and mutations
+
+The detailed report is [PROD-ACCEPTANCE-EVIDENCE.md](PROD-ACCEPTANCE-EVIDENCE.md).
+It lists every one of the 96 removed/merged collected nodes and all 54 additions
+between bf575fd and ba02b6e, with individual reasons/replacements. The only removed
+behavior node is the GBP quote-expiry node expanded into two parameter cases.
+Registry completeness and nonempty descriptions/milestones were lost in the rewrite;
+those bookkeeping guarantees are now restored. No monetary behavior coverage was lost.
+
+Actual collection results, using a detached temporary bf575fd worktree and removing
+it afterwards: bf575fd `965 tests collected in 5.09s`; initial HEAD ba02b6e
+`923 tests collected in 1.77s`. Temporary worktree removal returned exit 0 and
+`git worktree list` then listed only the current checkout. Arithmetic:
+`965 - 96 + 54 = 923`; passes `928 - 60 + 54 = 922`; skips `37 - 36 = 1`.
+The current review adds two real behavior tests, giving 925 collected nodes.
+
+Requested scenario selection uses exactly the unique nodes in
+`tests/support/acceptance_scenarios.json`, with output:
+
+```text
+.............                                                            [100%]
+13 passed in 91.48s (0:01:31)
+```
+
+The manifest maps one line per requested scenario; the single webhook test covers
+all three webhook assertions, and cancel runs both interleavings. The separate
+role-positive-control bundle reported `2 passed in 15.09s`.
+
+Six mutations were applied individually with valid Python syntax, tested, and
+restored byte-for-byte. All six final mutations failed relevant test calls, with
+no setup/collection errors. SHA-256 before/after matched and git status was empty
+after each restore. The initial unsigned-packet role test survived the role mutation
+(`1 passed in 5.70s`, exit 0), exposing a test blind spot; the new fully approved
+packet test fails that same mutation (202 instead of required 403).
+The other mutations bypass cooling, omit consumption persistence, replace the
+persisted retry lookup key with a fresh UUID, bypass HMAC verification, and remove
+the halt guard. Full failure outputs are in the detailed report, not presented as
+successful product tests. No deliberate product mutation remains.
+
+Current open-items checklist, verbatim:
+
+- [ ] Live Airwallex acceptance: sandbox credentials remain absent; live guard explicitly skips with reason.
+- [ ] Owner acceptance using real business/contact/bank/invoice records and physical passkeys remains unperformed. Test virtual authenticators are not physical-device acceptance.
+
+These need private provider credentials, genuine owner inputs or a physical device;
+no key-independent engineering task remains in this open-items checklist. Real
+business records must not be invented to close owner acceptance. The local count,
+coverage and mutation evidence work is implemented; final restored-tree checks
+are recorded below after process completion. No signup or external communication.
+
+## Final restored-tree verification
+
+```powershell
+uv run pytest tests -q --timeout=180 --tb=short 2>&1 | Tee-Object -FilePath output/playwright/acceptance-evidence/final-full-pytest.txt
+exit $LASTEXITCODE
+```
+
+Exit 0; exact captured output:
+
+```text
+........................................................................ [  7%]
+........................................................................ [ 15%]
+........................................................................ [ 23%]
+........................................................................ [ 31%]
+............................................s........................... [ 38%]
+........................................................................ [ 46%]
+........................................................................ [ 54%]
+........................................................................ [ 62%]
+........................................................................ [ 70%]
+........................................................................ [ 77%]
+........................................................................ [ 85%]
+........................................................................ [ 93%]
+.............................................................            [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests\live\test_airwallex_read.py:19: Read-only sandbox test requires CONFIRM_LIVE=1
+924 passed, 1 skipped in 743.13s (0:12:23)
+```
+
+```text
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+112 files already formatted
+uv run mypy app
+Success: no issues found in 53 source files
+```
+
+Confirmed live guard (also exit 0, skipped rather than faked):
+
+```text
+uv run python -c "import os, pytest; os.environ['CONFIRM_LIVE']='1'; raise SystemExit(pytest.main(['tests/live/test_airwallex_read.py','-q','-rs']))"
+SKIPPED [1] tests\live\test_airwallex_read.py:21: AWX_CLIENT_ID and AWX_API_KEY are not configured
+1 skipped in 0.66s
+```
+
+Final review-tree counts reconcile to `965 - 96 + 56 = 925` collected tests:
+the earlier 54 additions plus two mutation-sensitive behavior tests. Passing
+counts therefore reconcile to `928 - 60 + 56 = 924`, with one live skip.
+No actual monetary behavior test was deleted. The metadata assertions identified
+as lost were restored, and the full suite above includes them.
+
+Acceptance evidence work is complete: count/node reconciliation, restoration of
+registry guarantees, exact scenario run, and six killed-and-reverted mutations.
+`git diff --check` returned exit 0. Root demo files remain unchanged from bf575fd.
+Only the two key/device/owner-dependent open items listed above remain. No push,
+PR, publication, signup, outside-team message or secret disclosure.
