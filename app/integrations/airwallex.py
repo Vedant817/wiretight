@@ -21,6 +21,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from app.config import SANDBOX_BASE_URL
+from app.integrations.rate_budget import RateBudget
 from app.money import raise_on_float
 
 
@@ -111,6 +112,7 @@ class AirwallexClient:
         self._api_version = api_version
         self._login_as = login_as
         self._sleep = sleep
+        self._budget = RateBudget(sleep=sleep)
         self._now = now
         self._token: Token | None = None
         self.clock_skew_s: float | None = None
@@ -141,6 +143,7 @@ class AirwallexClient:
         if payload is not None:
             raise_on_float(payload)
         for attempt in range(4):
+            self._budget.acquire(path)
             try:
                 response = self._http.request(
                     method,
@@ -316,10 +319,15 @@ class AirwallexClient:
             raise ProviderError("multiple_nickname_matches")
         return rows[0] if rows else None
 
-    def find_conversion(self, request_id: str) -> Conversion | None:
+    def find_conversion(
+        self, request_id: str, *, from_created_at: str | None = None
+    ) -> Conversion | None:
+        filters = {"request_id": request_id}
+        if from_created_at:
+            filters.update(from_created_at=from_created_at, to_created_at=self._now().isoformat())
         rows = [
             row
-            for row in self.list_items("/fx/conversions", request_id=request_id)
+            for row in self.list_items("/fx/conversions", **filters)
             if row.get("request_id") == request_id
         ]
         if len(rows) > 1:
@@ -419,8 +427,12 @@ class AirwallexClient:
     def usd_risk_rates(self, currencies: set[str]) -> dict[str, Decimal]:
         """Risk basis: worse of current CLIENT amounts and last booked USD pair."""
         rates = self.usd_rates(currencies)
-        latest: dict[str, tuple[str, Decimal]] = {}
-        for row in self.list_items("/fx/conversions"):
+        latest: dict[str, tuple[datetime, Decimal]] = {}
+        for row in self.list_items(
+            "/fx/conversions",
+            from_created_at="1970-01-01T00:00:00+00:00",
+            to_created_at=self._now().isoformat(),
+        ):
             if row.get("status") != "SETTLED":
                 continue
             buy, sell = row.get("buy_currency"), row.get("sell_currency")
@@ -431,11 +443,16 @@ class AirwallexClient:
                 continue
             try:
                 bought, sold = Decimal(str(row["buy_amount"])), Decimal(str(row["sell_amount"]))
-                created = str(row["created_at"])
-                if not min(bought, sold) > 0 or not bought.is_finite() or not sold.is_finite():
+                created = datetime.fromisoformat(str(row["created_at"]).replace("Z", "+00:00"))
+                if (
+                    not bought.is_finite()
+                    or not sold.is_finite()
+                    or min(bought, sold) <= 0
+                    or created.tzinfo is None
+                ):
                     raise ValueError("invalid booked amounts")
                 basis = bought / sold if buy == "USD" else sold / bought
-            except (KeyError, ValueError):
+            except (KeyError, ValueError, ArithmeticError):
                 raise ProviderError("invalid_booked_rate_basis") from None
             if currency not in latest or created > latest[currency][0]:
                 latest[currency] = created, basis

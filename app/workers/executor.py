@@ -99,6 +99,7 @@ class Executor:
 
     def _live(self, conn: db.Connection) -> LiveState:
         db.assert_no_write_lock(conn, doing="read live Airwallex execution guards")
+        observed_at = utcnow()
         balances = {row.currency: row.available_amount for row in self.client.get_balances()}
         currencies = set(balances) | {
             row[0] for row in conn.execute("SELECT DISTINCT currency FROM obligation")
@@ -119,7 +120,7 @@ class Executor:
             )
         if self.client.clock_skew_s is None or abs(self.client.clock_skew_s) > 120:
             raise ExecutionBlockedError("Airwallex clock could not be verified within 120 seconds")
-        return LiveState(balances, rates, transfers, beneficiaries, utcnow())
+        return LiveState(balances, rates, transfers, beneficiaries, observed_at)
 
     def _caps(
         self,
@@ -270,6 +271,8 @@ class Executor:
         packet_id: str,
         live: LiveState,
         beneficiary_id: str | None = None,
+        *,
+        funding: bool = False,
     ) -> tuple[packets.PaymentPacket, BankDetails]:
         killswitch.load(conn, self.halt_file).guard()
         if utcnow() - live.observed_at > timedelta(seconds=60):
@@ -285,6 +288,15 @@ class Executor:
                 "Signed payment validity window is expired or in the future"
             )
         item = signed.items[0]
+        if conn.execute(
+            "SELECT 1 FROM execution_intent e JOIN approval_packet p ON p.id=e.packet_id "
+            "LEFT JOIN conversion c ON c.request_id=e.request_id "
+            "WHERE e.kind='CONVERSION' AND e.state<>'REJECTED' "
+            "AND json_extract(p.canonical_json,'$.payment_packet_id')=? "
+            "AND (c.status IS NULL OR c.status<>'SETTLED')",
+            (packet_id,),
+        ).fetchone():
+            raise ExecutionBlockedError("Funding conversion is unsettled, ambiguous or cancelled")
         for prior in conn.execute(
             "SELECT * FROM transfer_attempt WHERE obligation_id=? AND request_id<>?",
             (item.obligation_id, item.request_id),
@@ -335,6 +347,13 @@ class Executor:
         ):
             raise ExecutionBlockedError("Latest send date or configured rail cutoff has passed")
         self._caps(conn, signed, live, policy, beneficiary_id)
+        if funding:
+            return signed, self.vault.load(
+                conn,
+                conn.execute(
+                    "SELECT details_ref FROM payee_version WHERE id=?", (item.payee_version_id,)
+                ).fetchone()[0],
+            )
         amount = Decimal(item.transfer_amount)
         fee_reservation = Decimal(policy.policy["rails"]["fee_reservation_usd"][item.rail])
         available = live.balances.get(item.source_currency, Decimal(0))
@@ -353,7 +372,9 @@ class Executor:
             if currency == "USD":
                 continue  # Base-currency reserve is the aggregate USD-equivalent floor above.
             if live.balances.get(currency, Decimal(0)) - (
-                amount if currency == item.source_currency else Decimal(0)
+                amount + fee_reservation / live.rates[item.source_currency]
+                if currency == item.source_currency
+                else Decimal(0)
             ) < Decimal(floor):
                 raise ExecutionBlockedError("Currency reserve floor would be breached")
         payee = conn.execute(
@@ -399,6 +420,16 @@ class Executor:
                     "packet_sha256": hashlib.sha256(
                         audit.canonical_json(terms.model_dump()).encode()
                     ).hexdigest(),
+                    **(
+                        {
+                            "risk_amount_usd": str(
+                                Decimal(terms.items[0].transfer_amount)
+                                * live.rates[terms.items[0].transfer_currency]
+                            )
+                        }
+                        if kind == "TRANSFER"
+                        else {}
+                    ),
                 },
             )
             consumed = conn.execute(
@@ -538,11 +569,19 @@ class Executor:
                     ).fetchone()[0]
                 )
                 item = terms.items[0]
+                evidence = conn.execute(
+                    "SELECT payload_json FROM audit_log WHERE kind='execution.intent' "
+                    "AND json_extract(payload_json,'$.intent_id')=? ORDER BY seq LIMIT 1",
+                    (intent["id"],),
+                ).fetchone()
+                risk = json.loads(evidence[0]).get("risk_amount_usd") if evidence else None
+                if risk is not None and (not Decimal(risk).is_finite() or Decimal(risk) <= 0):
+                    raise ExecutionBlockedError("Audited execution risk basis is invalid")
                 conn.execute(
                     "INSERT INTO transfer_attempt(id,obligation_id,tranche_no,attempt_no,"
                     "request_id,"
-                    "wt_state,created_at,updated_at,payee_version_id,packet_id,run_id) "
-                    "VALUES(?,?,?,?,?,'SUBMITTING',?,?,?,?,?)",
+                    "wt_state,created_at,updated_at,payee_version_id,packet_id,run_id,amount_usd) "
+                    "VALUES(?,?,?,?,?,'SUBMITTING',?,?,?,?,?,?)",
                     (
                         str(uuid4()),
                         item.obligation_id,
@@ -554,6 +593,7 @@ class Executor:
                         item.payee_version_id,
                         intent["packet_id"],
                         terms.run_id,
+                        risk,
                     ),
                 )
                 audit.append(
@@ -578,6 +618,10 @@ class Executor:
             if result:
                 self._accept_transfer(conn, intent, result)
                 return "SUBMITTED"
+        elif intent["kind"] == "CONVERSION":
+            from app.workers import fx
+
+            return fx.recover(self, conn, intent)
         elif intent["kind"] == "BENEFICIARY":
             found = self.client.find_beneficiary(payload["nickname"])
             if found:
@@ -668,6 +712,12 @@ class Executor:
                     outcomes[intent["id"]] = result.status
                 else:
                     outcomes[intent["id"]] = self._recover_one(conn, intent)
+            for row in conn.execute(
+                "SELECT id FROM execution_intent WHERE kind='CONVERSION' AND state<>'REJECTED' "
+                "ORDER BY created_at"
+            ).fetchall():
+                intent = self._intent(conn, row["id"])
+                outcomes[intent["id"]] = self._recover_one(conn, intent)
             return outcomes
 
     def recover(self) -> dict[str, str]:

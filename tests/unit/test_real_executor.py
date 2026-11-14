@@ -138,7 +138,7 @@ class ProviderBoundary:
 
 
 @pytest.fixture
-def execution(domain, tmp_path):
+def execution(domain, tmp_path, request):
     database, ids = domain
     conn = database.connection()
     with time_machine.travel("2026-11-10T10:00:00+00:00", tick=False) as clock:
@@ -157,14 +157,16 @@ def execution(domain, tmp_path):
         )
         passkeys = signing.Passkeys(rp_id="localhost", origin="http://localhost:8000")
         devices = {i: registered(conn, i, passkeys)[1] for i in range(4)}
+        currency = getattr(request, "param", "USD")
         bank = BankDetails(
             company_name="Fixture supplier",
-            country="US",
-            currency="USD",
+            country="GB" if currency == "GBP" else "US",
+            currency=currency,
             account_name="Fixture supplier",
             account_number="123456789",
-            routing_value="021000021",
-            bank_account_category="Checking",
+            routing_value="123456" if currency == "GBP" else "021000021",
+            bank_account_category="Checking" if currency == "USD" else None,
+            bank_name="Fixture bank" if currency == "GBP" else "",
         )
         vault = DetailVault(key_dir / "details.key")
         details_id = vault.store(conn, bank)
@@ -179,8 +181,16 @@ def execution(domain, tmp_path):
             "INSERT INTO "
             "payee_version(id,vendor_id,fingerprint,details_ref,masked,"
             "method,rail,country,currency,status,created_at,updated_at) "
-            "VALUES('payee','v',?,?,'masked','LOCAL','ACH','US','USD','PROPOSED',?,?)",
-            (bank.fingerprint(), details_id, now.isoformat(), now.isoformat()),
+            "VALUES('payee','v',?,?,'masked','LOCAL',?,?,?,'PROPOSED',?,?)",
+            (
+                bank.fingerprint(),
+                details_id,
+                bank.rail(),
+                bank.country,
+                bank.currency,
+                now.isoformat(),
+                now.isoformat(),
+            ),
         )
         conn.execute(
             "INSERT INTO "
@@ -240,7 +250,11 @@ def execution(domain, tmp_path):
             "VALUES('bill','json','fixture',?,'{}',?,?)",
             (hashlib.sha256(b"fixture invoice").hexdigest(), ids[0], now),
         )
-        conn.execute("UPDATE obligation SET bill_id='bill',invoice_no_raw='invoice-1' WHERE id='o'")
+        conn.execute(
+            "UPDATE obligation SET bill_id='bill',invoice_no_raw='invoice-1',"
+            "currency=? WHERE id='o'",
+            (currency,),
+        )
         conn.execute(
             "INSERT INTO "
             "duplicate_lock(obligation_key,obligation_id,created_at) "
@@ -291,7 +305,7 @@ def execution(domain, tmp_path):
                 policy=policy,
                 passkeys=passkeys,
                 vault=vault,
-                rates={"USD": __import__("decimal").Decimal(1)},
+                rates={"USD": Decimal(1), "GBP": Decimal("1.25")},
             )
             packet_id = packets.save_payment(conn, terms)
         for index in (1, 2):
@@ -305,6 +319,7 @@ def execution(domain, tmp_path):
             )
         trust.pin_roster(conn, key_dir=key_dir, seal_dir=seal_dir)
         provider = ProviderBoundary()
+        provider.devices = devices
         client = AirwallexClient(
             "test-client",
             "test-api-key",
@@ -324,6 +339,32 @@ def execution(domain, tmp_path):
             yield executor, provider, packet_id, terms
         finally:
             client.close()
+
+
+def test_old_balance_observation_cannot_be_refreshed_by_slow_later_guard_reads(execution):
+    executor, provider, packet, _ = execution
+    original = provider.handle
+    shifted = False
+    with time_machine.travel(operators.utcnow(), tick=False) as clock:
+
+        def delayed(request):
+            nonlocal shifted
+            response = original(request)
+            if request.url.path.endswith("/rfis") and not shifted:
+                clock.shift(timedelta(seconds=90))
+                shifted = True
+            return response
+
+        executor.client.close()
+        executor.client = AirwallexClient(
+            "fixture-id",
+            "fixture-key",
+            transport=httpx.MockTransport(delayed),
+            sleep=lambda _: None,
+        )
+        with pytest.raises(ExecutionBlockedError, match="checks are stale"):
+            executor.execute(packet)
+    assert provider.posts == []
 
 
 def test_approved_payment_executes_once_and_uses_real_boundaries(execution):

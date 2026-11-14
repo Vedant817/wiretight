@@ -1,12 +1,15 @@
 """Actual provider-client/SQLite boundary; all transport responses are test-only."""
 
 # ruff: noqa: F811
+from decimal import Decimal
+
 import httpx
 import pytest
 
-from app.core import reconciliation
+from app.core import audit, operators, reconciliation
 from app.integrations.airwallex import AirwallexClient
 from tests.unit.test_operators_signing import domain  # noqa: F401
+from tests.unit.test_real_executor import execution  # noqa: F401
 
 
 @pytest.fixture
@@ -103,3 +106,54 @@ def test_missing_financial_history_and_changed_settled_row_fail_closed(finance):
     state["rows"][1]["net"] = "11.00"
     with pytest.raises(reconciliation.ReconciliationError, match="changed"):
         reconciliation.reconcile(conn, client, run)
+
+
+def test_provider_paid_payout_missing_attempt_and_journal_are_recovered_from_evidence(execution):
+    executor, provider, packet, terms = execution
+    conn = executor.database.connection()
+    opening, rows = reconciliation.snapshot(executor.client)
+    at = operators.utcnow().isoformat()
+    conn.execute(
+        "UPDATE run SET opening_balances=? WHERE id='run'", (audit.canonical_json(opening),)
+    )
+    conn.execute(
+        "INSERT INTO run_baseline VALUES('run',?,?)", (audit.canonical_json(sorted(rows)), at)
+    )
+    audit.append(
+        conn,
+        "run.opened",
+        {
+            "run_id": "run",
+            "opening_balances": opening,
+            "settled_ids": sorted(rows),
+            "observed_at": at,
+        },
+    )
+    audit.write_checkpoint(
+        conn, executor.seal_dir, executor.key, reason="fixture-opening-observation"
+    )
+    executor.execute(packet)
+    transfer = next(iter(provider.transfers.values()))
+    transfer["status"] = "PAID"
+    amount = Decimal(terms.items[0].transfer_amount)
+    provider.financial = [
+        {
+            "id": "payout-financial",
+            "source_type": "PAYOUT",
+            "source_id": transfer["id"],
+            "transaction_type": "PAYOUT",
+            "currency": "USD",
+            "amount": str(-amount),
+            "net": str(-amount),
+            "status": "SETTLED",
+        }
+    ]
+    provider.balance = str(Decimal(provider.balance) - amount)
+    conn.execute("DELETE FROM transfer_attempt")
+    assert conn.execute("SELECT COUNT(*) FROM journal_line").fetchone()[0] == 0
+    executor.poll()
+    assert executor.reconcile_run("run")
+    restored = conn.execute("SELECT * FROM transfer_attempt").fetchone()
+    assert restored["wt_state"] == "PAID_PROVISIONAL" and Decimal(restored["amount_usd"]) == amount
+    assert conn.execute("SELECT COUNT(*) FROM journal_line").fetchone()[0] == 2
+    assert len([row for row in provider.posts if row[0] == "/transfers/create"]) == 1
