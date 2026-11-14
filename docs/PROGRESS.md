@@ -242,3 +242,17 @@ mypy clean across 30 source files. No live provider acceptance, payment executor
 operator authentication, reconciliation or operational UI is claimed. The real
 uvicorn process smoke covered diagnostics only. No demo/ media edits, push, PR,
 publication, deployment or messages. Engineering work remains active.
+
+## 14 November 2026 - production stretch 3
+
+Committed kernel-backed process exclusion and authenticated operators/passkey
+approval APIs. Version-2 SQLite migration is atomic and preserves version-1 audit
+data. No default users. Requester/ops separation, CSRF/session revocation, concurrent
+double-click protection and actual stored WebAuthn assertion re-verification are
+implemented. Executor, packet construction and operational UI remain pending.
+Actual verification: full suite 814 passed, 37 skipped in 65.81s; subsequent final
+15-test operator/signing run passed in 32.55s after the last registration-fingerprint
+check. Kernel subprocess tests: 2 passed in 0.61s. Ruff clean, 62 files formatted,
+mypy clean in 34 source files. See PROD-STATUS.md for exact commands, the shared
+SQLite reader failure/fix, software-authenticator limitations and remaining work.
+No live provider calls, demo/ edits, push, PR, publication or external messages.
