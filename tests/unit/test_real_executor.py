@@ -4,6 +4,7 @@
 import hashlib
 import json
 from datetime import timedelta
+from decimal import Decimal
 from email.utils import format_datetime
 
 import httpx
@@ -16,6 +17,7 @@ from app.core import (
     installation,
     operators,
     packets,
+    reconciliation,
     record_signing,
     runtime_policy,
     signing,
@@ -34,6 +36,7 @@ class ProviderBoundary:
         self.transfers = {}
         self.posts = []
         self.fault = None
+        self.financial = []
 
     def handle(self, request):
         path = request.url.path.removeprefix("/api/v1")
@@ -52,7 +55,21 @@ class ProviderBoundary:
                 return httpx.Response(
                     200,
                     headers=headers,
-                    json=[{"currency": "USD", "available_amount": self.balance}],
+                    json=[
+                        {
+                            "currency": "USD",
+                            "available_amount": self.balance,
+                            "account_type": "cash",
+                            "total_amount": self.balance,
+                            "pending_amount": "0.00",
+                            "reserved_amount": "0.00",
+                            "prepayment_amount": "0.00",
+                        }
+                    ],
+                )
+            if path == "/financial_transactions":
+                return httpx.Response(
+                    200, headers=headers, json={"has_more": False, "items": self.financial}
                 )
             if path == "/beneficiaries":
                 values = list(self.beneficiaries.values())
@@ -549,3 +566,86 @@ def test_polling_continues_after_approver_revocation_without_new_money(execution
     executor.poll()
     assert conn.execute("SELECT wt_state FROM transfer_attempt").fetchone()[0] == "PAID_PROVISIONAL"
     assert len(provider.posts) == before
+
+
+def test_settlement_requires_reconciled_financial_payout_and_window_and_reopens_return(execution):
+    executor, provider, packet_id, terms = execution
+    conn = executor.database.connection()
+    opening, rows = reconciliation.snapshot(executor.client)
+    observed_at = operators.utcnow().isoformat()
+    conn.execute(
+        "UPDATE run SET opening_balances=? WHERE id='run'", (audit.canonical_json(opening),)
+    )
+    conn.execute(
+        "INSERT INTO run_baseline VALUES('run',?,?)",
+        (audit.canonical_json(sorted(rows)), observed_at),
+    )
+    audit.append(
+        conn,
+        "run.opened",
+        {
+            "run_id": "run",
+            "opening_balances": opening,
+            "settled_ids": sorted(rows),
+            "observed_at": observed_at,
+        },
+    )
+    audit.write_checkpoint(
+        conn, executor.seal_dir, executor.key, reason="fixture-real-opening-read"
+    )
+    executor.execute(packet_id)
+    transfer = next(iter(provider.transfers.values()))
+    transfer["status"] = "PAID"
+    executor.poll()
+    # PAID alone cannot settle even if cash happens to tie out.
+    assert executor.reconcile_run("run")
+    assert conn.execute("SELECT wt_state FROM transfer_attempt").fetchone()[0] == "PAID_PROVISIONAL"
+    amount = terms.items[0].transfer_amount
+    provider.financial = [
+        {
+            "id": "fixture-financial",
+            "source_id": transfer["id"],
+            "source_type": "PAYOUT",
+            "transaction_type": "PAYOUT",
+            "currency": "USD",
+            "amount": "-" + amount,
+            "net": "-" + amount,
+            "status": "SETTLED",
+        }
+    ]
+    provider.balance = str(Decimal(provider.balance) - Decimal(amount))
+    assert executor.reconcile_run("run")
+    assert conn.execute("SELECT wt_state FROM transfer_attempt").fetchone()[0] == "PAID_PROVISIONAL"
+    with time_machine.travel(operators.utcnow() + timedelta(days=10), tick=False):
+        executor.poll()
+        assert executor.reconcile_run("run")
+        assert conn.execute("SELECT wt_state FROM transfer_attempt").fetchone()[0] == "FINAL"
+        assert conn.execute("SELECT COUNT(*) FROM journal_line").fetchone()[0] == 2
+        transfer.update(
+            status="CANCELLED",
+            failure_type="BANK_DETAILS_INVALID",
+            failure_reason="Fixture late return",
+        )
+        executor.poll()
+        assert conn.execute("SELECT wt_state FROM transfer_attempt").fetchone()[0] == "REOPENED"
+        assert (
+            conn.execute("SELECT state FROM obligation WHERE id='o'").fetchone()[0]
+            == "HOLD: PAYOUT_FAILURE"
+        )
+        refund = Decimal(amount) - Decimal("1.00")
+        provider.financial.append(
+            {
+                "id": "fixture-refund",
+                "source_id": transfer["id"],
+                "source_type": "PAYOUT",
+                "transaction_type": "PAYOUT_FAILURE",
+                "currency": "USD",
+                "amount": str(refund),
+                "net": str(refund),
+                "status": "SETTLED",
+            }
+        )
+        provider.balance = str(Decimal(provider.balance) + refund)
+        assert executor.reconcile_run("run")
+        assert conn.execute("SELECT COUNT(*) FROM journal_line").fetchone()[0] == 4
+        assert conn.execute("SELECT wt_state FROM transfer_attempt").fetchone()[0] == "REOPENED"

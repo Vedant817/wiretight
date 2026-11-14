@@ -565,3 +565,29 @@ PAID with a missing attempt, skipped failure/return states and ledger mismatches
 It still does not prove actual OS process death mid-money-job or FX quote expiry
 at execution: those remain explicit unfinished scenarios, along with bank-change
 workflow coverage during cooling and full settlement orchestration.
+
+### Settlement follow-through after the full-suite checkpoint
+
+Added policy-calendar settlement labelling behind `Executor.reconcile_run`.
+Actual audited intent terms, a current matched cash/financial tie-out, a single
+matching settled payout principal, no payout reversal, and the full signed rail
+window are required. First PAID observation starts the clock conservatively.
+SWIFT can receive PRESUMED_SETTLED only, never FINAL by timer. Labels explicitly
+remain policy assumptions; polling continues and late failure/cancellation reopens
+them. Tranches, obligation closure and capped-bank activation follow a local FINAL.
+
+```
+uv run pytest tests/unit/test_real_executor.py::test_settlement_requires_reconciled_financial_payout_and_window_and_reopens_return -q --timeout=180
+1 passed in 7.78s
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run mypy app
+Success: no issues found in 52 source files
+```
+
+The test includes a later provider cancellation, a partial refund net of an actual
+fee, balanced return posting and continued REOPENED status. Provider values are
+test-only HTTP fixtures. This addition follows the 871-pass full-suite checkpoint;
+it has the targeted result above, not a newly claimed full-suite result. Run opening
+and reconciliation still need complete service/API orchestration. FX and real OS
+crash acceptance remain unfinished. No live provider/arrival proof is claimed.

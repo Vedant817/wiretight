@@ -22,7 +22,17 @@ from zoneinfo import ZoneInfo
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from app.core import audit, db, killswitch, packets, signing, transfer_tracking, trust
+from app.core import (
+    audit,
+    db,
+    killswitch,
+    packets,
+    reconciliation,
+    settlement,
+    signing,
+    transfer_tracking,
+    trust,
+)
 from app.core.bank_details import BankDetails, DetailVault
 from app.core.operators import utcnow
 from app.core.policy import LoadedPolicy, PolicyError
@@ -623,6 +633,23 @@ class Executor:
                 raise ExecutionBlockedError("Beneficiary mapping conflict")
             self._result(conn, intent["id"], "SUBMITTED", provider_id=result["id"])
         return str(result["id"])
+
+    def reconcile_run(self, run_id: str) -> bool:
+        with exclusive_process(self.lock_file):
+            conn = self.database.connection()
+            self._trust(conn, roster=False)
+            for row in conn.execute(
+                "SELECT id FROM execution_intent WHERE kind='TRANSFER' AND packet_id IN "
+                "(SELECT packet_id FROM transfer_attempt WHERE run_id=?)",
+                (run_id,),
+            ).fetchall():
+                self._intent(conn, row["id"])
+            matched = reconciliation.reconcile(conn, self.client, run_id)
+            if matched:
+                policy = load_runtime_policy(conn, self.policy_path, self.passkeys)
+                settlement.finalize_reconciled(conn, run_id, policy)
+            audit.write_checkpoint(conn, self.seal_dir, self.key, reason="reconciliation-" + run_id)
+            return matched
 
     def poll(self) -> dict[str, str]:
         """Poll submitted and uncertain transfers, including previously FINAL ones."""
