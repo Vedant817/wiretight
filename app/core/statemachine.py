@@ -61,6 +61,19 @@ def is_terminal_awx(status: str | None) -> bool:
     return status in TERMINAL_AWX
 
 
+def _reachable(current: str, observed: str) -> bool:
+    pending = list(DOCUMENTED_TRANSITIONS.get(current, ()))
+    visited: set[str] = set()
+    while pending:
+        value = pending.pop()
+        if value == observed:
+            return True
+        if value not in visited:
+            visited.add(value)
+            pending.extend(DOCUMENTED_TRANSITIONS.get(value, ()))
+    return False
+
+
 def transfer_next_awx(current: str | None, observed: str) -> str:
     """Return the ``awx_status`` after observing ``observed``.
 
@@ -77,8 +90,7 @@ def transfer_next_awx(current: str | None, observed: str) -> str:
     if current in TERMINAL_AWX:
         return current
 
-    allowed = DOCUMENTED_TRANSITIONS.get(current, frozenset())
-    if observed in allowed:
+    if _reachable(current, observed):
         return observed
 
     # Either a regression (SENT -> PROCESSING) or a jump we do not document.
@@ -99,7 +111,7 @@ def is_regression(current: str | None, observed: str) -> bool:
         return False
     if current in TERMINAL_AWX:
         return True
-    return observed not in DOCUMENTED_TRANSITIONS.get(current, frozenset())
+    return not _reachable(current, observed)
 
 
 # ---------------------------------------------------------------------------

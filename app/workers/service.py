@@ -150,6 +150,23 @@ def main() -> int:
         with exclusive_process(Path(settings.app_db_path).with_suffix(".refresh.lock")):
             while not stop.is_set():
                 okay = refresh(database, client)
+                if (
+                    database.connection()
+                    .execute("SELECT 1 FROM execution_intent WHERE kind='TRANSFER' LIMIT 1")
+                    .fetchone()
+                ):
+                    from app.workers.executor import Executor
+
+                    executor = Executor(
+                        database,
+                        client,
+                        policy_path=Path(settings.app_policy_path),
+                        key_dir=Path(settings.app_key_dir),
+                        seal_dir=Path(settings.app_audit_checkpoint_dir),
+                        halt_file=Path(settings.app_halt_file),
+                        lock_file=Path(settings.app_db_path).with_suffix(".execution.lock"),
+                    )
+                    executor.poll()
                 if args.once:
                     return 0 if okay else 1
                 stop.wait(settings.poll_interval_s)

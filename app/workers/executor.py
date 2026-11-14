@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from app.core import audit, db, killswitch, packets, signing, trust
+from app.core import audit, db, killswitch, packets, signing, transfer_tracking, trust
 from app.core.bank_details import BankDetails, DetailVault
 from app.core.operators import utcnow
 from app.core.policy import LoadedPolicy, PolicyError
@@ -76,13 +76,16 @@ class Executor:
             )
         self.vault = DetailVault(key_dir / "details.key")
 
-    def _trust(self, conn: db.Connection) -> None:
+    def _trust(self, conn: db.Connection, *, roster: bool = True) -> None:
         if not audit.verify_checkpoints(conn, self.seal_dir, self.public).ok:
             raise ExecutionBlockedError("Audit checkpoint verification failed")
-        try:
-            trust.verify_roster(conn, self.key_dir, self.public)
-        except Exception:
-            raise ExecutionBlockedError("Registered operator trust could not be verified") from None
+        if roster:
+            try:
+                trust.verify_roster(conn, self.key_dir, self.public)
+            except Exception:
+                raise ExecutionBlockedError(
+                    "Registered operator trust could not be verified"
+                ) from None
 
     def _live(self, conn: db.Connection) -> LiveState:
         db.assert_no_write_lock(conn, doing="read live Airwallex execution guards")
@@ -515,31 +518,44 @@ class Executor:
             if not self.vault.load(conn, details_ref).matches_provider(data):
                 raise ExecutionBlockedError("Provider beneficiary does not match execution intent")
         with db.transaction(conn):
+            if not conn.execute(
+                "SELECT 1 FROM transfer_attempt WHERE request_id=?", (result.request_id,)
+            ).fetchone():
+                terms = packets.PaymentPacket.model_validate_json(
+                    conn.execute(
+                        "SELECT canonical_json FROM approval_packet WHERE id=?",
+                        (intent["packet_id"],),
+                    ).fetchone()[0]
+                )
+                item = terms.items[0]
+                conn.execute(
+                    "INSERT INTO transfer_attempt(id,obligation_id,tranche_no,attempt_no,"
+                    "request_id,"
+                    "wt_state,created_at,updated_at,payee_version_id,packet_id,run_id) "
+                    "VALUES(?,?,?,?,?,'SUBMITTING',?,?,?,?,?)",
+                    (
+                        str(uuid4()),
+                        item.obligation_id,
+                        item.tranche_no,
+                        item.attempt_no,
+                        result.request_id,
+                        intent["created_at"],
+                        utcnow().isoformat(),
+                        item.payee_version_id,
+                        intent["packet_id"],
+                        terms.run_id,
+                    ),
+                )
+                audit.append(
+                    conn,
+                    "payout.missing_attempt_recovered",
+                    {
+                        "intent_id": intent["id"],
+                        "request_id": result.request_id,
+                    },
+                )
             self._result(conn, intent["id"], "SUBMITTED", provider_id=result.id)
-            conn.execute(
-                "UPDATE transfer_attempt SET "
-                "transfer_id=?,awx_status=?,wt_state=?,updated_at=? WHERE "
-                "request_id=?",
-                (
-                    result.id,
-                    result.status,
-                    "PAID_PROVISIONAL" if result.status == "PAID" else "SUBMITTING",
-                    utcnow().isoformat(),
-                    result.request_id,
-                ),
-            )
-            conn.execute(
-                "INSERT INTO "
-                "transfer_observation(id,transfer_id,observed_at,awx_status,"
-                "raw_json) VALUES(?,?,?,?,?)",
-                (
-                    str(uuid4()),
-                    result.id,
-                    utcnow().isoformat(),
-                    result.status,
-                    self.vault.encrypt_json(data),
-                ),
-            )
+            transfer_tracking.observe(conn, self.vault, data)
         audit.write_checkpoint(conn, self.seal_dir, self.key, reason="result-" + intent["id"])
 
     def _recover_one(self, conn: db.Connection, intent: db.sqlite3.Row) -> str:
@@ -608,10 +624,29 @@ class Executor:
             self._result(conn, intent["id"], "SUBMITTED", provider_id=result["id"])
         return str(result["id"])
 
+    def poll(self) -> dict[str, str]:
+        """Poll submitted and uncertain transfers, including previously FINAL ones."""
+        with exclusive_process(self.lock_file):
+            conn = self.database.connection()
+            self._trust(conn, roster=False)
+            outcomes = {}
+            for row in conn.execute(
+                "SELECT id FROM execution_intent WHERE kind='TRANSFER' AND state<>'REJECTED' "
+                "ORDER BY created_at"
+            ).fetchall():
+                intent = self._intent(conn, row["id"])
+                if intent["provider_id"]:
+                    result = self.client.get_transfer(intent["provider_id"])
+                    self._accept_transfer(conn, intent, result)
+                    outcomes[intent["id"]] = result.status
+                else:
+                    outcomes[intent["id"]] = self._recover_one(conn, intent)
+            return outcomes
+
     def recover(self) -> dict[str, str]:
         with exclusive_process(self.lock_file):
             conn = self.database.connection()
-            self._trust(conn)
+            self._trust(conn, roster=False)
             outcomes = {}
             rows = conn.execute(
                 "SELECT id FROM execution_intent WHERE state IN "

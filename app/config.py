@@ -190,6 +190,7 @@ class WorkerSettings(_BaseWiretightSettings):
     """
 
     awx_client_id: str = Field(default="", alias="AWX_CLIENT_ID")
+    app_key_dir: str = Field(default="var/keys", alias="APP_KEY_DIR")
     awx_api_key: str = Field(default="", alias="AWX_API_KEY")
     awx_login_as: str = Field(default="", alias="AWX_LOGIN_AS")
     awx_api_version: str = Field(default="", alias="AWX_API_VERSION")

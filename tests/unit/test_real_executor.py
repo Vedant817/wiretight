@@ -78,6 +78,10 @@ class ProviderBoundary:
                 return httpx.Response(
                     200, headers=headers, json={"has_more": False, "items": values}
                 )
+            if path.startswith("/transfers/"):
+                return httpx.Response(
+                    200, headers=headers, json=self.transfers[path.rsplit("/", 1)[1]]
+                )
             if path in {"/rfis", "/fx/conversions"}:
                 return httpx.Response(200, headers=headers, json={"has_more": False, "items": []})
         body = json.loads(request.content)
@@ -461,3 +465,87 @@ def test_provider_history_counts_toward_caps_even_when_not_in_local_ledger(execu
     with pytest.raises(ExecutionBlockedError, match="cap exceeded"):
         executor.execute(packet_id)
     assert provider.posts == []
+
+
+def test_poll_skipped_paid_then_cancelled_return_captures_first_failure(execution):
+    executor, provider, packet_id, _ = execution
+    executor.execute(packet_id)
+    transfer = next(iter(provider.transfers.values()))
+    transfer["status"] = "PAID"
+    executor.poll()
+    conn = executor.database.connection()
+    row = conn.execute("SELECT * FROM transfer_attempt").fetchone()
+    assert row["awx_status"] == "PAID" and row["wt_state"] == "PAID_PROVISIONAL"
+    first_paid = row["first_paid_at"]
+    transfer.update(
+        status="CANCELLED", failure_type="BANK_DETAILS_INVALID", failure_reason="Fixture return"
+    )
+    executor.poll()
+    transfer["failure_reason"] = "Later text must not overwrite first evidence"
+    executor.poll()
+    row = conn.execute("SELECT * FROM transfer_attempt").fetchone()
+    assert row["failure_reason"] == "Fixture return" and row["first_paid_at"] == first_paid
+    assert row["awx_status"] == "CANCELLED"
+    assert (
+        conn.execute("SELECT status FROM payee_version WHERE id='payee'").fetchone()[0]
+        == "SUSPENDED"
+    )
+    assert (
+        conn.execute("SELECT COUNT(*) FROM incident WHERE kind='PAYOUT_FAILURE'").fetchone()[0] == 1
+    )
+    assert len(provider.transfers) == 1
+
+
+def test_provider_paid_with_missing_attempt_is_recovered_without_reposting(execution):
+    executor, provider, packet_id, _ = execution
+    executor.execute(packet_id)
+    transfer = next(iter(provider.transfers.values()))
+    transfer["status"] = "PAID"
+    conn = executor.database.connection()
+    conn.execute("DELETE FROM transfer_attempt")
+    executor.poll()
+    row = conn.execute("SELECT * FROM transfer_attempt").fetchone()
+    assert row["transfer_id"] == transfer["id"] and row["wt_state"] == "PAID_PROVISIONAL"
+    assert len([post for post in provider.posts if post[0] == "/transfers/create"]) == 1
+
+
+def test_revoked_approver_cannot_execute_already_approved_packet(execution):
+    executor, provider, packet_id, _ = execution
+    conn = executor.database.connection()
+    email = conn.execute(
+        "SELECT u.email FROM user u JOIN approval_signature a ON a.approver_id=u.id "
+        "WHERE a.packet_id=? LIMIT 1",
+        (packet_id,),
+    ).fetchone()[0]
+    operators.disable(conn, email)
+    with pytest.raises((ExecutionBlockedError, signing.SigningError)):
+        executor.execute(packet_id)
+    assert provider.posts == []
+
+
+def test_approval_expiring_during_renewed_cooling_cannot_execute(execution):
+    executor, provider, packet_id, _ = execution
+    conn = executor.database.connection()
+    conn.execute(
+        "UPDATE payee_version SET cooling_off_until=? WHERE id='payee'",
+        ((operators.utcnow() + timedelta(hours=72)).isoformat(),),
+    )
+    with (
+        time_machine.travel(operators.utcnow() + timedelta(hours=5), tick=False),
+        pytest.raises((ExecutionBlockedError, signing.SigningError, packets.PaymentBlockedError)),
+    ):
+        executor.execute(packet_id)
+    assert provider.posts == []
+
+
+def test_polling_continues_after_approver_revocation_without_new_money(execution):
+    executor, provider, packet_id, _ = execution
+    executor.execute(packet_id)
+    conn = executor.database.connection()
+    email = conn.execute("SELECT email FROM user WHERE role='approver' LIMIT 1").fetchone()[0]
+    operators.disable(conn, email)
+    next(iter(provider.transfers.values()))["status"] = "PAID"
+    before = len(provider.posts)
+    executor.poll()
+    assert conn.execute("SELECT wt_state FROM transfer_attempt").fetchone()[0] == "PAID_PROVISIONAL"
+    assert len(provider.posts) == before
