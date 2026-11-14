@@ -24,8 +24,9 @@ def exclusive_process(path: str | Path) -> Iterator[None]:
     fd = os.open(target, os.O_CREAT | os.O_RDWR, 0o600)
     held = False
     try:
-        if os.fstat(fd).st_size == 0:
-            os.write(fd, b"\x00")
+        # Windows _locking explicitly supports ranges beyond EOF. An initial
+        # marker write would race another handle acquiring byte zero, causing
+        # PermissionError before the loser can report normal lock contention.
         os.lseek(fd, 0, os.SEEK_SET)
         try:
             if sys.platform == "win32":
