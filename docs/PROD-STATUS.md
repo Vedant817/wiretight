@@ -901,3 +901,109 @@ Success: no issues found in 53 source files
 `git diff a938d47 --name-only -- demo` produced no paths. The 37 skips comprise
 36 historical spec-index placeholders and one unconfirmed live test; the separate
 confirmed live guard above reported absent credentials. No skip is counted as a pass.
+
+
+## Next stretch: remove deferred tests and attack execution interleavings
+
+The following checklist supersedes the preceding stretch's historical-index gap.
+
+- [x] All 36 not-written placeholder skips removed: 24 replaced by registered behavior tests, 12 obsolete cases deleted with per-ID reasons in PROD-AUDIT.md and scope rationale in DECISIONS.md. Deleted cases are not claimed as passes.
+- [x] Active registry entries require actual collected test functions, including inherited class markers. Marker-looking strings/comments do not count; there is no PENDING exemption.
+- [x] Replay/double approval, unsigned callback evidence, tampered cooling deadline, provider clock skew, corrupt beneficiary last-four, and IST daily cap boundaries exercised.
+- [x] Kill after durable claim but before the payout POST exercised in a real child process; restart is lookup-only with one consumption and no blind repost.
+- [x] Timeout/accepted-but-response-lost retries preserve the original request identity and create one provider payout/conversion; ambiguous absence does not authorize a new attempt or cross-run replan.
+- [x] Duplicate/out-of-order signed webhook hints cannot override actual GET state; forged signatures are rejected.
+- [x] Expired quotes, including a 60-second quote inside the safety margin, require a new quote and new human approval; rate/bank/amount drift blocks conversion.
+- [x] Actual concurrent worker processes race on the same packet. Cancel/execution races are tested in both orders with HTTP barriers, independent of UI visibility.
+- [x] Halt or raw policy replacement after claim prevents POST. A replacement policy newly signed by two real test passkeys also invalidates the old payment approval.
+- [x] Real defect fixed: provider compliance failure now trips persistent halt, retains a separate destination/obligation compliance hold, and voids unused destination approvals. Polling continues while halted.
+- [x] Product source grep completed; each remaining match has a line-level disposition in PROD-AUDIT.md. No product-path test doubles introduced.
+- [x] Final full suite, ruff check, format check and mypy completed; exact output below.
+- [ ] Live Airwallex acceptance: sandbox credentials remain absent; live guard explicitly skips with reason.
+- [ ] Owner acceptance using real business/contact/bank/invoice records and physical passkeys remains unperformed. Test virtual authenticators are not physical-device acceptance.
+
+Only synthetic HTTP boundaries and explicit test clocks/data are used in tests;
+production executor, SQLite, WebAuthn verification, state machine and audit logic
+are exercised directly. No money guard or signature verifier is replaced by a stub.
+The process-kill fixture waits after TRANSFER claim and kills the owned process tree
+before a payout POST; a missing provider result is honestly retained as AMBIGUOUS.
+
+Actual focused results so far:
+
+```text
+uv run pytest tests/unit/test_execution_adversaries.py -q --timeout=180 --tb=short
+16 passed in 116.80s (0:01:56)
+uv run pytest 'tests/unit/test_execution_adversaries.py::test_control_change_after_claim_prevents_the_money_post[signed_policy]' -q --timeout=180 --tb=short
+1 passed in 10.21s
+uv run pytest tests/unit/test_execution_adversaries.py::test_signed_callback_first_payment_is_capped_and_remainder_held tests/unit/test_execution_adversaries.py::test_unsigned_callback_row_never_authorizes_execution tests/unit/test_execution_adversaries.py::test_webhook_claims_do_not_override_provider_get_and_forgery_is_refused -q --timeout=180 --tb=short
+3 passed in 24.70s
+```
+
+The first focused adversarial run found the real compliance-halt defect.
+Additional test-development failures were not passing verification: the initial
+cooling test encountered the future-dated review guard before cooling, so it now
+creates a genuine newly signed callback at 71 hours; the first tranche fixture
+needed to replace its test setup's old tranche split, and its cap assertion needed
+to allow the conservative risk margin (the cap is an upper limit). A partial
+selection including the registry deliberately lacked required collected cases;
+the final registry check runs with the full suite and includes class-level markers.
+No such earlier failed command is counted as passing.
+
+Explicit confirmed live guard:
+
+```text
+uv run python -c "import os, pytest; os.environ['CONFIRM_LIVE']='1'; raise SystemExit(pytest.main(['tests/live/test_airwallex_read.py','-q','-rs']))"
+SKIPPED [1] tests\live\test_airwallex_read.py:21: AWX_CLIENT_ID and AWX_API_KEY are not configured
+1 skipped in 0.53s
+```
+
+
+Final full-suite invocation (PowerShell captured both streams to the local ignored artifact):
+
+```powershell
+uv run pytest tests -q --timeout=180 --tb=short 2>&1 | Tee-Object -FilePath output/playwright/adversarial-full-pytest.txt
+exit $LASTEXITCODE
+```
+
+Exit code 0. Exact captured output:
+
+```text
+........................................................................ [  7%]
+........................................................................ [ 15%]
+........................................................................ [ 23%]
+........................................................................ [ 31%]
+............................................s........................... [ 39%]
+........................................................................ [ 46%]
+........................................................................ [ 54%]
+........................................................................ [ 62%]
+........................................................................ [ 70%]
+........................................................................ [ 78%]
+........................................................................ [ 85%]
+........................................................................ [ 93%]
+...........................................................              [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests\live\test_airwallex_read.py:19: Read-only sandbox test requires CONFIRM_LIVE=1
+922 passed, 1 skipped in 659.47s (0:10:59)
+```
+
+Final checks (all exit 0):
+
+```text
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+111 files already formatted
+uv run mypy app
+Success: no issues found in 53 source files
+```
+
+The single full-suite skip is the unconfirmed live guard. The separate confirmed
+guard above explicitly reported absent sandbox credentials. There are no historical
+not-written skips. The changed test total reflects removal of obsolete cases and
+redundant index-bookkeeping parameterizations, together with new behavior tests;
+it is not a claim that deleted historical scenarios passed.
+
+`git diff --check` returned exit 0. Comparison to starting commit `bf575fd` showed
+no paths under root `demo/`. Code/test/audit decision commit: `e360a20`.
+No push, PR, publication, signup, external message, or secret disclosure. Live
+Airwallex and owner/physical-device acceptance remain the open items above.

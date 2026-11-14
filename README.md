@@ -21,9 +21,10 @@ cooling, execution requests/status, run planning and reconciliation exceptions.
 All provider observations and money requests go through the genuine sandbox client.
 Test fixtures and historical recording tools live under `tests/support/`.
 See [the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
-Known verification gaps: the original spec index still has 36 declared skipped
-placeholders; real sandbox and physical-device acceptance are not established.
-Passing the current focused tests does not certify every historical spec milestone.
+The historical not-written placeholder skips have been removed: 24 cases are
+registered on behavior tests and 12 obsolete cases were deleted with individual
+reasons in the audit. Deleted cases are not passing original-spec acceptance.
+Real sandbox and physical-device acceptance remain unverified.
 
 With Python 3.12 and uv installed, install pinned dependencies and start both isolated
 processes with one command:
