@@ -6,12 +6,14 @@ must preserve its request_id and resolve it using provider list endpoints.
 
 from __future__ import annotations
 
+import json
 import random
 import threading
 import time
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from email.utils import parsedate_to_datetime
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -20,6 +22,10 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from app.config import SANDBOX_BASE_URL
 from app.money import raise_on_float
+
+
+def _invalid_json_number(_value: str) -> None:
+    raise ValueError("Non-finite provider number")
 
 
 class ProviderError(RuntimeError):
@@ -107,6 +113,7 @@ class AirwallexClient:
         self._sleep = sleep
         self._now = now
         self._token: Token | None = None
+        self.clock_skew_s: float | None = None
         self._lock = threading.RLock()
         self._http = httpx.Client(
             base_url=SANDBOX_BASE_URL + "/api/v1/",
@@ -144,6 +151,13 @@ class AirwallexClient:
                 )
             except httpx.TransportError:
                 raise ProviderError("ambiguous" if method == "POST" else "unavailable") from None
+            if response.headers.get("Date"):
+                try:
+                    self.clock_skew_s = (
+                        parsedate_to_datetime(response.headers["Date"]) - self._now()
+                    ).total_seconds()
+                except (ValueError, TypeError):
+                    self.clock_skew_s = None
             if response.status_code != 429 and response.status_code < 500:
                 return response
             # A 5xx can follow a committed mutation. Resolve through a GET
@@ -183,7 +197,11 @@ class AirwallexClient:
                 category = "unavailable"
             raise ProviderError(category, status=response.status_code)
         try:
-            return response.json()
+            if response.text == "OK":
+                return "OK"
+            return json.loads(
+                response.content, parse_float=Decimal, parse_constant=_invalid_json_number
+            )
         except ValueError:
             raise ProviderError("invalid_response") from None
 
@@ -319,8 +337,11 @@ class AirwallexClient:
     def beneficiary_schema(self, payload: dict[str, Any]) -> dict[str, Any]:
         return dict(self.request("POST", "/beneficiary_api_schemas/generate", payload=payload))
 
-    def validate_beneficiary(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return dict(self.request("POST", "/beneficiaries/validate", payload=payload))
+    def validate_beneficiary(self, payload: dict[str, Any]) -> bool:
+        result = self.request("POST", "/beneficiaries/validate", payload=payload)
+        if result != "OK":
+            raise ProviderError("invalid_validation_response")
+        return True
 
     def create_beneficiary(self, payload: dict[str, Any]) -> dict[str, Any]:
         # This endpoint has no documented idempotency contract. Never retry it.
@@ -370,3 +391,54 @@ class AirwallexClient:
         return list(
             self.list_items("/financial_transactions", from_created_at=start, to_created_at=end)
         )
+
+    def list_transfers(self, *, start: str) -> list[dict[str, Any]]:
+        return list(self.list_items("/transfers", from_created_at=start))
+
+    def list_rfis(self) -> list[dict[str, Any]]:
+        return list(self.list_items("/rfis", types="TRANSACTION", statuses="ACTION_REQUIRED"))
+
+    def usd_rates(self, currencies: set[str]) -> dict[str, Decimal]:
+        rates = {"USD": Decimal(1)}
+        for currency in currencies - {"USD"}:
+            data = self.get_rates(buy_currency="USD", sell_currency=currency)
+            if data.get("buy_currency") != "USD" or data.get("sell_currency") != currency:
+                raise ProviderError("invalid_rate_currencies")
+            levels = [row for row in data.get("rate_details", []) if row.get("level") == "CLIENT"]
+            if len(levels) != 1:
+                raise ProviderError("missing_client_rate_basis")
+            bought, sold = (
+                Decimal(str(levels[0]["buy_amount"])),
+                Decimal(str(levels[0]["sell_amount"])),
+            )
+            if not bought.is_finite() or not sold.is_finite() or min(bought, sold) <= 0:
+                raise ProviderError("invalid_rate_amounts")
+            rates[currency] = bought / sold
+        return rates
+
+    def usd_risk_rates(self, currencies: set[str]) -> dict[str, Decimal]:
+        """Risk basis: worse of current CLIENT amounts and last booked USD pair."""
+        rates = self.usd_rates(currencies)
+        latest: dict[str, tuple[str, Decimal]] = {}
+        for row in self.list_items("/fx/conversions"):
+            if row.get("status") != "SETTLED":
+                continue
+            buy, sell = row.get("buy_currency"), row.get("sell_currency")
+            if "USD" not in {buy, sell} or buy == sell:
+                continue
+            currency = sell if buy == "USD" else buy
+            if currency not in currencies:
+                continue
+            try:
+                bought, sold = Decimal(str(row["buy_amount"])), Decimal(str(row["sell_amount"]))
+                created = str(row["created_at"])
+                if not min(bought, sold) > 0 or not bought.is_finite() or not sold.is_finite():
+                    raise ValueError("invalid booked amounts")
+                basis = bought / sold if buy == "USD" else sold / bought
+            except (KeyError, ValueError):
+                raise ProviderError("invalid_booked_rate_basis") from None
+            if currency not in latest or created > latest[currency][0]:
+                latest[currency] = created, basis
+        for currency, (_, basis) in latest.items():
+            rates[currency] = max(rates[currency], basis)
+        return rates

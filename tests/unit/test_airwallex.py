@@ -196,3 +196,23 @@ def test_api_version_omitted_on_fx_and_secrets_masked():
     assert seen[2].headers["x-api-version"] == "2025-06-30"
     assert "test-token" not in repr(client._token)
     client.close()
+
+
+def test_real_validation_ack_and_exact_decimal_rate_basis():
+    from decimal import Decimal
+
+    def handler(request):
+        if request.url.path.endswith("login"):
+            return httpx.Response(201, json=login_response())
+        if request.url.path.endswith("validate"):
+            return httpx.Response(200, text="OK")
+        return httpx.Response(
+            200,
+            content=b'{"buy_currency":"USD","sell_currency":"EUR",'
+            b'"rate":7632,"rate_details":[{"level":"CLIENT","buy_amount":10000.10,"sell_amount":9000.01}]}',
+        )
+
+    client = client_for(handler)
+    assert client.validate_beneficiary({"beneficiary": {}}) is True
+    assert client.usd_rates({"USD", "EUR"})["EUR"] == Decimal("10000.10") / Decimal("9000.01")
+    client.close()
