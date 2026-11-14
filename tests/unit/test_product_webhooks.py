@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import os
 import socket
 import time
 
@@ -7,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.main import create_app, verify_webhook
+from app.core import db
 
 # TestClient's event loop needs an internal socketpair. Preserve that operation
 # while still refusing all outbound connects, including accidental provider I/O.
@@ -96,3 +98,47 @@ def test_expired_signed_event():
     signature = hmac.new(b"secret", timestamp.encode() + body, hashlib.sha256).hexdigest()
     with pytest.raises(ValueError, match="tolerance"):
         verify_webhook(body, timestamp, signature, "secret")
+
+
+def test_unknown_event_name_is_only_a_poll_hint_and_malformed_events_are_refused(service):
+    # The provider may add event names we have never seen. A correctly signed
+    # one is still only a hint to GET authoritative data: it must be stored and
+    # must not create or advance any transfer state.
+    body = b'{"id":"unknown-1","name":"ledger.reconciliation.mystery","data":{"unexpected":[1,2]}}'
+    assert service.post("/webhooks/airwallex", content=body, headers=signed(body)).json() == {
+        "accepted": True,
+        "duplicate": False,
+    }
+    conn = db.connect(os.environ["APP_DB_PATH"])
+    try:
+        row = conn.execute("SELECT * FROM webhook_event WHERE event_id='unknown-1'").fetchone()
+        assert row["enqueued_poll"] == 1
+        assert conn.execute("SELECT COUNT(*) FROM transfer_attempt").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM provider_job").fetchone()[0] == 0
+        audit_rows = conn.execute(
+            "SELECT payload_json FROM audit_log WHERE kind='webhook.received'"
+        ).fetchall()
+        assert [row[0] for row in audit_rows if "ledger.reconciliation.mystery" in row[0]]
+    finally:
+        conn.close()
+
+    # Replaying the same signed bytes is a duplicate; changing the body under
+    # the same id is a conflict, never a second poll.
+    assert service.post("/webhooks/airwallex", content=body, headers=signed(body)).json() == {
+        "accepted": True,
+        "duplicate": True,
+    }
+    changed = body.replace(b"mystery", b"mystery2")
+    assert (
+        service.post("/webhooks/airwallex", content=changed, headers=signed(changed)).status_code
+        == 409
+    )
+
+    for malformed in (
+        b'{"id":"m1","name":"payout.transfer.sent"}',
+        b'{"id":"m2","name":"","data":{}}',
+        b'{"id":"m3","name":"payout.transfer.sent","data":"not-an-object"}',
+        b'{"id":"","name":"payout.transfer.sent","data":{}}',
+    ):
+        resp = service.post("/webhooks/airwallex", content=malformed, headers=signed(malformed))
+        assert resp.status_code == 400, malformed

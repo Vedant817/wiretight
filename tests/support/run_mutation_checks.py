@@ -87,6 +87,51 @@ def experiments():
             lambda s: remove_queue_role(s),
             [adversaries + "test_ops_cannot_queue_a_fully_approved_packet"],
         ),
+        (
+            "tie_out_clean",
+            "app/core/reconciliation.py",
+            lambda s: changed(s, "clean = residual == 0 and not unexplained", "clean = True"),
+            [
+                "tests/unit/test_reconciliation_runtime.py::"
+                "test_actual_cash_mismatch_is_unexplained_even_when_journal_balances"
+            ],
+        ),
+        (
+            "unmapped_payout",
+            "app/core/reconciliation.py",
+            lambda s: changed(
+                s,
+                'row["source_type"] == "PAYOUT"',
+                'False and row["source_type"] == "PAYOUT"',
+            ),
+            [
+                "tests/unit/test_reconciliation_runtime.py::"
+                "test_unmapped_provider_payout_is_not_falsely_cleared_by_zero_residual"
+            ],
+        ),
+        (
+            "webhook_id_reuse",
+            "app/api/main.py",
+            lambda s: changed(
+                s,
+                'if existing["raw_sha256"] != digest:',
+                'if False and existing["raw_sha256"] != digest:',
+            ),
+            ["tests/unit/test_product_webhooks.py::test_bad_signature_and_malformed_input"],
+        ),
+        (
+            "unknown_webhook_event",
+            "app/api/main.py",
+            lambda s: changed(
+                s,
+                "event = WebhookEvent.model_validate_json(raw)",
+                "event = WebhookEvent(id='x', name='x', data={})",
+            ),
+            [
+                "tests/unit/test_product_webhooks.py::"
+                "test_unknown_event_name_is_only_a_poll_hint_and_malformed_events_are_refused"
+            ],
+        ),
     ]
 
 

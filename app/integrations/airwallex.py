@@ -275,10 +275,20 @@ class AirwallexClient:
             if not isinstance(data, dict) or not isinstance(data.get("items"), list):
                 raise ProviderError("invalid_page")
             yield from data["items"]
-            if data.get("has_more") is False:
+            has_more = data.get("has_more")
+            if has_more is False:
                 return
-            if not isinstance(data.get("has_more"), bool) or not data["items"]:
-                raise ProviderError("invalid_pagination")
+            if has_more is None:
+                # Key absent: stop if fewer than a full page, else continue.
+                if len(data["items"]) < 100:
+                    return
+                continue
+            if has_more is True:
+                if not data["items"]:
+                    raise ProviderError("invalid_pagination")
+                continue
+            # Any other type (string, int, etc.) is invalid.
+            raise ProviderError("invalid_pagination")
         raise ProviderError("pagination_limit")
 
     def get_balances(self) -> list[Balance]:

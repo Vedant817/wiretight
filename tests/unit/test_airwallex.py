@@ -237,3 +237,71 @@ def test_redirect_is_never_followed_and_ambient_proxy_is_not_used(monkeypatch):
     finally:
         client.close()
     assert seen == ["api.sandbox.airwallex.com", "api.sandbox.airwallex.com"]
+
+
+# --- list_items pagination edge cases (covers the /transfers has_more absent bug) ---
+
+
+def test_list_items_no_has_more_empty_items_stops_after_one_request():
+    """Endpoint returns {'items': []} with no has_more -> yields [], one request only."""
+    calls = []
+
+    def handler(request):
+        if request.url.path.endswith("login"):
+            return httpx.Response(201, json=login_response())
+        calls.append(request)
+        return httpx.Response(200, json={"items": []})
+
+    client = client_for(handler)
+    result = list(client.list_items("/transfers", from_created_at="1970-01-01T00:00:00Z"))
+    assert result == []
+    assert len(calls) == 1
+    client.close()
+
+
+def test_list_items_no_has_more_two_pages_continues_when_full_page():
+    """100 items, no has_more, then 3 items, no has_more -> yields 103 items after 2 requests."""
+    calls = []
+
+    def handler(request):
+        if request.url.path.endswith("login"):
+            return httpx.Response(201, json=login_response())
+        page = int(request.url.params["page_num"])
+        calls.append(page)
+        if page == 0:
+            return httpx.Response(200, json={"items": [{"id": i} for i in range(100)]})
+        return httpx.Response(200, json={"items": [{"id": i} for i in range(100, 103)]})
+
+    client = client_for(handler)
+    result = list(client.list_items("/transfers", from_created_at="1970-01-01T00:00:00Z"))
+    assert len(result) == 103
+    assert calls == [0, 1]
+    client.close()
+
+
+def test_list_items_has_more_string_raises_invalid_pagination():
+    """has_more='yes' (string) -> raises ProviderError invalid_pagination."""
+
+    def handler(request):
+        if request.url.path.endswith("login"):
+            return httpx.Response(201, json=login_response())
+        return httpx.Response(200, json={"items": [{}], "has_more": "yes"})
+
+    client = client_for(handler)
+    with pytest.raises(ProviderError, match="invalid_pagination"):
+        list(client.list_items("/transfers", from_created_at="1970-01-01T00:00:00Z"))
+    client.close()
+
+
+def test_list_items_has_more_true_empty_items_raises_invalid_pagination():
+    """has_more=True with empty items -> raises ProviderError invalid_pagination."""
+
+    def handler(request):
+        if request.url.path.endswith("login"):
+            return httpx.Response(201, json=login_response())
+        return httpx.Response(200, json={"items": [], "has_more": True})
+
+    client = client_for(handler)
+    with pytest.raises(ProviderError, match="invalid_pagination"):
+        list(client.list_items("/transfers", from_created_at="1970-01-01T00:00:00Z"))
+    client.close()

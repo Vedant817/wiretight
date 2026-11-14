@@ -61,11 +61,6 @@ class Trip:
     cleared_by: str | None = None
 
 
-#: Test key material. Real clearing is a passkey gesture through
-#: ``app.core.signing``; this exists so the suite can sign without a human. It is
-#: public by design and must never be used for anything but tests.
-
-
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
