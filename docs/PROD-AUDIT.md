@@ -35,3 +35,25 @@ exponents and state enums are safety constraints, not fake customer data.
 product entry points; it remains an explicitly simulated recording tool, not a product fallback.
 No credentials in local `.env` were present at audit time. Environment credentials must
 be checked by presence only, without displaying values.
+
+## Supervisor follow-up scan — 14 November 2026
+
+Read-only scan of `app/` Python sources used
+`rg -n -i 'demo|dummy|mock|hardcoded|stale|notimplemented|todo|test_key_seed' app --glob '*.py'`.
+The historical recording package is still present and remains excluded from product
+entry-point imports; its relocation is **not complete**. Media in `demo/` is untouched.
+
+| Current location | Finding / disposition |
+|---|---|
+| app/core/operators.py:94 | Nonexistent-account password hash exists to equalize password verification cost. Renamed to unmatched_password_hash; this is a timing defense, not a default login or fake operator. |
+| app/core/policy.py:111; app/core/killswitch.py:87 | Public historical HMAC test seeds remain in legacy modules. New runtime signing paths do not accept them, but relocation out of app/ remains OPEN. |
+| app/core/runtime_policy.py:27,31 | Rejects demo configuration; an inert false compatibility marker is still passed to the historical floor validator. Removal of that legacy vocabulary remains OPEN. |
+| app/workers/service.py:135; app/api/main.py:129 | Demo-environment references are refusal guards, not feature flags enabling a simulation. |
+| app/workers/executor.py:266; app/api/intake.py:344 | Staleness guards and an observation TTL are safety checks, not cached fake customer data. |
+| app/workers/executor.py:627 | Real GET polling added. No canned provider state is returned. Polling now continues after operator revocation without authorizing new money. |
+| app/core/reconciliation.py:71,100 | Actual opening cash/history and financial postings added. Full worker integration and settlement finalization remain OPEN; no zero opening balance is manufactured. |
+
+The scan does not establish completion of cleanup. Legacy signer/demo source is
+still listed above rather than being represented as removed. FX execution/expiry,
+actual financial-worker process-crash proof, settlement and the rest of the supervisor
+scenario matrix remain unfinished until separately implemented and run.

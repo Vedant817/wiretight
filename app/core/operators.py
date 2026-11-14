@@ -91,7 +91,7 @@ def login(conn: db.Connection, *, email: str, password: str, source: str) -> tup
     now = utcnow()
     buckets = [digest("source:" + source), digest("email:" + email.strip().lower())]
     # Unknown users take the same expensive password path to limit enumeration.
-    dummy = "scrypt-v1$" + "00" * 16 + "$" + "00" * 64
+    unmatched_password_hash = "scrypt-v1$" + "00" * 16 + "$" + "00" * 64
     row = conn.execute(
         "SELECT u.id,a.password_hash,a.enabled FROM user u JOIN operator_auth a ON a.user_id=u.id "
         "WHERE u.email=?",
@@ -104,7 +104,7 @@ def login(conn: db.Connection, *, email: str, password: str, source: str) -> tup
             ).fetchone()
             if limit and limit["reset_at"] > now.isoformat() and limit["failures"] >= 10:
                 raise AuthenticationError("Login temporarily unavailable; try again later")
-    valid = verify_password(password, row["password_hash"] if row else dummy)
+    valid = verify_password(password, row["password_hash"] if row else unmatched_password_hash)
     with db.transaction(conn):
         # Check again under the writer lock: concurrent requests cannot all pass
         # the initial rate check then bypass the stored failure threshold.

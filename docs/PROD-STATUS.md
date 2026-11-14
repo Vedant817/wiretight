@@ -467,3 +467,101 @@ No live balance read or background configured worker was claimed. Provider-backe
 planning, payment polling/settlement, conversion execution, reconciliation, outbound
 rate buckets, complete readiness, UI, launcher and legacy fixture relocation remain
 unfinished. Real sandbox keys and real-device enrollment still require Vedant.
+
+## Stretch 8 — supervisor verification and tracking/reconciliation foundations
+
+First reran the complete suite after the refresh worker addition, before editing:
+
+```
+uv run pytest tests -q --timeout=180
+862 passed, 37 skipped in 227.05s (0:03:47)
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+84 files already formatted
+uv run mypy app
+Success: no issues found in 49 source files
+```
+
+Added real provider GET polling of submitted/uncertain transfers, including those
+previously marked FINAL. Audited intent/packet terms remain authoritative; a missing
+attempt row is recovered from those terms without another payout POST. Missing USD
+risk basis is not invented during recovery. Observations preserve first-paid time
+and first failure details, tolerate skipped forward status transitions, ignore stale
+backward snapshots and hold the obligation/bank version on failure, cancellation or
+unknown status. Previously final/presumed-settled returns reopen tracking. Polling
+uses audit/intent verification while permitting read recovery after approver revocation;
+new money still requires the current trusted roster and actual signatures. The
+refresh worker now invokes polling when transfer intents exist.
+
+Migration 6 and a real reconciliation module capture fenced actual opening cash
+totals and complete financial history. Missing totals, pending/reserved balances,
+changed balances during a read, missing history and inconsistent postings fail
+closed. Available balance is not confused with total cash. New settled transactions
+produce exact balanced journal legs once. Existing posting legs are independently
+verified, including detecting deletion of both legs. Cash residuals are exact;
+an unmapped provider payout prevents a clean tie-out even if the residual is zero.
+Opening terms are bound to their audit event. This module is not yet fully wired
+into run/planning endpoints or settlement finalization; its tests do not constitute
+live provider reconciliation acceptance.
+
+Actual targeted runs during development:
+
+```
+uv run pytest tests/unit/test_real_executor.py -q --timeout=180
+1 failed, 15 passed in 147.45s (0:02:27)
+```
+
+The failure was a new test referring to nonexistent `approval_signature.user_id`;
+the actual column is `approver_id`. Corrected the test, then ran:
+
+```
+uv run pytest tests/unit/test_real_executor.py::test_revoked_approver_cannot_execute_already_approved_packet -q --timeout=180
+1 passed in 11.36s
+uv run pytest tests/unit/test_reconciliation_runtime.py -q --timeout=180
+4 passed in 9.53s
+uv run pytest tests/unit/test_reconciliation_runtime.py tests/unit/test_refresh_worker.py -q --timeout=180
+7 passed in 14.00s
+$env:CONFIRM_LIVE='1'
+uv run pytest tests/live/test_airwallex_read.py -q -rs
+SKIPPED [1] tests\live\test_airwallex_read.py:21: AWX_CLIENT_ID and AWX_API_KEY are not configured
+1 skipped in 0.79s
+```
+
+All provider responses in these fault tests are test-only transport fixtures. No
+live call, browser/device proof, actual money-worker OS-crash test, FX-expiry guard
+or completed settlement lifecycle is claimed. The full supervisor scenario matrix,
+settlement finalization, FX execution, complete service orchestration and removal
+of legacy demo/signers remain required. PROD-AUDIT.md records the current source
+scan honestly, including retained legacy code. No push, PR, publication, signup,
+external message or demo/ media edit.
+
+References consulted: [transfer lifecycle](https://www.airwallex.com/docs/payouts/transfers/create-a-transfer/transfer-statuses),
+[failure/refund behavior](https://www.airwallex.com/docs/payouts/transfers/manage-transfers/handle-failed-transfers),
+[cash balance fields](https://www.airwallex.com/docs/api/core_resources/balances/current),
+[financial transaction fields](https://www.airwallex.com/docs/api/2024-08-07/finance/financial_transactions).
+
+Final verification of this slice (after runtime changes, including read polling
+after revocation and the new expired-approval case):
+
+```
+uv run pytest tests -q --timeout=180
+871 passed, 37 skipped in 315.57s (0:05:15)
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+87 files already formatted
+uv run mypy app
+Success: no issues found in 51 source files
+git diff --check
+exit 0
+```
+
+The lint run initially found nested-context style in the new expiry test; it was
+flattened without changing test behavior and lint then passed. The full suite
+includes approval bypass/tampering, timeout/lookup idempotency, concurrent executor
+calls, revoked approver refusal, expired approval during renewed cooling, provider
+PAID with a missing attempt, skipped failure/return states and ledger mismatches.
+It still does not prove actual OS process death mid-money-job or FX quote expiry
+at execution: those remain explicit unfinished scenarios, along with bank-change
+workflow coverage during cooling and full settlement orchestration.

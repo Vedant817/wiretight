@@ -301,3 +301,15 @@ targeted tests: 19 passed in 6.46s; ruff clean, 84 formatted files, mypy clean i
 source files. Full-suite result above predates this isolated addition. Payment
 automation, planning, FX, reconciliation and UI remain unfinished. No live calls
 or production acceptance claimed. Exact limits are in PROD-STATUS.md.
+
+## 14 November 2026 - supervisor tracking and reconciliation slice
+
+Full suite first rerun after the refresh worker: 862 passed, 37 skipped in 227.05s.
+Added audited-intent polling, first-failure/return holds, recovery of missing local
+attempts without reposting, and a fenced cash/financial journal reconciliation
+module with independent posting checks. Final full suite: 871 passed, 37 skipped
+in 315.57s; ruff clean, 87 formatted files, mypy clean in 51 source files.
+Live check explicitly skipped for missing AWX_CLIENT_ID/AWX_API_KEY. Settlement
+finalization, FX execution/expiry, complete worker orchestration, actual process
+crash proof and legacy demo/signer cleanup remain unfinished. Exact commands,
+failure history and limits are in PROD-STATUS.md. Local commits only; demo/ untouched.
