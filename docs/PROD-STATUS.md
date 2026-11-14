@@ -53,17 +53,20 @@ vectors are synthetic HTTP-boundary tests, **not recorded Airwallex contract fix
 
 ## Remaining engineering work
 
-- Durable executor, lookup/recovery orchestration, live policy/cap/reserve rechecks,
-  and exactly-once approval consumption are not built. Passkey assertion re-verification
-  is implemented but is not yet wired to an executor.
+- Guarded payout execution, durable intent/approval consumption and lookup recovery
+  are implemented and tested at the HTTP boundary (stretch 5). The service loop,
+  conversion execution, complete incident/settlement guards and live acceptance are
+  still incomplete. This is not a production acceptance claim.
 - Operator session authentication, authorization, passkey enrollment and packet
   approval APIs are built (stretch 3). Callback and policy decision APIs are built
-  (stretch 4). Supplier/invoice ingestion, packet construction, first-run entity/policy
-  setup and the operational UI are not built.
+  (stretch 4). Native payment packet construction and explicit entity/policy setup
+  exist (stretch 5). Supplier/invoice intake endpoints, provider-job dispatch and
+  operational UI are not built.
 - Ledger-to-provider reconciliation, settlement windows, incident handling and poller
   are not built. Existing core tests do not certify those missing integrations.
-- Runtime configuration still has historical replay/demo vocabulary; the product
-  diagnostic surface refuses readiness, but removal from shared settings is pending.
+- Native installation policy has no demo marker and runtime policy refuses that
+  marker. Shared legacy floor/test helpers still contain historical vocabulary.
+  The product diagnostic surface continues to refuse readiness pending integration.
 - Global account creation, beneficiary ambiguous-create recovery, conversion recovery,
   startup audit sealing, outbound rate buckets, structured operational logs and
   credential-separated worker readiness remain incomplete.
@@ -269,3 +272,102 @@ any mutation. The worker must use the new kernel lock. No money route is enabled
 The real business name and reserve floor must come from operator input, not invented
 defaults. Credentials remain absent (presence-only check: no .env or inherited keys).
 No files in demo/ were changed; no push, PR, publication, deployment or messages.
+
+## Stretch 5 — real setup and durable payout execution
+
+Implemented:
+
+- `init-installation` requires the real business legal name, an explicitly chosen
+  USD reserve and a provisioned roster. It generates fresh cryptographic keys and
+  a persistent UUID namespace, writes a real policy, and never overwrites an existing
+  policy. `trust-operators` locally pins enrolled credentials outside SQLite and
+  writes an audit checkpoint. Worker audit seals cannot silently enroll new keys.
+- Typed corridor inputs and immutable encrypted bank-detail versions. Full provider
+  account/routing/name/currency identifiers must match before paying; last-four-only
+  data cannot authorize a destination. Supported current inputs are company bank
+  accounts in US/USD, GB/GBP and DE/NL/FR EUR, LOCAL or SWIFT with required BIC.
+  Sandbox acceptance of each payload is still unverified.
+- Payment packets come from actual persisted invoice, duplicate lock, bank version,
+  signed callback, signed manual compliance-review evidence, policy and run. A manual
+  review is labelled `OPERATOR_REVIEW_CLEAR`, not automatic sanctions clearance.
+  Names, masked destination, bank-version hash, payer fee choice and absolute validity
+  timestamps are signed. Mutable database expiry fields cannot extend signed expiry.
+  The callback also binds the request arrival timestamp and the executor recomputes
+  the real cooling floor. Native tranches are fixed once and live USD caps rechecked.
+- `app/workers/executor.py` is now a real payout dispatcher using the actual HTTP
+  client. It verifies policy/roster/audit trust and stored human signatures, rebuilds
+  terms, reads current balances, rates, transfer history, beneficiaries and RFIs,
+  checks reserve/cap/timing/duplicate conditions, consumes approval with an audit
+  INTENT and immutable outbox record, seals that intent, then calls the provider.
+  No SQLite write transaction spans an HTTP call.
+- New beneficiary creation is under the signed payment approval; nickname lookup
+  resolves uncertain creates. Money-moving request IDs remain stable. Restarting a
+  PREPARED/AMBIGUOUS payout only looks up its existing key. If no payout is found,
+  it remains AMBIGUOUS and never silently gets a second POST. Recovering only a
+  beneficiary returns BENEFICIARY_READY, never a false payout-submitted result.
+- Current global/provider transfer history counts toward caps; the local ledger
+  cannot be cleared to reset those counts. Version-4 migration links attempts to
+  approved payee/run/packet terms and adds review/job/snapshot tables.
+- Corrected provider protocol mistakes against current official docs: beneficiary
+  validation returns `OK`, and the rates response's top-level `rate` must not be
+  assumed to be an exchange rate. CLIENT buy/sell amounts determine the exact USD
+  basis, conservatively compared to the last booked USD pair. JSON fractional numbers
+  decode directly to Decimal, never binary float. Holiday rules and timezone data
+  are now pinned runtime dependencies. Runtime settings default to live sandbox mode;
+  demo-timing and fixture-directory fields were removed from shared settings.
+
+Verification (actual runs):
+
+```
+uv run pytest tests/unit/test_real_executor.py -q
+13 passed in 102.28s
+uv run pytest tests -q --timeout=180
+845 passed, 37 skipped in 219.91s
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+75 files already formatted
+uv run mypy app
+Success: no issues found in 44 source files
+git diff --check
+exit 0
+uv run python -m app.cli init-installation --help
+uv run python -m app.cli trust-operators --help
+both exit 0
+uv lock
+Resolved 73 packages
+```
+
+The full run includes the final absolute-expiry/request-arrival bindings, rate-basis
+changes and packet display/fee fields. HTTP fault cases cover one-time payout, lost
+response after acceptance, uncertain missing payout held without repost, provider
+5xx after commit, process-control loss followed by recovery, insufficient funds,
+bank change after signing, concurrent executor calls, bad stored assertion, changed
+trusted roster and external-provider history breaching caps. The process-control-loss
+test raises SystemExit at the HTTP transport boundary; it is not a real killed worker
+connected to a live provider. Earlier kernel-lock tests separately use real subprocess
+exit. All provider responses in these tests are synthetic and confined to tests/;
+they are **not** recorded sandbox contracts or live payout evidence.
+
+One new input test found all-zero routing data passed the checksum parser; the typed
+destination boundary now rejects it. Offline dependency resolution initially lacked
+cached registry metadata; the normal `uv lock` then succeeded without changing pins.
+
+Still incomplete: continuous service/job loop and heartbeat-backed readiness,
+authenticated supplier/invoice/review intake and planning endpoints, conversion
+packets/execution, complete poll/return/settlement/incident handling, reconciliation,
+outbound rate buckets, operational UI and one-command full-app launch. Mature-payee
+planning must incorporate live aggregate history; complete replacement/refund guards
+and policy-tightening cases need the remaining matrix. Legacy test signers/demo
+source cleanup is still pending. No production readiness claim or live provider
+acceptance is made. The ordinary web service remains unready.
+
+Vedant must eventually provide the real business inputs, register real devices and
+pin the roster, sign the actual policy, and add sandbox credentials. Those actions
+do not replace the remaining engineering. No keys were printed or committed. No
+demo/ media, push, PR, publication, deployment or external messages were touched.
+
+Protocol references checked this stretch:
+[beneficiary validation](https://www.airwallex.com/docs/api/payouts/beneficiaries/validate),
+[rates](https://www.airwallex.com/docs/api/transactional_fx/rates),
+[beneficiary list filters](https://www.airwallex.com/docs/api/payouts/beneficiaries).

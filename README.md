@@ -17,8 +17,9 @@ financial transactions.
 
 **Production assignment status (14 November 2026): incomplete.** The new product
 service includes readiness, webhooks, authenticated operator sessions and passkey
-approval APIs, plus signed policy, callback and halt-clear decisions. The payment
-workflow and executor are unfinished. See
+approval APIs, plus signed policy, callback and halt-clear decisions. A guarded
+payout dispatcher now exists with offline fault tests; the service loop, conversion
+execution, reconciliation and operational UI are unfinished. See
 [the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
 The real sandbox HTTP client has offline fault tests; it has no live acceptance yet.
 The 36 skipped compliance-index tests correspond to missing milestones (including
@@ -67,6 +68,14 @@ cooling window. Clearing a database halt needs two fresh sign-offs; a local `HAL
 file remains an independent stop. First-run business/policy setup and the operator
 screens are still under construction, so these APIs do not yet form a usable
 payment application.
+
+After provisioning the roster, `init-installation --legal-name ... --reserve-usd ...`
+creates the business, policy and private local keys using the values you supply.
+After real passkey enrollment and policy signing, `trust-operators` pins the enrolled
+roster outside SQLite. Use `uv run python -m app.cli <command> --help` for paths and
+arguments. Never put a password or Airwallex key in command arguments. The full-app
+launcher and intake/planning screens are still pending; these setup commands alone
+do not make the app usable for payments.
 
 This repository is being built from `docs/spec/FINAL.md` (v1.0, locked). **Nothing here has been
 run against a live Airwallex sandbox yet.** The readme, the metrics table and the demo script are

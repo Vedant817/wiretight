@@ -268,3 +268,15 @@ Real API flow test passed; full suite 825 passed, 37 skipped in 105.51s. Ruff,
 formatting (67 files), mypy (38 source files), diff whitespace checks passed.
 See PROD-STATUS.md for exact commands and limits. No executor or live-provider
 acceptance claimed; no demo/ edit, push, PR, publication or message.
+
+## 14 November 2026 - production stretch 5
+
+Added explicit business/reserve setup, encrypted bank versions, administrator-pinned
+operator trust, canonical payment packets and guarded durable payout dispatch.
+Actual HTTP-boundary tests cover accepted payout, loss/uncertainty, concurrent calls,
+insufficient funds, tampered terms/signatures and provider-history caps. Full suite:
+845 passed, 37 skipped in 219.91s; ruff clean; 75 files formatted; mypy clean in 44
+source files. No live acceptance: all provider fault vectors remain tests-only.
+Service loop, FX execution, intake/planning, reconciliation, complete return handling
+and UI remain pending. Exact commands and limits are in PROD-STATUS.md. No demo/
+edit, push, PR, publication, deployment or messages.

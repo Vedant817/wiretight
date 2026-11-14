@@ -905,3 +905,23 @@ could remove an independent human stop created while clearing. Two sign-offs cle
 the database trip; local marker removal remains explicit and readiness stays halted
 until it is removed. Schema-version assertions now use SCHEMA_VERSION so migration
 preservation tests follow supported upgrades rather than assuming version 2 forever.
+
+## Production decision - 14 November 2026: durable dispatch and signed expiry
+
+Payout approval consumption, immutable intent and audit INTENT commit together.
+Checkpoint sealing happens before a provider mutation, outside SQLite's write lock.
+After loss of a process/response, a PREPARED or AMBIGUOUS payout is lookup-only. An
+empty lookup is uncertainty, never permission to silently send another payout.
+Beneficiary-only recovery is labelled BENEFICIARY_READY rather than SUBMITTED.
+Payment hashes also bind human-readable names, masked destination, full detail
+version hash, payer fee choice, creation time and absolute expiry. Database timestamp
+edits cannot extend a real signature's validity. Callback hashes now bind the
+request-arrival timestamp; cooling is recomputed from that signed evidence.
+Operator key enrollment requires an explicit administrator-signed roster file
+outside the DB. Automatic worker audit checkpoints cannot enroll new credentials.
+Current screening is an ops user's evidence-backed, passkey-signed manual review;
+it is not a synthetic list or a claim of automated sanctions clearance. Full API
+intake, reconciliation and remaining guard coverage are still required before ready.
+The generated runtime policy has no demo marker. A compatibility adapter supplies
+an inert false marker only to the historical floor validator while legacy fixture
+cleanup remains pending. Runtime policy files containing that marker are refused.
