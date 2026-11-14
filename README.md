@@ -8,8 +8,8 @@ Wiretight runs a small company's weekly cross-border supplier payment run on the
 Airwallex **sandbox**. Code, never the model, decides money. Every sign-off is a passkey
 signature over a hash of the exact terms. Any new or changed bank details go through a lock:
 a signed operations callback to an older contact, a cooling-off period, two sign-offs, and a
-capped first payment. `PAID` is provisional. Every wallet movement ties out against Airwallex
-financial transactions.
+capped first payment. `PAID` is provisional. Reconciliation against Airwallex financial
+transactions is still being built; the application is not ready for payment operations.
 
 ---
 
@@ -18,7 +18,8 @@ financial transactions.
 **Production assignment status (14 November 2026): incomplete.** The new product
 service includes readiness, webhooks, authenticated operator sessions and passkey
 approval APIs, plus signed policy, callback and halt-clear decisions. A guarded
-payout dispatcher now exists with offline fault tests; the service loop, conversion
+payout dispatcher and authenticated supplier/invoice/evidence intake now exist with
+offline tests; the service loop, conversion
 execution, reconciliation and operational UI are unfinished. See
 [the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
 The real sandbox HTTP client has offline fault tests; it has no live acceptance yet.
@@ -77,6 +78,12 @@ arguments. Never put a password or Airwallex key in command arguments. The full-
 launcher and intake/planning screens are still pending; these setup commands alone
 do not make the app usable for payments.
 
+Authenticated intake routes are documented in [the intake guide](docs/INTAKE.md).
+New contacts get the current time. To import an existing supplier-master contact,
+use `import-contact` with its actual historical timestamp and genuine source file;
+the CLI prompts for an existing operator password and records both the claimed
+master date and actual import time. It does not record a callback or bypass cooling.
+
 This repository is being built from `docs/spec/FINAL.md` (v1.0, locked). **Nothing here has been
 run against a live Airwallex sandbox yet.** The readme, the metrics table and the demo script are
 written when there is something true to put in them — see `docs/PROGRESS.md` for what is real so
@@ -90,9 +97,13 @@ and a check stays `NOT RUN` until a real, redacted fixture backs it.
 
 - **Sandbox only.** The app refuses to start unless `AWX_ENV=sandbox` and `AWX_BASE_URL` is
   exactly `https://api.sandbox.airwallex.com`. There is no production URL anywhere in `app/`.
-- All companies, people, emails, balances and payment histories are **synthetic fixtures**.
+- The product starts empty and requires your business data. Historical recording
+  tools and tests use synthetic fixtures; product routes do not seed those fixtures.
 - The callback record is **evidence of** a callback; the system cannot prove a phone call happened.
-- **No real sanctions screening** is performed. The screening call checks a tiny synthetic list.
+- **No automated sanctions screening integration** is available. Product compliance
+  review records are evidence-backed manual operator decisions signed with a passkey,
+  bound to the exact bank version and valid for at most 24 hours. They do not prove
+  that a sanctions provider cleared the beneficiary. The synthetic demo list is isolated.
 - A passkey signature proves a registered device holder signed these exact terms in this app.
   It is **not** a legal e-signature.
 - Process separation (web vs worker) is **logical, on one laptop** — not OS-level isolation.
@@ -114,9 +125,10 @@ docs/       spec/ (read-only) · PROGRESS · DECISIONS · NEEDS_HUMAN · undocum
 
 ## Source of truth
 
-`docs/spec/FINAL.md` is the locked v1.0 specification and the only authority for behaviour. Where
-anything in this repository disagrees with it, the spec wins and the disagreement belongs in
-`docs/DECISIONS.md`.
+`docs/spec/FINAL.md` is the locked v1.0 specification. The current production assignment
+requires human approval for every money action and forbids demo timing in the product.
+These requirements take precedence over the historical demo/T0 allowances; deviations
+are recorded in `docs/DECISIONS.md`.
 
 ## Demo mode (simulated)
 

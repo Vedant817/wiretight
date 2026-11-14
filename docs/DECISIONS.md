@@ -925,3 +925,29 @@ intake, reconciliation and remaining guard coverage are still required before re
 The generated runtime policy has no demo marker. A compatibility adapter supplies
 an inert false marker only to the historical floor validator while legacy fixture
 cleanup remains pending. Runtime policy files containing that marker are refused.
+
+## Production decision - 14 November 2026: source-backed intake and migration invariant
+
+The web API accepts actual supplier/invoice inputs and content-addressed encrypted
+source evidence. It supplies requester identity and receipt times from the active
+session and server clock; clients cannot select other requesters or backdate new
+contacts. A local administrator import accepts an actual historical master timestamp
+with a source file, recording both the claimed date and import time. That is a
+provenance assertion, never proof of a phone call or permission to skip cooling.
+Bank-request phone hashes prevent using a request-supplied phone for its callback.
+Unreadable/encoded bank-source formats fail closed; no extraction is simulated.
+US account category must be supplied rather than guessed as Checking.
+
+Compliance review signatures bind the immutable evidence hash, bank fingerprint,
+encrypted bank-detail hash, reviewer, result and times. HIT/ERROR holds the bank
+version and voids open approvals. CLEAR does not automatically release a hold or
+claim sanctions-provider clearance. Halt-clear signatures bind a four-hour round
+with signed absolute expiry; an expired round requires fresh signatures.
+
+Actual concurrent intake reproduced two accepted active bank changes: the old lock
+unit fixture installed a unique index which the real database migrations never
+created. Migration 5 now installs that partial unique index. Existing conflicting
+requests make upgrade fail atomically, preserving all records for explicit operator
+resolution; the migrator never picks a winning bank version. Regression tests use
+both fresh database connections and a legacy version-4 database with conflicting
+requests. Supplier changes and their encrypted versions commit or roll back together.

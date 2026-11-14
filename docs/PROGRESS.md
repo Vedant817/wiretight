@@ -280,3 +280,15 @@ source files. No live acceptance: all provider fault vectors remain tests-only.
 Service loop, FX execution, intake/planning, reconciliation, complete return handling
 and UI remain pending. Exact commands and limits are in PROD-STATUS.md. No demo/
 edit, push, PR, publication, deployment or messages.
+
+## 14 November 2026 - production stretch 6
+
+Added authenticated real-data intake, encrypted source evidence, signed manual
+reviews, historical master-contact import and signed halt-clear rounds. A real
+concurrency test exposed a missing bank-change index in migrations; migration 5
+now enforces it and refuses conflicting legacy upgrades atomically. Full suite:
+859 passed, 37 skipped in 256.28s. Separate-process HTTP intake smoke passed;
+ruff clean, 82 files formatted, mypy clean in 48 source files. Worker loop, planning,
+FX, reconciliation and UI remain unfinished. See PROD-STATUS.md for exact results
+and failure history. No live/provider/device acceptance or production readiness
+claimed; no demo/ edit, push, PR, publication, deployment or messages.

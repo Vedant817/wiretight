@@ -371,3 +371,67 @@ Protocol references checked this stretch:
 [beneficiary validation](https://www.airwallex.com/docs/api/payouts/beneficiaries/validate),
 [rates](https://www.airwallex.com/docs/api/transactional_fx/rates),
 [beneficiary list filters](https://www.airwallex.com/docs/api/payouts/beneficiaries).
+
+## Stretch 6 — actual intake, review bindings and migration verification
+
+Implemented authenticated supplier, contact, bank-change and invoice intake;
+encrypted immutable source-file upload/download; evidence-backed manual compliance
+review with actual passkey assertions; and a password-prompted local historical
+contact import. Requester identity and receipt times come from the session/server,
+not client-selected IDs or dates. New web contacts cannot be backdated. See INTAKE.md
+for supported inputs and explicit limits. US account category is now required.
+Review signatures bind the bank fingerprint and full encrypted-detail hash. A
+HIT/ERROR holds the bank version and voids open approvals. Halt clearing now binds
+an absolute four-hour round and can collect fresh signatures after an old round
+expires. Provider refresh requests are durably queued and report PENDING; no job
+completion or provider data is fabricated while the worker remains unfinished.
+
+A concurrent bank-change test initially failed: both requests committed. Investigation
+found the old unit fixture created a unique index which database migration never
+installed. Migration 5 now installs it. The losing transaction rolls back its vault
+and bank-version writes. A legacy database with conflicting requests refuses upgrade
+atomically and retains all records; an operator must resolve the actual conflict,
+never let a migration arbitrarily pick a bank version.
+
+Actual verification:
+
+```
+uv run pytest tests/unit/test_product_intake.py -q --timeout=180
+9 passed in 23.78s                         # initial intake subset
+uv run pytest tests/unit/test_product_intake.py tests/unit/test_real_decisions.py -q --timeout=180
+1 failed, 22 passed in 82.67s              # exposed missing migration index
+uv run pytest tests/unit/test_product_intake.py::test_concurrent_bank_changes_rollback_losing_vault_write tests/unit/test_product_intake.py::test_cli_import_preserves_historical_master_source_and_actual_import_time tests/unit/test_real_decisions.py::test_expired_halt_clear_round_requires_new_signatures_even_with_same_reason -q --timeout=180
+3 passed in 11.72s                        # after index correction
+uv run pytest tests/unit/test_intake_migration.py -q
+1 passed in 0.59s
+uv run pytest tests -q --timeout=180
+859 passed, 37 skipped in 256.28s
+uv run python -m tests.support.http_smoke
+exit 0; separate-process loopback HTTP login, evidence, supplier, invoice,
+duplicate/CSRF enforcement and logout passed; readiness remained 503
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+82 files already formatted
+uv run mypy app
+Success: no issues found in 48 source files
+git diff --check
+exit 0
+uv run python -m app.cli import-contact --help
+exit 0
+```
+
+The full suite ran after all runtime changes and includes the migration, concurrency,
+review-tampering/replay, malformed-input, encrypted evidence, historical import and
+expired halt-round cases. The standalone HTTP harness was subsequently added and
+run against an actual separate Uvicorn process using temporary test-only business
+data. It does not prove browser/device passkeys or provider acceptance. The 37 skips
+remain 36 unimplemented compliance-index milestones and one unconfirmed live test.
+
+Still unfinished: continuous worker/job processing and truthful heartbeat readiness,
+provider-backed planning, FX execution, complete poll/settlement/return handling,
+reconciliation, outbound rate budgets, operational UI, full-app launcher and legacy
+test-signer/demo-source relocation. No sandbox credentials were added or live calls
+claimed. Vedant still needs genuine business/master inputs, real device enrollment,
+roster/policy approval and sandbox keys; engineering gaps remain independent of keys.
+No demo/ media was changed; no push, PR, publication, deployment or external message.
