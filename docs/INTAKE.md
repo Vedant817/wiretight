@@ -64,8 +64,11 @@ period. A local historical-contact import cannot create signed callback evidence
 `POST /api/provider/refresh` only queues a durable REFRESH request. Duplicate pending
 refreshes coalesce. `GET /api/provider/jobs/{id}` reports its actual persisted state;
 `GET /api/provider/snapshots` returns only stored observations with timestamps. At
-this stage there is no worker command consuming those jobs, so they remain PENDING
-and the snapshot list remains empty. Neither endpoint fabricates provider results.
+this stage `uv run python -m app.workers.service` consumes REFRESH jobs with genuine
+sandbox balance reads. Use `--once` for one attempt. Without a running configured
+worker, jobs remain PENDING; failed reads mark jobs FAILED and retain the original
+observation timestamp. Successful refreshes do not authorize payments or make the
+application ready. Neither endpoint fabricates provider results.
 
 The web process needs `APP_DB_PATH`, `APP_POLICY_PATH`, `APP_KEY_DIR` and the WebAuthn
 origin settings to match local setup. Defaults are documented in `.env.example`;

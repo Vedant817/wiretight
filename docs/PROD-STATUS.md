@@ -435,3 +435,35 @@ test-signer/demo-source relocation. No sandbox credentials were added or live ca
 claimed. Vedant still needs genuine business/master inputs, real device enrollment,
 roster/policy approval and sandbox keys; engineering gaps remain independent of keys.
 No demo/ media was changed; no push, PR, publication, deployment or external message.
+
+## Stretch 7 — read-only refresh worker
+
+Added `uv run python -m app.workers.service` with `--once`, sandbox/config/credential
+guards, kernel process exclusion, bounded polling interval and graceful stop signals.
+It performs real typed-client balance reads outside SQLite transactions, validates
+finite amounts/unique currencies and provider clock, atomically persists an actual
+dated observation with REFRESH completion, and records a heartbeat. Revoked requester
+jobs fail. Failed reads mark pending jobs FAILED, preserve earlier observations and
+their timestamps, and store only safe error categories. Every heartbeat remains
+unready: this is a read-only refresh worker, not completed payment automation.
+
+Actual checks after this worker addition:
+
+```
+uv run pytest tests/unit/test_refresh_worker.py tests/unit/test_airwallex.py -q --timeout=180
+19 passed in 6.46s
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+84 files already formatted
+uv run mypy app
+Success: no issues found in 49 source files
+```
+
+The 859-pass full-suite run above preceded this isolated worker addition. These
+targeted tests exercised real SQLite and the actual HTTP client with test-only
+transport responses, plus missing-credential startup refusal without a socket.
+No live balance read or background configured worker was claimed. Provider-backed
+planning, payment polling/settlement, conversion execution, reconciliation, outbound
+rate buckets, complete readiness, UI, launcher and legacy fixture relocation remain
+unfinished. Real sandbox keys and real-device enrollment still require Vedant.

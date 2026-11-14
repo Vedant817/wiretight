@@ -292,3 +292,12 @@ ruff clean, 82 files formatted, mypy clean in 48 source files. Worker loop, plan
 FX, reconciliation and UI remain unfinished. See PROD-STATUS.md for exact results
 and failure history. No live/provider/device acceptance or production readiness
 claimed; no demo/ edit, push, PR, publication, deployment or messages.
+
+## 14 November 2026 - production stretch 7
+
+Added the read-only sandbox refresh worker, real balance observation persistence,
+durable job completion/failure and explicitly unready heartbeats. Worker/client
+targeted tests: 19 passed in 6.46s; ruff clean, 84 formatted files, mypy clean in 49
+source files. Full-suite result above predates this isolated addition. Payment
+automation, planning, FX, reconciliation and UI remain unfinished. No live calls
+or production acceptance claimed. Exact limits are in PROD-STATUS.md.

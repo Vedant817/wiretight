@@ -44,7 +44,11 @@ Current service variables (set in its process environment): `AWX_ENV=sandbox`,
 of the web process. Worker/client credentials are `AWX_CLIENT_ID` and `AWX_API_KEY`,
 read by `WorkerSettings` from environment or a gitignored `.env`; optional
 `AWX_LOGIN_AS`, `AWX_API_VERSION`, `AWX_HTTP_TIMEOUT_S` configure the client.
-There is no functional worker command yet. No production-host mode is supported.
+The read-only refresh worker runs with `uv run python -m app.workers.service`
+(or `--once` for one attempt). It consumes REFRESH jobs and persists actual balance
+observations. Missing keys cause exit 2 and a setup-error heartbeat; failed reads
+preserve older observations. It does not dispatch payments or make readiness true.
+No production-host mode is supported.
 
 Run offline checks with `uv run --extra dev pytest tests -q --timeout=180`,
 `uv run ruff check app tests`, `uv run ruff format --check app tests` and
