@@ -32,6 +32,7 @@ def test_runtime_policy_requires_two_distinct_real_signers(domain, tmp_path):
         (operators.utcnow().isoformat(),),
     )
     policy = copy.deepcopy(BASE_POLICY)
+    policy.pop("demo_timing")
     policy["entity_id"] = "entity"
     policy["roster"] = [
         dict(row) for row in conn.execute("SELECT id,name,role,email FROM user ORDER BY id")
@@ -251,6 +252,7 @@ def test_real_policy_callback_and_halt_http_flows(domain, decision_service, tmp_
         (operators.utcnow().isoformat(),),
     )
     policy = copy.deepcopy(BASE_POLICY)
+    policy.pop("demo_timing")
     policy["entity_id"] = "entity"
     policy["roster"] = [
         dict(row) for row in conn.execute("SELECT id,name,role,email FROM user ORDER BY id")

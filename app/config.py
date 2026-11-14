@@ -124,7 +124,7 @@ class _BaseWiretightSettings(BaseSettings):
 
     awx_env: str = Field(default=SANDBOX_ENV_VALUE, alias="AWX_ENV")
     awx_base_url: str = Field(default=SANDBOX_BASE_URL, alias="AWX_BASE_URL")
-    awx_mode: str = Field(default="replay", alias="AWX_MODE")
+    awx_mode: str = Field(default="live", alias="AWX_MODE")
     app_db_path: str = Field(default="var/app.sqlite", alias="APP_DB_PATH")
     app_halt_file: str = Field(default="var/HALT", alias="APP_HALT_FILE")
     app_display_tz: str = Field(default="Asia/Kolkata", alias="APP_DISPLAY_TZ")
@@ -153,13 +153,12 @@ class WebSettings(_BaseWiretightSettings):
     # Web surface.
     app_host: str = Field(default="127.0.0.1", alias="APP_HOST")
     app_port: int = Field(default=8000, alias="APP_PORT")
-    app_policy_path: str = Field(default="policy.example.yaml", alias="APP_POLICY_PATH")
+    app_policy_path: str = Field(default="policy.yaml", alias="APP_POLICY_PATH")
     app_policy_sig_path: str = Field(default="var/policy.sig.json", alias="APP_POLICY_SIG_PATH")
-    app_demo_timing: bool = Field(default=False, alias="APP_DEMO_TIMING")
     signing_mode: str = Field(default="webauthn", alias="SIGNING_MODE")
 
     webauthn_rp_id: str = Field(default="localhost", alias="WEBAUTHN_RP_ID")
-    webauthn_rp_name: str = Field(default="Wiretight (demo)", alias="WEBAUTHN_RP_NAME")
+    webauthn_rp_name: str = Field(default="Wiretight", alias="WEBAUTHN_RP_NAME")
     webauthn_origin: str = Field(default="http://localhost:8000", alias="WEBAUTHN_ORIGIN")
 
     verify_account_enabled: bool = Field(default=False, alias="VERIFY_ACCOUNT_ENABLED")
@@ -197,16 +196,14 @@ class WorkerSettings(_BaseWiretightSettings):
     awx_min_account_api_version: str = Field(
         default="2025-06-30", alias="AWX_MIN_ACCOUNT_API_VERSION"
     )
-    awx_fixtures_dir: str = Field(default="tests/fixtures/airwallex", alias="AWX_FIXTURES_DIR")
     awx_request_id_namespace: str = Field(default="", alias="AWX_REQUEST_ID_NAMESPACE")
     awx_rps_global: int = Field(default=20, alias="AWX_RPS_GLOBAL")
     awx_rps_per_endpoint: int = Field(default=10, alias="AWX_RPS_PER_ENDPOINT")
     awx_max_concurrency: int = Field(default=10, alias="AWX_MAX_CONCURRENCY")
     awx_http_timeout_s: int = Field(default=20, alias="AWX_HTTP_TIMEOUT_S")
 
-    app_policy_path: str = Field(default="policy.example.yaml", alias="APP_POLICY_PATH")
+    app_policy_path: str = Field(default="policy.yaml", alias="APP_POLICY_PATH")
     app_policy_sig_path: str = Field(default="var/policy.sig.json", alias="APP_POLICY_SIG_PATH")
-    app_demo_timing: bool = Field(default=False, alias="APP_DEMO_TIMING")
     app_audit_checkpoint_dir: str = Field(
         default="var/audit-checkpoints", alias="APP_AUDIT_CHECKPOINT_DIR"
     )

@@ -23,6 +23,8 @@ dependencies = [
     "rfc8785==0.1.4",
     "webauthn==3.0.1",
     "cryptography==50.0.2",
+    "holidays==0.106",
+    "tzdata==2026.2",
     # Week 2 optional ingest (cut item 3). No OCR.
     "pdfplumber==0.11.10",
     "pypdf==6.19.0",

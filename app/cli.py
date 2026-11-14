@@ -59,6 +59,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     disable.add_argument("--email", required=True)
     disable.add_argument("--db", default=os.environ.get("APP_DB_PATH", "var/app.sqlite"))
+    setup = sub.add_parser(
+        "init-installation", help="initialize a real business and reserve policy"
+    )
+    setup.add_argument("--legal-name", required=True)
+    setup.add_argument("--reserve-usd", required=True)
+    setup.add_argument("--db", default=os.environ.get("APP_DB_PATH", "var/app.sqlite"))
+    setup.add_argument("--policy", default=os.environ.get("APP_POLICY_PATH", "policy.yaml"))
+    setup.add_argument("--key-dir", default=os.environ.get("APP_KEY_DIR", "var/keys"))
+    setup.add_argument(
+        "--seals", default=os.environ.get("APP_AUDIT_CHECKPOINT_DIR", "var/audit-checkpoints")
+    )
+    pin = sub.add_parser(
+        "trust-operators", help="locally review/pin enrolled operator keys and seal audit"
+    )
+    pin.add_argument("--db", default=os.environ.get("APP_DB_PATH", "var/app.sqlite"))
+    pin.add_argument("--key-dir", default=os.environ.get("APP_KEY_DIR", "var/keys"))
+    pin.add_argument(
+        "--seals", default=os.environ.get("APP_AUDIT_CHECKPOINT_DIR", "var/audit-checkpoints")
+    )
 
     verify = sub.add_parser(
         "verify-audit",
@@ -178,6 +197,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "verify-audit": cmd_verify_audit,
         "operator-add": cmd_operator_add,
         "operator-disable": cmd_operator_disable,
+        "init-installation": cmd_init_installation,
+        "trust-operators": cmd_trust_operators,
     }
     handler = handlers[args.command]
     return handler(args)
@@ -221,6 +242,45 @@ def cmd_operator_disable(args: argparse.Namespace) -> int:
         print("Unknown operator", file=sys.stderr)
         return EXIT_REFUSED
     print("Operator disabled. Existing sessions and approval eligibility are revoked.")
+    return EXIT_OK
+
+
+def cmd_init_installation(args: argparse.Namespace) -> int:
+    from app.core.installation import initialize
+
+    try:
+        with db.Database(args.db) as database:
+            initialize(
+                database.connection(),
+                legal_name=args.legal_name,
+                reserve_usd=args.reserve_usd,
+                policy_path=Path(args.policy),
+                key_dir=Path(args.key_dir),
+                seal_dir=Path(args.seals),
+            )
+    except (OSError, ValueError):
+        print(
+            "Setup refused: check roster, real business name, reserve amount and existing files",
+            file=sys.stderr,
+        )
+        return EXIT_REFUSED
+    print(
+        "Installation created. Enroll each operator passkey, sign "
+        "the policy twice, then run trust-operators."
+    )
+    return EXIT_OK
+
+
+def cmd_trust_operators(args: argparse.Namespace) -> int:
+    from app.core.trust import pin_roster
+
+    try:
+        with db.Database(args.db) as database:
+            pin_roster(database.connection(), key_dir=Path(args.key_dir), seal_dir=Path(args.seals))
+    except (OSError, ValueError):
+        print("Trust pin refused: check operator enrollment and audit integrity", file=sys.stderr)
+        return EXIT_REFUSED
+    print("Enabled operator credentials pinned outside the database; audit checkpoint written.")
     return EXIT_OK
 
 
