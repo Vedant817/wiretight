@@ -45,7 +45,7 @@ from types import TracebackType
 from typing import Final
 
 #: Incremented whenever ``schema.sql`` gains a migration step.
-SCHEMA_VERSION: Final[int] = 1
+SCHEMA_VERSION: Final[int] = 2
 
 _SCHEMA_PATH: Final[Path] = Path(__file__).with_name("schema.sql")
 
@@ -333,7 +333,7 @@ def _migrate_locked(conn: Connection) -> None:
             )
         return
 
-    if current != 0:
+    if current not in {0, 1}:
         raise RuntimeError(
             f"schema is at version {current}, which this build cannot migrate from. "
             "Intermediate migrations must ship before the version they produce."
@@ -347,10 +347,22 @@ def _migrate_locked(conn: Connection) -> None:
         # Re-read: a peer may have finished while we waited for the lock file.
         if user_version(conn) >= SCHEMA_VERSION:
             return
-        # executescript wraps its own transaction; the guard is what makes two
-        # callers safe, since only one can hold the lock file.
-        conn.executescript(_SCHEMA_PATH.read_text(encoding="utf-8"))
-        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        current = user_version(conn)
+        scripts = []
+        if current < 1:
+            scripts.append(_SCHEMA_PATH.read_text(encoding="utf-8"))
+        if current < 2:
+            scripts.append(_SCHEMA_PATH.with_name("migration_002.sql").read_text(encoding="utf-8"))
+        # executescript does NOT create a transaction automatically. Version
+        # changes and DDL must commit together, including on a fresh database.
+        script = "BEGIN IMMEDIATE;\n" + "\n".join(scripts)
+        script += f"\nPRAGMA user_version = {SCHEMA_VERSION};\nCOMMIT;"
+        try:
+            conn.executescript(script)
+        except BaseException:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
     finally:
         if fd >= 0:
             with suppress(OSError):
@@ -389,6 +401,10 @@ def _open(
         str(path),
         isolation_level=None,
         check_same_thread=not share_across_threads,
+        # CPython 3.12's statement cache can reuse a prepared statement across
+        # concurrent shared-reader cursors. Observed COUNT(*) returned None.
+        # Each shared-reader execute must own its prepared statement.
+        cached_statements=0 if share_across_threads else 128,
     )
     _configure(conn, read_only=read_only, busy_timeout_ms=busy_timeout_ms)
     if migrate_schema and not read_only:

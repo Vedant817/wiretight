@@ -1,9 +1,7 @@
 """Command line entry point.
 
-``python -m app.cli <command>``. The only command that exists today is
-``verify-audit``, because §14(b) makes *"``make verify-audit`` 0/1 behaviour"*
-the Done clause for the trust substrate, and the Makefile already calls this
-module. Commands that reach a network or a secret are added here and nowhere else,
+``python -m app.cli <command>`` supports audit verification and local operator
+provisioning/revocation. Commands that reach a network or a secret are added here,
 so the CLI stays the single place that can leak a key and the single place an
 audit has to review.
 
@@ -48,6 +46,19 @@ def build_parser() -> argparse.ArgumentParser:
         description="Wiretight: bank details stay locked until a second person confirms.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    operator = sub.add_parser(
+        "operator-add", help="provision an operator locally (password prompted)"
+    )
+    operator.add_argument("--name", required=True)
+    operator.add_argument("--email", required=True)
+    operator.add_argument("--role", choices=("approver", "ops"), required=True)
+    operator.add_argument("--db", default=os.environ.get("APP_DB_PATH", "var/app.sqlite"))
+    disable = sub.add_parser(
+        "operator-disable", help="revoke operator sessions and approval eligibility"
+    )
+    disable.add_argument("--email", required=True)
+    disable.add_argument("--db", default=os.environ.get("APP_DB_PATH", "var/app.sqlite"))
 
     verify = sub.add_parser(
         "verify-audit",
@@ -163,9 +174,54 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(list(sys.argv[1:] if argv is None else argv))
 
-    handlers = {"verify-audit": cmd_verify_audit}
+    handlers = {
+        "verify-audit": cmd_verify_audit,
+        "operator-add": cmd_operator_add,
+        "operator-disable": cmd_operator_disable,
+    }
     handler = handlers[args.command]
     return handler(args)
+
+
+def cmd_operator_add(args: argparse.Namespace) -> int:
+    import getpass
+    import sqlite3
+
+    from app.core import operators
+
+    password = getpass.getpass("New operator password (14+ characters): ")
+    if password != getpass.getpass("Repeat password: "):
+        print("Passwords did not match", file=sys.stderr)
+        return EXIT_REFUSED
+    try:
+        with db.Database(args.db) as database:
+            operators.provision(
+                database.connection(),
+                name=args.name,
+                email=args.email,
+                role=args.role,
+                password=password,
+            )
+    except (ValueError, sqlite3.IntegrityError):
+        print(
+            "Operator refused: check fields, password length, and duplicate email", file=sys.stderr
+        )
+        return EXIT_REFUSED
+    print("Operator created. Sign in and register a passkey before approving actions.")
+    return EXIT_OK
+
+
+def cmd_operator_disable(args: argparse.Namespace) -> int:
+    from app.core import operators
+
+    try:
+        with db.Database(args.db) as database:
+            operators.disable(database.connection(), args.email)
+    except ValueError:
+        print("Unknown operator", file=sys.stderr)
+        return EXIT_REFUSED
+    print("Operator disabled. Existing sessions and approval eligibility are revoked.")
+    return EXIT_OK
 
 
 EXIT_OK = 0

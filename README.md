@@ -16,8 +16,9 @@ financial transactions.
 ## ⚠ Status: under construction
 
 **Production assignment status (14 November 2026): incomplete.** The new product
-service is a setup/readiness and webhook surface. It cannot yet approve or execute
-payments. See [the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
+service includes readiness, webhooks, authenticated operator sessions and passkey
+approval APIs. The payment workflow and executor are unfinished. See
+[the audit](docs/PROD-AUDIT.md) and [verified status](docs/PROD-STATUS.md).
 The real sandbox HTTP client has offline fault tests; it has no live acceptance yet.
 The 36 skipped compliance-index tests correspond to missing milestones (including
 approvals, execution, reconciliation, and operator UI); they are known gaps.
@@ -47,6 +48,18 @@ Run offline checks with `uv run --extra dev pytest tests -q --timeout=180`,
 `uv run mypy app`. The read-only sandbox test additionally requires
 `CONFIRM_LIVE=1` and both credentials; otherwise it reports a skip with the reason.
 Do not treat passing HTTP fault tests as recorded sandbox contracts.
+
+Provision each real operator locally with `uv run python -m app.cli operator-add`
+and the required `--name`, `--email`, `--role approver|ops` options (password prompted,
+14–256 characters; no password argument). Use three distinct approvers and a separate
+ops operator for the two-person approval workflow. There are no default accounts.
+`operator-disable --email ...` immediately revokes an operator's sessions and approval
+eligibility. Both commands accept `--db`; otherwise they use `APP_DB_PATH`.
+Passkey APIs use `WEBAUTHN_RP_ID` (default `localhost`) and `WEBAUTHN_ORIGIN`
+(default `http://localhost:8000`); HTTPS is required outside localhost. Operator UI
+and first-run enrollment screens are still pending. Password login alone cannot
+approve a payment: sign-off requires a user-verified passkey assertion bound to the
+exact packet hash. No HMAC or test signer is accepted by these product endpoints.
 
 This repository is being built from `docs/spec/FINAL.md` (v1.0, locked). **Nothing here has been
 run against a live Airwallex sandbox yet.** The readme, the metrics table and the demo script are

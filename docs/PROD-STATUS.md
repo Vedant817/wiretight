@@ -54,9 +54,11 @@ vectors are synthetic HTTP-boundary tests, **not recorded Airwallex contract fix
 ## Remaining engineering work
 
 - Durable executor, lookup/recovery orchestration, live policy/cap/reserve rechecks,
-  signature re-verification and exactly-once approval consumption are not built.
-- Operator authentication/authorization, passkey enrollment, approval and callback
-  workflows, supplier/invoice ingestion and the operational UI are not built.
+  and exactly-once approval consumption are not built. Passkey assertion re-verification
+  is implemented but is not yet wired to an executor.
+- Operator session authentication, authorization, passkey enrollment and packet
+  approval APIs are built (stretch 3). Callback workflow, supplier/invoice ingestion,
+  packet construction and the operational UI are not built.
 - Ledger-to-provider reconciliation, settlement windows, incident handling and poller
   are not built. Existing core tests do not certify those missing integrations.
 - Runtime configuration still has historical replay/demo vocabulary; the product
@@ -66,7 +68,7 @@ vectors are synthetic HTTP-boundary tests, **not recorded Airwallex contract fix
   credential-separated worker readiness remain incomplete.
 - Historical app/demo recording source remains isolated; fixtures have not yet been
   relocated into tests. No files inside demo/ were edited.
-- Approval double clicks, crash/restart without duplicate payout, insufficient-balance
+- Concurrent approval double clicks are tested. Crash/restart without duplicate payout, insufficient-balance
   execution guards, expired FX quotes, unsupported corridors, concurrent operators
   and reconciliation mismatches need integrated tests after those flows exist.
 - 36 pre-existing compliance-index skips cover unbuilt milestones. They are not
@@ -128,3 +130,73 @@ The assignment remains active. Next: replace the PID-file lock with kernel-backe
 exclusion, then add authenticated operators and bound human approvals before a
 durable executor can be exposed. Credential absence blocks live acceptance only;
 it does not block continuing the remaining engineering work.
+
+## Stretch 3 — authenticated operators and bound passkey approvals
+
+Implemented:
+
+- Kernel-backed single-writer exclusion (`app/core/process_lock.py`). Persistent
+  inode, no PID/age reclamation. A second process is refused; `os._exit` releases
+  the OS lock so a restarted process can acquire it. Tested on this Windows host;
+  POSIX branch has not been run here. The worker still needs to use this primitive.
+- Explicit version-1 to version-2 SQLite migration, with DDL and version changes
+  in one transaction. Upgrade test preserves a pre-existing audit entry and proves
+  migration idempotence. No users or companies are seeded.
+- Locally provisioned operators, scrypt password hashing, revocable eight-hour
+  sessions, DB-backed account/source failure limits, bounded password-verification
+  concurrency, CSRF tokens, same-origin checks and secure-cookie support for HTTPS.
+- User-verified passkey registration and exact-packet-hash sign-off. Two distinct
+  T2 approvers; requester and ops identities cannot approve; fewer than three
+  enabled approvers blocks T2. Single-use five-minute ceremonies bind session,
+  operator, nonce and packet. Concurrent double clicks record one signature.
+- Immutable signature rows and executor-side verification of the original stored
+  assertion, signing counter and ceremony. Current requester/role/revocation checks
+  run again. Registered public-key and credential fingerprints are bound to the
+  audit log. The future executor must verify/seal that log before money actions.
+- Protected operator/approval API endpoints; bounded request bodies including
+  chunked requests; validation responses omit raw inputs (including passwords).
+  Unexpected errors log only a structured event/type, with no body or key data.
+- CLI `operator-add` prompts for a password; `operator-disable` revokes access.
+
+Verification (actual commands/results):
+
+```
+uv run pytest tests/unit/test_process_lock.py -q
+2 passed in 0.61s
+uv run pytest tests/unit/test_operators_signing.py tests/unit/test_b_concurrency.py -q
+44 passed in 35.64s
+uv run pytest tests -q --timeout=180
+814 passed, 37 skipped in 65.81s
+uv run pytest tests/unit/test_operators_signing.py -q
+15 passed in 32.55s
+uv run ruff check app tests --output-format concise
+All checks passed!
+uv run ruff format --check app tests
+62 files already formatted
+uv run mypy app
+Success: no issues found in 34 source files
+git diff --check
+exit 0
+uv run python -m app.cli --help
+uv run python -m app.cli operator-add --help
+uv run python -m app.cli operator-disable --help
+all exit 0
+```
+
+The full-suite run preceded the last registration-fingerprint check and one new
+stored-assertion-tampering test; the final 15-test focused run covers those changes.
+The software authenticator is strictly under tests/support, generates real ES256
+signatures/CBOR, and exercises the installed WebAuthn verifier. It does not prove
+physical-device enrollment or browser user-verification acceptance.
+
+During focused verification an existing shared-reader test returned one `None`
+instead of a COUNT value (1 failure / 117 passes). Shared connections now disable
+the CPython statement cache; the concurrent regression performs 1,000 reads across
+eight threads and checks every result. This agrees with the documented CPython
+[shared-cache inconsistency issue](https://github.com/python/cpython/issues/118172).
+WAL alone never made Python's shared statement cache safe.
+
+Remaining: construct real packets from supplier/invoice data, connect signed callback
+and policy workflows, build the executor/recovery/reconciliation and UI, and run the
+full hard-scenario/live matrix. Credentials are still absent; no provider calls,
+media edits, pushes, PRs, publication or external messages were made.

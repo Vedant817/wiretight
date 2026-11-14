@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
+import logging
 import os
 import threading
 import time
@@ -13,11 +15,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from app.api.operators import router
 from app.config import SANDBOX_BASE_URL
-from app.core import audit, db
+from app.core import audit, db, signing
+from app.core.operators import AuthenticationError
 
 
 class WebhookEvent(BaseModel):
@@ -49,9 +54,44 @@ def create_app() -> FastAPI:
         database.close()
 
     application = FastAPI(title="Wiretight", lifespan=lifespan, docs_url=None, redoc_url=None)
+    application.include_router(
+        router(
+            database,
+            signing.Passkeys(
+                rp_id=os.environ.get("WEBAUTHN_RP_ID", "localhost"),
+                origin=os.environ.get("WEBAUTHN_ORIGIN", "http://localhost:8000"),
+            ),
+        )
+    )
+
+    @application.exception_handler(RequestValidationError)
+    async def invalid_request(_: Request, exc: RequestValidationError) -> JSONResponse:
+        # Pydantic errors normally echo input, including passwords or bank details.
+        return JSONResponse(
+            {
+                "detail": [
+                    {"loc": list(e["loc"]), "type": e["type"], "msg": e["msg"]}
+                    for e in exc.errors()
+                ]
+            },
+            status_code=422,
+        )
+
+    @application.exception_handler(AuthenticationError)
+    async def invalid_session(_: Request, exc: AuthenticationError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=401)
 
     @application.middleware("http")
     async def boundary(request: Request, call_next: Any) -> Any:
+        if request.method in {"POST", "PUT", "PATCH"}:
+            chunks = bytearray()
+            async for chunk in request.stream():
+                chunks.extend(chunk)
+                if len(chunks) > 262144:
+                    return JSONResponse({"detail": "Request exceeds size limit"}, status_code=413)
+            # Starlette's cached-request middleware replays this bounded body to
+            # the downstream parser. Chunked requests get the same size limit.
+            request._body = bytes(chunks)
         # Global bounded budget; never trust forwarded client headers.
         with rate_lock:
             now = time.monotonic()
@@ -61,7 +101,18 @@ def create_app() -> FastAPI:
             limited = rate_window[1] > 300
         if limited and request.url.path not in {"/health", "/ready"}:
             return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            logging.getLogger("wiretight").error(
+                json.dumps(
+                    {
+                        "event": "request.failed",
+                        "error_type": type(exc).__name__,
+                    }
+                )
+            )
+            response = JSONResponse({"detail": "Service unavailable; retry later"}, status_code=503)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
@@ -85,7 +136,7 @@ def create_app() -> FastAPI:
         if os.environ.get("AWX_MODE", "live") != "live":
             errors.append("Product requires AWX_MODE=live")
         errors.append(
-            "Execution unavailable: operator approvals and durable worker are not implemented"
+            "Execution unavailable: durable worker and live guard verification are not implemented"
         )
         return errors
 
