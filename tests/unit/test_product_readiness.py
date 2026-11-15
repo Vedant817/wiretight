@@ -28,6 +28,15 @@ def test_invalid_product_configuration_is_refused(values, monkeypatch):
         validate_product(settings)
 
 
+@pytest.mark.parametrize("flag", ["DEMO_MODE", "APP_DEMO_TIMING"])
+def test_demo_env_flags_are_refused_by_validate_product(flag, monkeypatch):
+    monkeypatch.setenv("AWX_MODE", "live")
+    monkeypatch.setenv(flag, "1")
+    settings = WebSettings(_env_file=None)
+    with pytest.raises(SandboxGuardError, match="Recording settings are forbidden"):
+        validate_product(settings)
+
+
 def test_launcher_separates_secret_environments():
     web, worker = environments(
         {
